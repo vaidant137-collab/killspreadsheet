@@ -64,23 +64,43 @@ def meridian_desc(l: RfxLine) -> str:
             f"{l.liner_gsm} gsm liner")
 
 
+def _inches(l: RfxLine) -> str:
+    """Millimetres to rounded whole inches, the way a small converter writes it.
+
+    450 x 350 x 300 mm becomes 18X14X12. The rounding is lossy and it is applied
+    by the supplier before the buyer ever sees it, so matching back to the
+    tender's millimetre spec means tolerating up to ~12 mm of drift per axis.
+    Confirmed convention: IndiaMART listings quote "16x12x10 inches",
+    "12x10x8 inch", "7.00 X 5.00 X 4.25 Inches".
+    """
+    d = l.dims
+    vals = [d.length_mm, d.width_mm] + ([d.height_mm] if d.height_mm else [])
+    return "X".join(str(round(v / 25.4)) for v in vals)
+
+
 def ganesh(l: RfxLine) -> str:
-    """A printed rate card. All caps, no spaces, heavily abbreviated."""
+    """A printed rate card. All caps, no spaces, heavily abbreviated — and
+    dimensions in INCHES, because that is what the trade actually does."""
     if l.style == BoxStyle.PAD:
-        return f"PAD {_dims(l, 'X')}"
+        return f"PAD {_inches(l)}"
     if l.style == BoxStyle.PARTITION:
         # Two of the buyer's lines are 450x350 fitments. Ganesh distinguishes
         # them with a suffix that is easy to miss and easy to mis-read -- which
         # is realistic, and should surface as a low-confidence MATCH rather
         # than a low-confidence extraction.
         if "4CELL" in l.code:
-            return f"PARTN {_dims(l, 'X')} 4C"
+            return f"PARTN {_inches(l)} 4C"
         if "6CELL" in l.code:
-            return f"PARTN {_dims(l, 'X')} 6C"
-        return f"CAP+TRAY {_dims(l, 'X')}"
+            return f"PARTN {_inches(l)} 6C"
+        return f"CAP+TRAY {_inches(l)}"
     if l.style == BoxStyle.DIECUT_0427:
-        return f"{l.ply}PLY DIECUT {_dims(l, 'X')}"
-    return f"{l.ply}PLY {_dims(l, 'X')}"
+        return f"{l.ply}PLY DIECUT {_inches(l)}"
+    # "Double Wall 3 Ply" is a real listing, and it contradicts itself: 3-ply is
+    # single wall by definition. Real vendor data is not merely unstructured,
+    # it is wrong — and a system that trusts a stated spec inherits the error.
+    if l.ply == 3 and l.line_no in (2, 4):
+        return f"DBL WALL 3PLY {_inches(l)}"
+    return f"{l.ply}PLY {_inches(l)}"
 
 
 LABELLERS = {

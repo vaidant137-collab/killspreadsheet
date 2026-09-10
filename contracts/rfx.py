@@ -74,6 +74,28 @@ class RfxLine(BaseModel):
     requires_tooling: bool = False
     introduced_this_year: bool = False
 
+    # --- fields taken from real published tender practice --------------------
+    # Indian tenders specify GSM as a per-layer stack, not one liner figure:
+    # "150/150/150/150/150 (out to In)" (HAL tender MAT/P/B-12/263). A vendor
+    # replying with a single number has not answered the question, and
+    # comparing "180" against a stack compares nothing.
+    gsm_stack: str | None = None
+
+    # The same tender specifies THREE strength measures at once — bursting
+    # strength in kg/cm2, bursting factor, and compression in kg — using "Ntl"
+    # and "Nlt" interchangeably for "not less than", in the same document.
+    # A vendor answering any one of the three looks compliant.
+    strength_spec: dict[str, str] = Field(default_factory=dict)
+
+    # "Two 3-ply B-grade plates per box" — one buyer line is really two
+    # products. A vendor who prices the plates separately has not quoted
+    # higher, they have quoted differently.
+    sub_components: list[str] = Field(default_factory=list)
+
+    # Buyers routinely identify a box by what goes in it rather than by its
+    # board: "(1 Ltr. Humaur)", "5-10 Kg", "Above 45 kg".
+    capacity_band: str | None = None
+
 
 class QuestionnaireItem(BaseModel):
     q_no: int

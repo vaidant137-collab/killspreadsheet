@@ -53,6 +53,9 @@ class VendorLineQuote(BaseModel):
     currency: str
     basis: QuoteBasis
     refers_to_prior_contract: bool = False
+    # The vendor priced the box but not the fitments the buyer's line includes.
+    # Not a cheaper quote — a different one.
+    excludes_sub_component: bool = False
     tooling_inr: float | None = None
     tooling_amortised: bool = False
     note: str | None = None
@@ -87,6 +90,14 @@ class VendorProfile(BaseModel):
     city: str
     incumbent: bool = False
     reply_format: str
+    # Confirmed against ~45 live IndiaMART listings: Indian suppliers quote
+    # dimensions in inches at least as often as millimetres, rounded, while
+    # tenders specify mm. Converting "18x14x12 in" back to "450x350x300 mm" is
+    # not arithmetic — it is fuzzy matching against a rounding already applied.
+    dimension_system: str = "mm"          # "mm" | "inch"
+    # "Per Box" and "Per Piece" are used interchangeably in the same category
+    # on the same page. A matcher keyed on the string treats them as different.
+    unit_wording: str = "Nos"
     currency: str
     incoterm: Incoterm
     tax_basis: TaxBasis

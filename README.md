@@ -101,7 +101,15 @@ python -m tools.render_all          # renders the five documents + attachments
 
 ## The dataset
 
-Grounded in real corrugated RFQ practice, not invented. Industry checklists name
+**Provenance for every convention is in [`data/SOURCES.md`](data/SOURCES.md)** —
+a real published tender specification, ~45 live supplier listings, and the
+industry RFQ checklists. The vendor *documents* are generated, because real
+quotations are commercially confidential and unpublished; every *convention*
+they follow was pulled from the wild, including several messier than anything
+worth inventing: GSM specified as a per-layer stack, `Ntl`/`Nlt` used
+interchangeably for "not less than" in one document, strength in kg/cm² rather
+than kPa, dimensions in inches against a tender written in millimetres, and
+listings whose stated specs contradict themselves. Industry checklists name
 **"Incoterms with named place" as the single most important comparability
 field**, and state that *"quotes missing the evidence pack are non-comparable"* —
 which is the questionnaire gate, already established practice. Market figures

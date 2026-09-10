@@ -202,6 +202,40 @@ def build_lines() -> list[RfxLine]:
         style=BoxStyle.PARTITION, ply=3, dims=Dimensions(length_mm=450, width_mm=350),
         flute="B", liner_gsm=150, annual_qty=60000, uom=Uom.SET))
 
+    # ---- real tender conventions, applied across the schedule ---------------
+    # Lifted from HAL tender MAT/P/B-12/263 (see data/SOURCES.md). Note "Ntl"
+    # and "Nlt" both appear, both meaning "not less than", exactly as they do
+    # in the source document. Strength is stated in kg/cm2, not the kPa the
+    # international checklists assume, and no document anywhere says
+    # 12 kg/cm2 is about 1,177 kPa.
+    STACK = {
+        2: "140/120/140 (out to In)",
+        3: "150/120/150 (out to In)",
+        5: "180/140/150/140/180 (out to In)",
+        7: "200/150/150/150/150/150/200 (out to In)",
+    }
+    STRENGTH = {
+        2: {"bursting_strength": "Nlt 5 kg/cm2", "bursting_factor": "All layer Ntl 14"},
+        3: {"bursting_strength": "Nlt 8 Kg/cm2", "bursting_factor": "All Layer Nlt 16",
+            "compression_strength": "Nlt 120 kg"},
+        5: {"bursting_strength": "Ntl 12 Kg/cm2", "bursting_factor": "All Layer Nlt 20",
+            "compression_strength": "Nlt 250 kg"},
+        7: {"bursting_strength": "Nlt 16 Kg/cm2", "bursting_factor": "All layer Ntl 24",
+            "compression_strength": "Nlt 400 kg"},
+    }
+    CAPACITY = {2: None, 3: "5-10 Kg", 5: "11-25 Kg", 7: "Above 45 kg"}
+
+    for ln in L:
+        ln.gsm_stack = STACK.get(ln.ply or 3)
+        ln.strength_spec = dict(STRENGTH.get(ln.ply or 3, {}))
+        if ln.style in (BoxStyle.RSC_0201, BoxStyle.HSC_0203, BoxStyle.DIECUT_0427):
+            ln.capacity_band = CAPACITY.get(ln.ply)
+
+    # One buyer line is really two products, exactly as in the source tender.
+    by_no_tmp = {l.line_no: l for l in L}
+    by_no_tmp[6].sub_components = ["Two 3-ply B-grade plates per box, 100 GSM paper"]
+    by_no_tmp[6].capacity_band = "11-25 Kg (1 Ltr. Humaur pack)"
+
     # Bridge facts: the buyer has dispatch weights for lines they have bought
     # before, and none for the six introduced this year. That is not a gap in
     # our dataset — it is the honest state of a real procurement file, and it
@@ -233,18 +267,18 @@ QUESTIONNAIRE = [
 VENDORS = [
     VendorProfile(
         vendor_id="shakti", name="Shakti Packaging Pvt Ltd", city="Bhiwandi, Maharashtra",
-        reply_format="xlsx", currency="INR", incoterm=Incoterm.EX_WORKS,
+        reply_format="xlsx", dimension_system="mm", unit_wording="Per Box", currency="INR", incoterm=Incoterm.EX_WORKS,
         tax_basis=TaxBasis.GST_EXTRA, payment_days=30, validity_days=15,
         moq_pieces=5000, freight_inr_per_shipment=42000, shipments_per_year=12),
     VendorProfile(
         vendor_id="nova", name="Nova Corrugators Pvt Ltd", city="Vasai East, Maharashtra",
-        reply_format="pdf", currency="INR", incoterm=Incoterm.FOR_DESTINATION,
+        reply_format="pdf", dimension_system="mm", unit_wording="No.", currency="INR", incoterm=Incoterm.FOR_DESTINATION,
         tax_basis=TaxBasis.GST_INCLUDED, payment_days=45, validity_days=30,
         early_payment_discount_pct=3.0, early_payment_within_days=15,
         moq_pieces=3000, freight_inr_per_shipment=0.0, shipments_per_year=12),
     VendorProfile(
         vendor_id="meridian", name="Meridian Packaging International", city="Chennai, Tamil Nadu",
-        reply_format="docx", currency="USD", incoterm=Incoterm.EX_WORKS,
+        reply_format="docx", dimension_system="mm", unit_wording="pc", currency="USD", incoterm=Incoterm.EX_WORKS,
         tax_basis=TaxBasis.GST_EXTRA, payment_days=90, validity_days=30,
         moq_pieces=50000, fx_rate_at_quote=87.10,
         slabs=[VolumeSlab(min_qty=50000, uplift_pct=0.0),
@@ -252,12 +286,12 @@ VENDORS = [
         freight_inr_per_shipment=96000, shipments_per_year=12),
     VendorProfile(
         vendor_id="ganesh", name="Ganesh Boxes & Cartons", city="Ambernath, Maharashtra",
-        reply_format="photo", currency="INR", incoterm=Incoterm.EX_WORKS,
+        reply_format="photo", dimension_system="inch", unit_wording="Per 100 Box", currency="INR", incoterm=Incoterm.EX_WORKS,
         tax_basis=TaxBasis.GST_EXTRA, payment_days=30, validity_days=21,
         moq_pieces=2000, freight_inr_per_shipment=38000, shipments_per_year=12),
     VendorProfile(
         vendor_id="apex", name="Apex Packwell", city="Bhiwandi, Maharashtra", incumbent=True,
-        reply_format="email", currency="INR", incoterm=Incoterm.FREIGHT_EXTRA,
+        reply_format="email", dimension_system="mm", unit_wording="per kg", currency="INR", incoterm=Incoterm.FREIGHT_EXTRA,
         tax_basis=TaxBasis.GST_EXTRA, payment_days=45, validity_days=None,
         moq_pieces=5000, freight_inr_per_shipment=40000, shipments_per_year=12),
 ]
@@ -435,8 +469,10 @@ def build() -> GroundTruth:
                     amortised = True
                     rate = round(rate + DIE_COST_INR / l.annual_qty, 2)
 
+            excludes_sub = bool(l.sub_components) and v.vendor_id in ("meridian", "nova")
             quotes.append(VendorLineQuote(
                 line_no=l.line_no,
+                excludes_sub_component=excludes_sub,
                 rate=None if rate is None else round(rate, 4),
                 currency=currency, basis=basis,
                 refers_to_prior_contract=prior_ref,

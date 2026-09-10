@@ -82,7 +82,9 @@ def _draw_card(gt: GroundTruth) -> tuple[Image.Image, list[tuple[int, float, flo
            font=f("reg", 20), fill=(255, 236, 226))
 
     d.text((70, 230), "RATE CARD  —  EFFECTIVE 01 APRIL 2026", font=f("bold", 34), fill=INK)
-    d.text((70, 282), "ALL RATES ARE PER 100 PIECES.  EX-WORKS AMBERNATH.  GST EXTRA.",
+    # Sizes in inches, rates per 100 BOX. Both are real trade conventions and
+    # both differ from the buyer's tender, which specifies mm and buys per piece.
+    d.text((70, 282), "ALL RATES PER 100 BOX.  SIZES IN INCH.  EX-WORKS AMBERNATH.  GST EXTRA.",
            font=f("bold", 22), fill=(150, 40, 30))
     d.text((70, 316), "Quotation against enquiry " + gt.rfx.rfx_id + "   Dated 31-08-2026",
            font=f("reg", 21), fill=(90, 90, 94))

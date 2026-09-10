@@ -90,7 +90,9 @@ def render(gt: GroundTruth, out_dir: Path) -> Path:
             die_amort = round(18500.0 / l.annual_qty, 4)
         conv = round((q.rate or 0) * 0.22, 4)
         board = round((q.rate or 0) - conv - die_amort, 4)
-        uom = {"piece": "Nos", "kg": "Kgs", "set": "Set", "100_pieces": "Per 100 Nos"}[l.uom.value]
+        # "Per Box" where the buyer's tender says "piece" — the same unit under
+        # a different word, which a matcher keyed on the string treats as different.
+        uom = {"piece": "Per Box", "kg": "Kgs", "set": "Set", "100_pieces": "Per 100 Box"}[l.uom.value]
         vals = [i, label(l), _size(l), l.ply, l.liner_gsm, l.bursting_factor,
                 uom, l.annual_qty, board, conv, die_amort or None, None,
                 "Die cost included in rate" if q.tooling_amortised else None]
