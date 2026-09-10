@@ -355,10 +355,23 @@ ATTACHMENTS = {
                                 "contradicts the 'Yes' given at question 1.")],
     "meridian": [Attachment(filename="meridian_test_report.pdf", kind="test_report",
                             summary="Bursting strength test report, TAPPI T810, 1,400 kPa.")],
-    "ganesh": [Attachment(filename="ganesh_udyam_certificate.pdf", kind="msme",
+    "ganesh": [Attachment(filename="ganesh_company_profile.pdf", kind="brochure",
+                          summary="Company profile. Mostly marketing; the product range "
+                                  "includes honeycomb board, paper pallets, BOPP tape and "
+                                  "stretch film that no RFx line asks for, priced per sq "
+                                  "metre and per pallet. CONTRADICTS the rate card: "
+                                  "advertises 7-ply export cartons at Rs 96-240/box while "
+                                  "the rate card states they do not supply them. A "
+                                  "catalogue price is not a bid."),
+               Attachment(filename="ganesh_udyam_certificate.pdf", kind="msme",
                           valid_until="2027-08-31",
                           summary="Udyam MSME registration certificate.")],
-    "shakti": [Attachment(filename="shakti_capacity_statement.pdf", kind="capacity",
+    "shakti": [Attachment(filename="shakti_company_profile.pdf", kind="brochure",
+                          summary="Capability statement, no prices. States a minimum order "
+                                  "of 10,000 pieces, CONTRADICTING the 5,000 in their own "
+                                  "quotation. Section headed 'Our certifications' is empty, "
+                                  "behind a questionnaire answer claiming ISO 9001 to 2027."),
+               Attachment(filename="shakti_capacity_statement.pdf", kind="capacity",
                           summary="Plant capacity statement, 900 t/month, single unit.")],
     "apex": [Attachment(filename="apex_rate_contract_fy26.pdf", kind="prior_contract",
                         summary="Last year's awarded rate contract - the context needed to "

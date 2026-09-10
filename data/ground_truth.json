@@ -1516,6 +1516,12 @@
       ],
       "attachments": [
         {
+          "filename": "shakti_company_profile.pdf",
+          "kind": "brochure",
+          "valid_until": null,
+          "summary": "Capability statement, no prices. States a minimum order of 10,000 pieces, CONTRADICTING the 5,000 in their own quotation. Section headed 'Our certifications' is empty, behind a questionnaire answer claiming ISO 9001 to 2027."
+        },
+        {
           "filename": "shakti_capacity_statement.pdf",
           "kind": "capacity",
           "valid_until": null,
@@ -2679,6 +2685,12 @@
         }
       ],
       "attachments": [
+        {
+          "filename": "ganesh_company_profile.pdf",
+          "kind": "brochure",
+          "valid_until": null,
+          "summary": "Company profile. Mostly marketing; the product range includes honeycomb board, paper pallets, BOPP tape and stretch film that no RFx line asks for, priced per sq metre and per pallet. CONTRADICTS the rate card: advertises 7-ply export cartons at Rs 96-240/box while the rate card states they do not supply them. A catalogue price is not a bid."
+        },
         {
           "filename": "ganesh_udyam_certificate.pdf",
           "kind": "msme",

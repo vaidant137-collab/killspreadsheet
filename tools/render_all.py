@@ -14,7 +14,8 @@ import json
 from pathlib import Path
 
 from contracts.quote import GroundTruth
-from tools import render_docx, render_email, render_pdf, render_photo, render_xlsx
+from tools import (render_brochure, render_docx, render_email, render_pdf,
+                   render_photo, render_xlsx)
 
 ROOT = Path(__file__).resolve().parent.parent
 GT_PATH = ROOT / "data" / "ground_truth.json"
@@ -39,6 +40,12 @@ def main() -> None:
     produced.append(("Apex    · EML   · four lines of email", render_email.render(gt, OUT)))
 
     render_email.render_questionnaire_sidecars(gt, OUT)
+
+    # Company profile brochures — the document nobody asked for and everybody
+    # sends. Modelled on three real published corrugated-industry brochures.
+    gb, sb = render_brochure.render_all(gt, ATT)
+    produced.append(("  attach· PDF   · Ganesh profile (advertises 7-ply!)", gb))
+    produced.append(("  attach· PDF   · Shakti profile (MOQ 10k vs 5k quoted)", sb))
 
     # attachments
     produced.append(("  attach· PDF   · Nova ISO 9001 (EXPIRED 31-03-2026)",

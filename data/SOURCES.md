@@ -128,6 +128,85 @@ Sources: [Corrugated box price per piece, India 2026](https://aarishapackaging.c
 
 ---
 
+## 5. Company profile brochures — three real ones, read end to end
+
+Vendors routinely answer an RFx with a company catalogue rather than a quote, or
+attach one alongside. Three real published brochures were read to check what
+that actually contains:
+
+| | YOJ Pack | Trident PBI | Pramukh Packaging |
+|---|---|---|---|
+| Marketing share | ~40% | ~60% | ~70% |
+| Prices | **yes** — ₹160/sq m, ₹850/pallet, ₹10/pc | none | none |
+| Product range | mostly **honeycomb**, not corrugated | vague, no dimensions or grades | **BOPP tape and stretch film** |
+| Certifications | — | heading present, **nothing under it** | none; only GST numbers |
+| Machinery | — | full list, named models | full list with sizes (42″–72″) |
+| Named clients | — | 12 | 31, incl. Ford, Godrej, Bosch |
+| MOQ | inside prose: "5000-box minimum" | — | — |
+| Capacity | — | "90,000+ boxes/day" **and** "18,000 MT/year" | — |
+
+What this creates that a messy quote does not:
+
+- **A signal-to-noise problem, not a parsing problem.** Sixty products are
+  described, thirty were asked about, and most of the overlap is superficial. A
+  system that tries to match everything will confidently attach a catalogue
+  price to a line it does not belong to — and unlike a bad parse, that error
+  looks entirely reasonable on screen.
+- **Prices in units no RFx line can consume.** Per square metre. Per pallet.
+  A number exists; it is not an answer.
+- **A capability document masquerading as a bid.** Trident's brochure answers
+  "can you make it" and never "at what price". It is not a response, however
+  much it arrived in the response window.
+- **Absence of evidence laid out as presence.** A section headed *"OUR
+  CERTIFICATIONS"* with nothing beneath it. A buyer skimming sees a
+  certifications section and moves on.
+- **Capacity stated twice in units that do not convert** without a box weight
+  the brochure never supplies — the same bridge-fact problem as the incumbent's
+  per-kg email, in a different costume.
+
+The rule the product has to hold: **a catalogue price is not a bid.** Finding
+one is useful. Treating it as a quote is not. Surfacing it and asking is the
+right behaviour, and it is a good demo moment.
+
+Two brochures are now in the demo set, carrying contradictions against their own
+vendor's quote:
+
+- **Ganesh** advertises 7-ply export cartons at ₹96–240/box, while the rate card
+  the same vendor sent states *"WE DO NOT SUPPLY 7 PLY EXPORT CARTONS OR
+  SHEETS."* Brochures are printed once and go stale; rate cards are current.
+- **Shakti** states a 10,000-piece minimum order in marketing prose against the
+  5,000 in their own quotation. Two numbers, two documents, one vendor.
+
+Sources: [YOJ Pack product catalogue](https://www.yojpack.com/YOJ-pack-kraft-Product-catalogue.pdf) ·
+[Trident PBI brochure](https://tridentpbi.in/trident-pbi-corrugated-box-manufacturer-brochure.pdf) ·
+[Pramukh Packaging brochure](https://www.pramukhpackagingindustries.com/brochure.pdf)
+
+---
+
+## 6. The wild set — and an honest limit
+
+`tools/fetch_wild_set.py` downloads the real documents above, plus a real
+retailer board specification and the Government of India MSME technical
+reference, into `data/wild/`. They are **not** redistributed in this repository;
+the script pulls them on your machine.
+
+They are deliberately kept out of the demo set, because of a tradeoff worth
+stating plainly:
+
+> **You cannot have both a real corpus and a free gold set.** The demo documents
+> are generated, which is what lets extraction be scored without anybody
+> labelling anything. Real documents have no ground truth until a human writes
+> one.
+
+So the two sets have two jobs. The demo set drives the headline scorecard. The
+wild set — small, hand-labelled, a few dozen fields — answers the only question
+the demo set cannot: *does this work on documents we did not make?* If demo-set
+accuracy is 96% and wild-set accuracy is 61%, the 96% was measuring the
+renderer rather than the extractor, and that is worth knowing before a live demo
+rather than during one.
+
+---
+
 ## What is still synthetic, and why
 
 The five vendor **documents** are generated, because real vendor quotations are
