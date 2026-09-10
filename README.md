@@ -1,0 +1,171 @@
+# Kill the Quote Spreadsheet
+
+A buyer talks an RFx into existence, five vendors reply in five different formats,
+and the buyer interrogates the result in plain language — all in one conversation,
+with every number traceable back to the pixels it came from.
+
+Category: **corrugated packaging**. Scale: **5 vendors, 30 line items, 9-question
+questionnaire, 5 attachments.**
+
+---
+
+## The one decision everything else follows from
+
+Extraction does not write into a chat context. It writes into a **relational
+store**, and the analyst answers by generating and running queries against it.
+
+That buys deterministic arithmetic (a model cannot be trusted to sum 150
+numbers), an auditable query you can put on screen, charts drawn from real rows,
+provenance for free because every row carries its evidence key, and an honest
+answer to *"where are you unsure"* — because unsureness is a column, not a vibe.
+
+The second decision: **the conversation is the entire product surface.** A
+comparison grid with a chat panel bolted on is a better spreadsheet, which is the
+one thing the title rules out. The comparison renders once, pinned, and each turn
+mutates it in place; clicking any cell slides an evidence drawer over the source.
+
+---
+
+## Swappable by construction
+
+Every module takes a Pydantic contract and returns one. Swapping an
+implementation means writing a new class that returns the same type and changing
+one line in `config.py`. Two rules keep that real rather than aspirational:
+
+1. **No module imports another module.** They all import `contracts/` only. The
+   moment `analyst/` imports from `extract/`, the seam is gone.
+2. **One config file names the active implementation** of each interface, so a
+   swap shows up in a single diff.
+
+| Seam | Contract | Today | Swaps to |
+|---|---|---|---|
+| Model provider | `complete(prompt, schema, images) -> Model` | Anthropic *or* OpenAI, by env var | the other one |
+| Extraction | `extract(SourceDoc) -> VendorSubmission` | one class per format | better parser, commercial OCR |
+| Matching | `match(Submission, Rfx) -> [LineMatch]` | embedding candidates + model judge | trained classifier |
+| Allocation | `allocate([Line], Constraints) -> Allocation` | 25-subset enumeration | MILP via OR-Tools |
+| Analyst | `ask(str, Session) -> [Block]` | hand-written tool loop (~60 lines) | LangGraph, or anything |
+| UI | consumes the `Block` union | plain JS renderer | React |
+
+There is no agent framework. The loop is sixty lines, and owning its failure
+modes was worth more than the abstractions — specifically, extraction and
+normalisation are separate calls so a bad parse cannot propagate into the
+arithmetic. The place a framework would earn its keep is the human-review
+interrupt; at five vendors, a `status` column does the same job.
+
+---
+
+## Layout
+
+```
+contracts/      the only thing every module shares
+llm/            base protocol · anthropic.py · openai.py
+extract/        xlsx · pdf · docx · image · email
+match/
+normalize/      pure python, no model — deliberately
+allocate/       naive.py · subsets.py · (milp.py, later)
+analyst/        tools.py · loop.py
+store/          schema.sql · repo.py
+eval/           harness.py · scorecard.py
+api/            routes.py · sse.py
+web/            index.html · blocks.js
+tools/          the document renderers
+data/           ground_truth.json · generated/ · attachments/ · adversarial/
+config.py       which implementation of each interface is live
+```
+
+`normalize/` containing zero AI is the load-bearing choice. The moment a model
+does the arithmetic, nothing on screen is auditable.
+
+---
+
+## The gold set is free
+
+The pipeline runs in the direction that makes evaluation cost nothing:
+
+```
+ground_truth.json  ──renders──▶  5 vendor documents
+        ▲                              │
+        └────────── scored against ◀───┴── extraction
+```
+
+The documents are *projections* of a single source of truth, so the harness
+compares extraction back against the thing the documents were made from. No
+hand-labelling of 560 cells, and the traps are provably where we think they are.
+
+```bash
+python -m data.build_ground_truth   # writes data/ground_truth.json
+python -m tools.render_all          # renders the five documents + attachments
+```
+
+---
+
+## The dataset
+
+Grounded in real corrugated RFQ practice, not invented. Industry checklists name
+**"Incoterms with named place" as the single most important comparability
+field**, and state that *"quotes missing the evidence pack are non-comparable"* —
+which is the questionnaire gate, already established practice. Market figures
+used: 3-ply ₹5–25/pc, 5-ply ₹25–80/pc, 7-ply ₹80–220/pc; printing adds ₹3–15/pc;
+BF 14–16 domestic, 18–22 industrial and export; MOQ 100–200 pieces standard,
+500–1,000 custom, with a **30–50% premium below 200 pieces**.
+
+| Vendor | Format | Lines | Habit |
+|---|---|---|---|
+| Shakti Packaging | XLSX | 30/30 | Own template, two sheets, ex-works, GST extra |
+| Nova Corrugators | PDF | 27/30 | Letterhead, FOR destination, GST included |
+| Meridian Packaging Intl | DOCX | 30/30 | Commercials in prose, quotes in USD, 90-day terms |
+| Ganesh Boxes & Cartons | JPG | 22/30 | Printed rate card, photographed on a phone |
+| Apex Packwell | EML | 30/30 | Four lines of email. The incumbent |
+
+### Traps, and why each one is real
+
+| Trap | Where | Why it happens |
+|---|---|---|
+| Summary sheet holds stale rates; real rates on sheet 2 | Shakti | The summary was built for the last revision and never updated |
+| Three hidden rows, real rate is a formula | Shakti | Superseded lines are hidden, not deleted |
+| **Die cost amortised into the unit rate** | Shakti | Every RFQ checklist demands tooling be separated, which is evidence of how often it isn't. Invisible at volume, decisive at MOQ — and it silently voids any split that cuts their share |
+| 3% early-payment discount in a page-3 footnote | Nova | Sales protecting the headline rate |
+| Table breaks across pages, header repeated | Nova | It's a long table |
+| 3 lines absent rather than marked no-quote | Nova | No die-cutting line; rather than write "no quote" three times, they omit the rows |
+| **ISO 9001 "Yes" contradicted by an expired certificate** | Nova | Nobody lied. The renewal is late at the plant. The most common compliance failure in onboarding, and only ever caught by reading the attachment |
+| Quotes in USD | Meridian | Imported machine-finished kraft liner; they won't carry the FX exposure |
+| Volume slabs stated in prose, as a **range** | Meridian | The slab is a negotiating position, not a published price |
+| 90-day terms mentioned once, in closing prose | Meridian | It's a term, not a headline |
+| Tooling quoted separately, ₹18,500/die | Meridian | The honest way — and it makes them look expensive next to Shakti |
+| Per 100 pieces throughout | Ganesh | Trade convention; the buyer asked per piece |
+| Indian digit grouping (`1,20,000`) | Ganesh | A locale-blind parser reads this as 120 |
+| Two rates revised in pen over the print | Ganesh | Card printed in April, board moved in July, the rep wrote over it |
+| **One band of rows under the photographer's shadow** | Ganesh | Genuinely degraded — the low-confidence extraction it produces is honest, not simulated |
+| Two 450×350 fitments with near-identical labels | Ganesh | Should surface as a low-confidence *match*, not a low-confidence extraction |
+| `₹42/kg for the 5-ply, 38 for the 3-ply` | Apex | Prices **board**; the buyer buys **pieces**. Needs a box weight |
+| Six lines have no weight on file | Apex | Introduced this year, never bought before. **Genuinely unresolvable** |
+| `rest same as last year` | Apex | A pointer, not a price. Resolves only against the attached FY26 contract |
+| `freight extra`, no validity stated | Apex | Incoterm undeclared; validity simply never mentioned |
+| **Strength quoted against three different standards** | All | Shakti gives BF per IS 2771, Nova ECT per ISO 3037, Meridian burst per TAPPI T810, Ganesh a bare "22 BF" with no method, Apex no figure at all. These do not convert |
+
+The incumbent's four-line email is the most interesting document in the set,
+because it fails in three different ways at once and each needs a different
+resolution path: a weight bridge, a prior-contract lookup, and an undeclared
+Incoterm.
+
+### Not in the demo set
+
+An **adversarial set** lives in `data/adversarial/` and never appears in the
+product — it is run by the harness only. Prompt-injection PDF, a discount stated
+twice so it can be double-applied, a superseded revision, two prices for one
+line, a page scanned upside down. The point is not that all five are handled; it
+is that they were tried, measured, and the ones we don't handle are named.
+
+---
+
+## Running it
+
+```bash
+pip install -r requirements.txt
+cp .env.example .env          # add your model API key
+python -m data.build_ground_truth
+python -m tools.render_all
+```
+
+Deployed for a URL; **the live demo runs locally**, because free-tier cold starts
+and request timeouts are exactly the shape of an extraction pass.

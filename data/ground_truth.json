@@ -1,0 +1,2727 @@
+{
+  "rfx": {
+    "rfx_id": "RFX-2026-CORR-011",
+    "title": "Annual corrugated packaging requirement, FY27",
+    "buyer_org": "Nandan Consumer Products Ltd",
+    "category": "Corrugated packaging",
+    "currency": "INR",
+    "issued_date": "2026-08-24",
+    "response_due": "2026-09-02",
+    "award_target": "2026-09-24",
+    "delivery_point": "Bhiwandi Distribution Centre, Maharashtra",
+    "required_incoterm": "FOR Bhiwandi DC",
+    "required_payment_terms": "45 days from GRN",
+    "cost_of_capital_pct": 9.0,
+    "lines": [
+      {
+        "line_no": 1,
+        "code": "CB-0201-3P-300200150",
+        "description": "Corrugated box, RSC (FEFCO 0201), 3-ply, 300x200x150 mm, 150 GSM liner, 16 BF, plain",
+        "style": "0201",
+        "ply": 3,
+        "dims": {
+          "length_mm": 300,
+          "width_mm": 200,
+          "height_mm": 150
+        },
+        "flute": "B",
+        "liner_gsm": 150,
+        "bursting_factor": 16,
+        "print_spec": "plain",
+        "annual_qty": 240000,
+        "uom": "piece",
+        "unit_weight_g": 211.2,
+        "food_contact": true,
+        "requires_tooling": false,
+        "introduced_this_year": false
+      },
+      {
+        "line_no": 2,
+        "code": "CB-0201-3P-350250200",
+        "description": "Corrugated box, RSC (FEFCO 0201), 3-ply, 350x250x200 mm, 150 GSM liner, 16 BF, 1-col flexo",
+        "style": "0201",
+        "ply": 3,
+        "dims": {
+          "length_mm": 350,
+          "width_mm": 250,
+          "height_mm": 200
+        },
+        "flute": "B",
+        "liner_gsm": 150,
+        "bursting_factor": 16,
+        "print_spec": "1-col flexo",
+        "annual_qty": 180000,
+        "uom": "piece",
+        "unit_weight_g": 317.0,
+        "food_contact": false,
+        "requires_tooling": false,
+        "introduced_this_year": false
+      },
+      {
+        "line_no": 3,
+        "code": "CB-0201-3P-250200120",
+        "description": "Corrugated box, RSC (FEFCO 0201), 3-ply, 250x200x120 mm, 140 GSM liner, 14 BF, plain",
+        "style": "0201",
+        "ply": 3,
+        "dims": {
+          "length_mm": 250,
+          "width_mm": 200,
+          "height_mm": 120
+        },
+        "flute": "B",
+        "liner_gsm": 140,
+        "bursting_factor": 14,
+        "print_spec": "plain",
+        "annual_qty": 300000,
+        "uom": "piece",
+        "unit_weight_g": 164.4,
+        "food_contact": true,
+        "requires_tooling": false,
+        "introduced_this_year": false
+      },
+      {
+        "line_no": 4,
+        "code": "CB-0201-3P-400300200",
+        "description": "Corrugated box, RSC (FEFCO 0201), 3-ply, 400x300x200 mm, 150 GSM liner, 16 BF, 2-col flexo",
+        "style": "0201",
+        "ply": 3,
+        "dims": {
+          "length_mm": 400,
+          "width_mm": 300,
+          "height_mm": 200
+        },
+        "flute": "B",
+        "liner_gsm": 150,
+        "bursting_factor": 16,
+        "print_spec": "2-col flexo",
+        "annual_qty": 150000,
+        "uom": "piece",
+        "unit_weight_g": 405.9,
+        "food_contact": false,
+        "requires_tooling": false,
+        "introduced_this_year": false
+      },
+      {
+        "line_no": 5,
+        "code": "CB-0201-3P-320240180",
+        "description": "Corrugated box, RSC (FEFCO 0201), 3-ply, 320x240x180 mm, 150 GSM liner, 16 BF, plain",
+        "style": "0201",
+        "ply": 3,
+        "dims": {
+          "length_mm": 320,
+          "width_mm": 240,
+          "height_mm": 180
+        },
+        "flute": "B",
+        "liner_gsm": 150,
+        "bursting_factor": 16,
+        "print_spec": "plain",
+        "annual_qty": 96000,
+        "uom": "piece",
+        "unit_weight_g": 278.3,
+        "food_contact": true,
+        "requires_tooling": false,
+        "introduced_this_year": false
+      },
+      {
+        "line_no": 6,
+        "code": "CB-0201-5P-450350300",
+        "description": "Corrugated box, RSC (FEFCO 0201), 5-ply, 450x350x300 mm, 180 GSM liner, 22 BF, 2-col flexo",
+        "style": "0201",
+        "ply": 5,
+        "dims": {
+          "length_mm": 450,
+          "width_mm": 350,
+          "height_mm": 300
+        },
+        "flute": "BC",
+        "liner_gsm": 180,
+        "bursting_factor": 22,
+        "print_spec": "2-col flexo",
+        "annual_qty": 120000,
+        "uom": "piece",
+        "unit_weight_g": 1217.0,
+        "food_contact": false,
+        "requires_tooling": false,
+        "introduced_this_year": false
+      },
+      {
+        "line_no": 7,
+        "code": "CB-0201-5P-500400350",
+        "description": "Corrugated box, RSC (FEFCO 0201), 5-ply, 500x400x350 mm, 180 GSM liner, 22 BF, 2-col flexo",
+        "style": "0201",
+        "ply": 5,
+        "dims": {
+          "length_mm": 500,
+          "width_mm": 400,
+          "height_mm": 350
+        },
+        "flute": "BC",
+        "liner_gsm": 180,
+        "bursting_factor": 22,
+        "print_spec": "2-col flexo",
+        "annual_qty": 84000,
+        "uom": "piece",
+        "unit_weight_g": 1564.2,
+        "food_contact": false,
+        "requires_tooling": false,
+        "introduced_this_year": false
+      },
+      {
+        "line_no": 8,
+        "code": "CB-0201-5P-400300250",
+        "description": "Corrugated box, RSC (FEFCO 0201), 5-ply, 400x300x250 mm, 180 GSM liner, 20 BF, 1-col flexo",
+        "style": "0201",
+        "ply": 5,
+        "dims": {
+          "length_mm": 400,
+          "width_mm": 300,
+          "height_mm": 250
+        },
+        "flute": "BC",
+        "liner_gsm": 180,
+        "bursting_factor": 20,
+        "print_spec": "1-col flexo",
+        "annual_qty": 132000,
+        "uom": "piece",
+        "unit_weight_g": 913.0,
+        "food_contact": false,
+        "requires_tooling": false,
+        "introduced_this_year": false
+      },
+      {
+        "line_no": 9,
+        "code": "CB-0201-5P-600400400",
+        "description": "Corrugated box, RSC (FEFCO 0201), 5-ply, 600x400x400 mm, 180 GSM liner, 22 BF, plain",
+        "style": "0201",
+        "ply": 5,
+        "dims": {
+          "length_mm": 600,
+          "width_mm": 400,
+          "height_mm": 400
+        },
+        "flute": "BC",
+        "liner_gsm": 180,
+        "bursting_factor": 22,
+        "print_spec": "plain",
+        "annual_qty": 60000,
+        "uom": "piece",
+        "unit_weight_g": 1844.2,
+        "food_contact": false,
+        "requires_tooling": false,
+        "introduced_this_year": false
+      },
+      {
+        "line_no": 10,
+        "code": "CB-0201-5P-380280220",
+        "description": "Corrugated box, RSC (FEFCO 0201), 5-ply, 380x280x220 mm, 180 GSM liner, 20 BF, plain",
+        "style": "0201",
+        "ply": 5,
+        "dims": {
+          "length_mm": 380,
+          "width_mm": 280,
+          "height_mm": 220
+        },
+        "flute": "BC",
+        "liner_gsm": 180,
+        "bursting_factor": 20,
+        "print_spec": "plain",
+        "annual_qty": 108000,
+        "uom": "piece",
+        "unit_weight_g": 788.7,
+        "food_contact": false,
+        "requires_tooling": false,
+        "introduced_this_year": false
+      },
+      {
+        "line_no": 11,
+        "code": "CB-0201-5P-550380320",
+        "description": "Corrugated box, RSC (FEFCO 0201), 5-ply, 550x380x320 mm, 180 GSM liner, 22 BF, 2-col flexo",
+        "style": "0201",
+        "ply": 5,
+        "dims": {
+          "length_mm": 550,
+          "width_mm": 380,
+          "height_mm": 320
+        },
+        "flute": "BC",
+        "liner_gsm": 180,
+        "bursting_factor": 22,
+        "print_spec": "2-col flexo",
+        "annual_qty": 72000,
+        "uom": "piece",
+        "unit_weight_g": null,
+        "food_contact": false,
+        "requires_tooling": false,
+        "introduced_this_year": true
+      },
+      {
+        "line_no": 12,
+        "code": "CB-0201-5P-300300300",
+        "description": "Corrugated box, RSC (FEFCO 0201), 5-ply, 300x300x300 mm, 180 GSM liner, 20 BF, plain",
+        "style": "0201",
+        "ply": 5,
+        "dims": {
+          "length_mm": 300,
+          "width_mm": 300,
+          "height_mm": 300
+        },
+        "flute": "BC",
+        "liner_gsm": 180,
+        "bursting_factor": 20,
+        "print_spec": "plain",
+        "annual_qty": 90000,
+        "uom": "piece",
+        "unit_weight_g": null,
+        "food_contact": false,
+        "requires_tooling": false,
+        "introduced_this_year": true
+      },
+      {
+        "line_no": 13,
+        "code": "CB-0201-5P-480320280",
+        "description": "Corrugated box, RSC (FEFCO 0201), 5-ply, 480x320x280 mm, 180 GSM liner, 22 BF, 1-col flexo",
+        "style": "0201",
+        "ply": 5,
+        "dims": {
+          "length_mm": 480,
+          "width_mm": 320,
+          "height_mm": 280
+        },
+        "flute": "BC",
+        "liner_gsm": 180,
+        "bursting_factor": 22,
+        "print_spec": "1-col flexo",
+        "annual_qty": 66000,
+        "uom": "piece",
+        "unit_weight_g": null,
+        "food_contact": false,
+        "requires_tooling": false,
+        "introduced_this_year": true
+      },
+      {
+        "line_no": 14,
+        "code": "CB-0201-5P-420320260",
+        "description": "Corrugated box, RSC (FEFCO 0201), 5-ply, 420x320x260 mm, 180 GSM liner, 22 BF, 2-col flexo",
+        "style": "0201",
+        "ply": 5,
+        "dims": {
+          "length_mm": 420,
+          "width_mm": 320,
+          "height_mm": 260
+        },
+        "flute": "BC",
+        "liner_gsm": 180,
+        "bursting_factor": 22,
+        "print_spec": "2-col flexo",
+        "annual_qty": 144000,
+        "uom": "piece",
+        "unit_weight_g": 1012.9,
+        "food_contact": false,
+        "requires_tooling": false,
+        "introduced_this_year": false
+      },
+      {
+        "line_no": 15,
+        "code": "CB-0201-5P-650450450",
+        "description": "Corrugated box, RSC (FEFCO 0201), 5-ply, 650x450x450 mm, 200 GSM liner, 22 BF, plain",
+        "style": "0201",
+        "ply": 5,
+        "dims": {
+          "length_mm": 650,
+          "width_mm": 450,
+          "height_mm": 450
+        },
+        "flute": "BC",
+        "liner_gsm": 200,
+        "bursting_factor": 22,
+        "print_spec": "plain",
+        "annual_qty": 48000,
+        "uom": "piece",
+        "unit_weight_g": null,
+        "food_contact": false,
+        "requires_tooling": false,
+        "introduced_this_year": true
+      },
+      {
+        "line_no": 16,
+        "code": "CB-0203-7P-600400400",
+        "description": "Export carton, HSC (FEFCO 0203), 7-ply, 600x400x400 mm, 200 GSM liner, 24 BF, 2-col flexo",
+        "style": "0203",
+        "ply": 7,
+        "dims": {
+          "length_mm": 600,
+          "width_mm": 400,
+          "height_mm": 400
+        },
+        "flute": "BC",
+        "liner_gsm": 200,
+        "bursting_factor": 24,
+        "print_spec": "2-col flexo",
+        "annual_qty": 36000,
+        "uom": "piece",
+        "unit_weight_g": 2945.6,
+        "food_contact": false,
+        "requires_tooling": false,
+        "introduced_this_year": false
+      },
+      {
+        "line_no": 17,
+        "code": "CB-0203-7P-700500450",
+        "description": "Export carton, HSC (FEFCO 0203), 7-ply, 700x500x450 mm, 200 GSM liner, 24 BF, 1-col flexo",
+        "style": "0203",
+        "ply": 7,
+        "dims": {
+          "length_mm": 700,
+          "width_mm": 500,
+          "height_mm": 450
+        },
+        "flute": "BC",
+        "liner_gsm": 200,
+        "bursting_factor": 24,
+        "print_spec": "1-col flexo",
+        "annual_qty": 24000,
+        "uom": "piece",
+        "unit_weight_g": 4154.4,
+        "food_contact": false,
+        "requires_tooling": false,
+        "introduced_this_year": false
+      },
+      {
+        "line_no": 18,
+        "code": "CB-0203-7P-550450400",
+        "description": "Export carton, HSC (FEFCO 0203), 7-ply, 550x450x400 mm, 200 GSM liner, 24 BF, plain",
+        "style": "0203",
+        "ply": 7,
+        "dims": {
+          "length_mm": 550,
+          "width_mm": 450,
+          "height_mm": 400
+        },
+        "flute": "BC",
+        "liner_gsm": 200,
+        "bursting_factor": 24,
+        "print_spec": "plain",
+        "annual_qty": 30000,
+        "uom": "piece",
+        "unit_weight_g": 3121.9,
+        "food_contact": false,
+        "requires_tooling": false,
+        "introduced_this_year": false
+      },
+      {
+        "line_no": 19,
+        "code": "CB-0427-3P-25018080",
+        "description": "Die-cut mailer (FEFCO 0427), 3-ply, 250x180x80 mm, 150 GSM liner, 16 BF, 2-col flexo",
+        "style": "0427",
+        "ply": 3,
+        "dims": {
+          "length_mm": 250,
+          "width_mm": 180,
+          "height_mm": 80
+        },
+        "flute": "E",
+        "liner_gsm": 150,
+        "bursting_factor": 16,
+        "print_spec": "2-col flexo",
+        "annual_qty": 60000,
+        "uom": "piece",
+        "unit_weight_g": 189.2,
+        "food_contact": false,
+        "requires_tooling": true,
+        "introduced_this_year": false
+      },
+      {
+        "line_no": 20,
+        "code": "CB-0427-3P-300220100",
+        "description": "Die-cut mailer (FEFCO 0427), 3-ply, 300x220x100 mm, 150 GSM liner, 16 BF, 2-col flexo",
+        "style": "0427",
+        "ply": 3,
+        "dims": {
+          "length_mm": 300,
+          "width_mm": 220,
+          "height_mm": 100
+        },
+        "flute": "E",
+        "liner_gsm": 150,
+        "bursting_factor": 16,
+        "print_spec": "2-col flexo",
+        "annual_qty": 45000,
+        "uom": "piece",
+        "unit_weight_g": null,
+        "food_contact": false,
+        "requires_tooling": true,
+        "introduced_this_year": true
+      },
+      {
+        "line_no": 21,
+        "code": "CB-0427-5P-350250120",
+        "description": "Die-cut mailer (FEFCO 0427), 5-ply, 350x250x120 mm, 180 GSM liner, 20 BF, 2-col flexo",
+        "style": "0427",
+        "ply": 5,
+        "dims": {
+          "length_mm": 350,
+          "width_mm": 250,
+          "height_mm": 120
+        },
+        "flute": "BC",
+        "liner_gsm": 180,
+        "bursting_factor": 20,
+        "print_spec": "2-col flexo",
+        "annual_qty": 36000,
+        "uom": "piece",
+        "unit_weight_g": null,
+        "food_contact": false,
+        "requires_tooling": true,
+        "introduced_this_year": true
+      },
+      {
+        "line_no": 22,
+        "code": "CS-3P-1200900",
+        "description": "Corrugated sheet, 3-ply, 1200x900 mm, 150 GSM liner, 16 BF",
+        "style": "sheet",
+        "ply": 3,
+        "dims": {
+          "length_mm": 1200,
+          "width_mm": 900,
+          "height_mm": null
+        },
+        "flute": "B",
+        "liner_gsm": 150,
+        "bursting_factor": 16,
+        "print_spec": "plain",
+        "annual_qty": 18000,
+        "uom": "kg",
+        "unit_weight_g": null,
+        "food_contact": false,
+        "requires_tooling": false,
+        "introduced_this_year": false
+      },
+      {
+        "line_no": 23,
+        "code": "CS-5P-1200900",
+        "description": "Corrugated sheet, 5-ply, 1200x900 mm, 180 GSM liner, 20 BF",
+        "style": "sheet",
+        "ply": 5,
+        "dims": {
+          "length_mm": 1200,
+          "width_mm": 900,
+          "height_mm": null
+        },
+        "flute": "BC",
+        "liner_gsm": 180,
+        "bursting_factor": 20,
+        "print_spec": "plain",
+        "annual_qty": 24000,
+        "uom": "kg",
+        "unit_weight_g": null,
+        "food_contact": false,
+        "requires_tooling": false,
+        "introduced_this_year": false
+      },
+      {
+        "line_no": 24,
+        "code": "CS-5P-15001000",
+        "description": "Corrugated sheet, 5-ply, 1500x1000 mm, 180 GSM liner, 22 BF",
+        "style": "sheet",
+        "ply": 5,
+        "dims": {
+          "length_mm": 1500,
+          "width_mm": 1000,
+          "height_mm": null
+        },
+        "flute": "BC",
+        "liner_gsm": 180,
+        "bursting_factor": 22,
+        "print_spec": "plain",
+        "annual_qty": 15000,
+        "uom": "kg",
+        "unit_weight_g": null,
+        "food_contact": false,
+        "requires_tooling": false,
+        "introduced_this_year": false
+      },
+      {
+        "line_no": 25,
+        "code": "CS-3P-1000800",
+        "description": "Corrugated sheet, 3-ply, 1000x800 mm, 140 GSM liner, 14 BF",
+        "style": "sheet",
+        "ply": 3,
+        "dims": {
+          "length_mm": 1000,
+          "width_mm": 800,
+          "height_mm": null
+        },
+        "flute": "B",
+        "liner_gsm": 140,
+        "bursting_factor": 14,
+        "print_spec": "plain",
+        "annual_qty": 12000,
+        "uom": "kg",
+        "unit_weight_g": null,
+        "food_contact": false,
+        "requires_tooling": false,
+        "introduced_this_year": false
+      },
+      {
+        "line_no": 26,
+        "code": "CS-7P-12001000",
+        "description": "Corrugated sheet, 7-ply, 1200x1000 mm, 200 GSM liner, 24 BF",
+        "style": "sheet",
+        "ply": 7,
+        "dims": {
+          "length_mm": 1200,
+          "width_mm": 1000,
+          "height_mm": null
+        },
+        "flute": "BC",
+        "liner_gsm": 200,
+        "bursting_factor": 24,
+        "print_spec": "plain",
+        "annual_qty": 9000,
+        "uom": "kg",
+        "unit_weight_g": null,
+        "food_contact": false,
+        "requires_tooling": false,
+        "introduced_this_year": false
+      },
+      {
+        "line_no": 27,
+        "code": "CP-2P-1150950",
+        "description": "Layer pad, 2-ply, 1150x950 mm, 140 GSM liner",
+        "style": "pad",
+        "ply": 2,
+        "dims": {
+          "length_mm": 1150,
+          "width_mm": 950,
+          "height_mm": null
+        },
+        "flute": "B",
+        "liner_gsm": 140,
+        "bursting_factor": null,
+        "print_spec": "plain",
+        "annual_qty": 24000,
+        "uom": "100_pieces",
+        "unit_weight_g": 363.3,
+        "food_contact": false,
+        "requires_tooling": false,
+        "introduced_this_year": false
+      },
+      {
+        "line_no": 28,
+        "code": "CD-3P-4CELL-450350",
+        "description": "Partition set, 4-cell, 3-ply, to suit 450x350x300 mm case",
+        "style": "partition",
+        "ply": 3,
+        "dims": {
+          "length_mm": 450,
+          "width_mm": 350,
+          "height_mm": null
+        },
+        "flute": "B",
+        "liner_gsm": 150,
+        "bursting_factor": null,
+        "print_spec": "plain",
+        "annual_qty": 120000,
+        "uom": "set",
+        "unit_weight_g": 198.4,
+        "food_contact": false,
+        "requires_tooling": false,
+        "introduced_this_year": false
+      },
+      {
+        "line_no": 29,
+        "code": "CD-3P-6CELL-500400",
+        "description": "Partition set, 6-cell, 3-ply, to suit 500x400x350 mm case",
+        "style": "partition",
+        "ply": 3,
+        "dims": {
+          "length_mm": 500,
+          "width_mm": 400,
+          "height_mm": null
+        },
+        "flute": "B",
+        "liner_gsm": 150,
+        "bursting_factor": null,
+        "print_spec": "plain",
+        "annual_qty": 84000,
+        "uom": "set",
+        "unit_weight_g": 252.0,
+        "food_contact": false,
+        "requires_tooling": false,
+        "introduced_this_year": false
+      },
+      {
+        "line_no": 30,
+        "code": "CT-3P-CAPTRAY-450350",
+        "description": "Top cap and bottom tray pair, 3-ply, 450x350 mm",
+        "style": "partition",
+        "ply": 3,
+        "dims": {
+          "length_mm": 450,
+          "width_mm": 350,
+          "height_mm": null
+        },
+        "flute": "B",
+        "liner_gsm": 150,
+        "bursting_factor": null,
+        "print_spec": "plain",
+        "annual_qty": 60000,
+        "uom": "set",
+        "unit_weight_g": 198.4,
+        "food_contact": false,
+        "requires_tooling": false,
+        "introduced_this_year": false
+      }
+    ],
+    "questionnaire": [
+      {
+        "q_no": 1,
+        "question": "Are you ISO 9001:2015 certified? State certificate number and expiry date.",
+        "answer_type": "text",
+        "gating": true,
+        "note": null
+      },
+      {
+        "q_no": 2,
+        "question": "Do you hold FSC chain-of-custody certification?",
+        "answer_type": "yes_no",
+        "gating": false,
+        "note": null
+      },
+      {
+        "q_no": 3,
+        "question": "Do you hold BRCGS Packaging Materials certification (required for food-contact lines)?",
+        "answer_type": "yes_no",
+        "gating": false,
+        "note": null
+      },
+      {
+        "q_no": 4,
+        "question": "Monthly converting capacity, in tonnes.",
+        "answer_type": "number",
+        "gating": false,
+        "note": null
+      },
+      {
+        "q_no": 5,
+        "question": "Do you operate a second plant or documented disaster-recovery arrangement?",
+        "answer_type": "yes_no",
+        "gating": false,
+        "note": null
+      },
+      {
+        "q_no": 6,
+        "question": "Are you registered as an MSME (Udyam)?",
+        "answer_type": "yes_no",
+        "gating": false,
+        "note": null
+      },
+      {
+        "q_no": 7,
+        "question": "Number of quality escapes or recalls in the last 24 months.",
+        "answer_type": "number",
+        "gating": true,
+        "note": null
+      },
+      {
+        "q_no": 8,
+        "question": "State board strength rating AND the test method used (e.g. ECT per ISO 3037, or bursting factor per IS 2771).",
+        "answer_type": "text",
+        "gating": true,
+        "note": "Method matters: ECT (kN/m) and burst (kPa / BF) do not convert into one another."
+      },
+      {
+        "q_no": 9,
+        "question": "Standard production lead time in days, from PO to despatch.",
+        "answer_type": "number",
+        "gating": false,
+        "note": null
+      }
+    ]
+  },
+  "prior_contract": [
+    {
+      "line_no": 1,
+      "rate_inr": 9.87,
+      "uom": "piece"
+    },
+    {
+      "line_no": 2,
+      "rate_inr": 16.16,
+      "uom": "piece"
+    },
+    {
+      "line_no": 3,
+      "rate_inr": 8.15,
+      "uom": "piece"
+    },
+    {
+      "line_no": 4,
+      "rate_inr": 22.31,
+      "uom": "piece"
+    },
+    {
+      "line_no": 5,
+      "rate_inr": 12.33,
+      "uom": "piece"
+    },
+    {
+      "line_no": 6,
+      "rate_inr": 56.75,
+      "uom": "piece"
+    },
+    {
+      "line_no": 7,
+      "rate_inr": 70.83,
+      "uom": "piece"
+    },
+    {
+      "line_no": 8,
+      "rate_inr": 41.54,
+      "uom": "piece"
+    },
+    {
+      "line_no": 9,
+      "rate_inr": 76.87,
+      "uom": "piece"
+    },
+    {
+      "line_no": 10,
+      "rate_inr": 34.09,
+      "uom": "piece"
+    },
+    {
+      "line_no": 14,
+      "rate_inr": 48.48,
+      "uom": "piece"
+    },
+    {
+      "line_no": 16,
+      "rate_inr": 141.8,
+      "uom": "piece"
+    },
+    {
+      "line_no": 17,
+      "rate_inr": 193.73,
+      "uom": "piece"
+    },
+    {
+      "line_no": 18,
+      "rate_inr": 144.49,
+      "uom": "piece"
+    },
+    {
+      "line_no": 19,
+      "rate_inr": 16.59,
+      "uom": "piece"
+    },
+    {
+      "line_no": 22,
+      "rate_inr": 41.01,
+      "uom": "kg"
+    },
+    {
+      "line_no": 23,
+      "rate_inr": 44.87,
+      "uom": "kg"
+    },
+    {
+      "line_no": 24,
+      "rate_inr": 44.87,
+      "uom": "kg"
+    },
+    {
+      "line_no": 25,
+      "rate_inr": 41.01,
+      "uom": "kg"
+    },
+    {
+      "line_no": 26,
+      "rate_inr": 49.7,
+      "uom": "kg"
+    },
+    {
+      "line_no": 27,
+      "rate_inr": 13.39,
+      "uom": "100_pieces"
+    },
+    {
+      "line_no": 28,
+      "rate_inr": 8.82,
+      "uom": "set"
+    },
+    {
+      "line_no": 29,
+      "rate_inr": 10.78,
+      "uom": "set"
+    },
+    {
+      "line_no": 30,
+      "rate_inr": 8.82,
+      "uom": "set"
+    }
+  ],
+  "submissions": [
+    {
+      "vendor": {
+        "vendor_id": "shakti",
+        "name": "Shakti Packaging Pvt Ltd",
+        "city": "Bhiwandi, Maharashtra",
+        "incumbent": false,
+        "reply_format": "xlsx",
+        "currency": "INR",
+        "incoterm": "ex_works",
+        "tax_basis": "gst_extra",
+        "payment_days": 30,
+        "validity_days": 15,
+        "early_payment_discount_pct": null,
+        "early_payment_within_days": null,
+        "moq_pieces": 5000,
+        "slabs": [],
+        "fx_rate_at_quote": null,
+        "freight_inr_per_shipment": 42000.0,
+        "shipments_per_year": 12
+      },
+      "line_quotes": [
+        {
+          "line_no": 1,
+          "rate": 10.48,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 2,
+          "rate": 15.93,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 3,
+          "rate": 7.94,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 4,
+          "rate": 23.14,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 5,
+          "rate": 12.84,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 6,
+          "rate": 58.1,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 7,
+          "rate": 74.74,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 8,
+          "rate": 40.12,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 9,
+          "rate": 75.13,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 10,
+          "rate": 33.08,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 11,
+          "rate": 71.41,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 12,
+          "rate": 38.61,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 13,
+          "rate": 50.21,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 14,
+          "rate": 46.83,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 15,
+          "rate": 108.91,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 16,
+          "rate": 139.72,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 17,
+          "rate": 188.27,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 18,
+          "rate": 142.78,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 19,
+          "rate": 16.59,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": true,
+          "note": null
+        },
+        {
+          "line_no": 20,
+          "rate": 20.23,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": true,
+          "note": null
+        },
+        {
+          "line_no": 21,
+          "rate": 41.96,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": true,
+          "note": null
+        },
+        {
+          "line_no": 22,
+          "rate": 42.51,
+          "currency": "INR",
+          "basis": "per_kg",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 23,
+          "rate": 47.86,
+          "currency": "INR",
+          "basis": "per_kg",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 24,
+          "rate": 46.19,
+          "currency": "INR",
+          "basis": "per_kg",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 25,
+          "rate": 41.98,
+          "currency": "INR",
+          "basis": "per_kg",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 26,
+          "rate": 48.47,
+          "currency": "INR",
+          "basis": "per_kg",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 27,
+          "rate": 1382.1,
+          "currency": "INR",
+          "basis": "per_100_pieces",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 28,
+          "rate": 9.06,
+          "currency": "INR",
+          "basis": "per_set",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 29,
+          "rate": 11.58,
+          "currency": "INR",
+          "basis": "per_set",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 30,
+          "rate": 8.43,
+          "currency": "INR",
+          "basis": "per_set",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        }
+      ],
+      "questionnaire": [
+        {
+          "q_no": 1,
+          "answer": "IS/ISO 9001:2015, cert. QMS-4471-IN, valid to 30 Jun 2027",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 2,
+          "answer": "No",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 3,
+          "answer": "No",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 4,
+          "answer": "900",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 5,
+          "answer": "No - single plant, Bhiwandi",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 6,
+          "answer": "No",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 7,
+          "answer": "1 (minor - print registration, Aug 2025)",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 8,
+          "answer": "22 BF as per IS 2771",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 9,
+          "answer": "21",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        }
+      ],
+      "attachments": [
+        {
+          "filename": "shakti_capacity_statement.pdf",
+          "kind": "capacity",
+          "valid_until": null,
+          "summary": "Plant capacity statement, 900 t/month, single unit."
+        }
+      ],
+      "freeform_terms": [
+        "Rates ex-works Bhiwandi. GST 18% extra.",
+        "Payment 30 days from invoice.",
+        "Offer valid 15 days from date of quotation.",
+        "Die charges for die-cut items are included in the unit rate."
+      ]
+    },
+    {
+      "vendor": {
+        "vendor_id": "nova",
+        "name": "Nova Corrugators Pvt Ltd",
+        "city": "Vasai East, Maharashtra",
+        "incumbent": false,
+        "reply_format": "pdf",
+        "currency": "INR",
+        "incoterm": "for_destination",
+        "tax_basis": "gst_included",
+        "payment_days": 45,
+        "validity_days": 30,
+        "early_payment_discount_pct": 3.0,
+        "early_payment_within_days": 15,
+        "moq_pieces": 3000,
+        "slabs": [],
+        "fx_rate_at_quote": null,
+        "freight_inr_per_shipment": 0.0,
+        "shipments_per_year": 12
+      },
+      "line_quotes": [
+        {
+          "line_no": 1,
+          "rate": 10.43,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 2,
+          "rate": 17.69,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 3,
+          "rate": 8.49,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 4,
+          "rate": 25.34,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 5,
+          "rate": 12.77,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 6,
+          "rate": 60.58,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 7,
+          "rate": 75.99,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 8,
+          "rate": 43.67,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 9,
+          "rate": 86.82,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 10,
+          "rate": 36.46,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 11,
+          "rate": 75.27,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 12,
+          "rate": 39.9,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 13,
+          "rate": 56.39,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 14,
+          "rate": 54.37,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 15,
+          "rate": 115.92,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 16,
+          "rate": 155.17,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 17,
+          "rate": 196.07,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 18,
+          "rate": 160.99,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 22,
+          "rate": 45.45,
+          "currency": "INR",
+          "basis": "per_kg",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 23,
+          "rate": 49.63,
+          "currency": "INR",
+          "basis": "per_kg",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 24,
+          "rate": 48.22,
+          "currency": "INR",
+          "basis": "per_kg",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 25,
+          "rate": 44.38,
+          "currency": "INR",
+          "basis": "per_kg",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 26,
+          "rate": 51.58,
+          "currency": "INR",
+          "basis": "per_kg",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 27,
+          "rate": 1492.16,
+          "currency": "INR",
+          "basis": "per_100_pieces",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 28,
+          "rate": 9.16,
+          "currency": "INR",
+          "basis": "per_set",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 29,
+          "rate": 12.11,
+          "currency": "INR",
+          "basis": "per_set",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 30,
+          "rate": 9.67,
+          "currency": "INR",
+          "basis": "per_set",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        }
+      ],
+      "questionnaire": [
+        {
+          "q_no": 1,
+          "answer": "Yes - ISO 9001:2015, cert. NC/QMS/2219, see attached certificate",
+          "evidence_file": "nova_iso9001_certificate.pdf",
+          "contradicted_by_evidence": true
+        },
+        {
+          "q_no": 2,
+          "answer": "Yes - FSC C148820",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 3,
+          "answer": "Yes - BRCGS Packaging, AA grade",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 4,
+          "answer": "1400",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 5,
+          "answer": "Yes - second plant at Silvassa",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 6,
+          "answer": "No",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 7,
+          "answer": "0",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 8,
+          "answer": "ECT 32 kN/m (ISO 3037)",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 9,
+          "answer": "18",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        }
+      ],
+      "attachments": [
+        {
+          "filename": "nova_iso9001_certificate.pdf",
+          "kind": "iso9001",
+          "valid_until": "2026-03-31",
+          "summary": "ISO 9001:2015 certificate NC/QMS/2219. Expired 31 March 2026 - contradicts the 'Yes' given at question 1."
+        }
+      ],
+      "freeform_terms": [
+        "All rates FOR Bhiwandi DC, inclusive of GST.",
+        "Payment terms 45 days from GRN.",
+        "Offer valid 30 days.",
+        "A discount of 3% applies where payment is received within 15 days of invoice."
+      ]
+    },
+    {
+      "vendor": {
+        "vendor_id": "meridian",
+        "name": "Meridian Packaging International",
+        "city": "Chennai, Tamil Nadu",
+        "incumbent": false,
+        "reply_format": "docx",
+        "currency": "USD",
+        "incoterm": "ex_works",
+        "tax_basis": "gst_extra",
+        "payment_days": 90,
+        "validity_days": 30,
+        "early_payment_discount_pct": null,
+        "early_payment_within_days": null,
+        "moq_pieces": 50000,
+        "slabs": [
+          {
+            "min_qty": 50000,
+            "uplift_pct": 0.0
+          },
+          {
+            "min_qty": 0,
+            "uplift_pct": 13.5
+          }
+        ],
+        "fx_rate_at_quote": 87.1,
+        "freight_inr_per_shipment": 96000.0,
+        "shipments_per_year": 12
+      },
+      "line_quotes": [
+        {
+          "line_no": 1,
+          "rate": 0.1114,
+          "currency": "USD",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 2,
+          "rate": 0.1915,
+          "currency": "USD",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 3,
+          "rate": 0.0979,
+          "currency": "USD",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 4,
+          "rate": 0.2483,
+          "currency": "USD",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 5,
+          "rate": 0.1354,
+          "currency": "USD",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 6,
+          "rate": 0.6167,
+          "currency": "USD",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 7,
+          "rate": 0.8278,
+          "currency": "USD",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 8,
+          "rate": 0.4831,
+          "currency": "USD",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 9,
+          "rate": 0.8506,
+          "currency": "USD",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 10,
+          "rate": 0.3659,
+          "currency": "USD",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 11,
+          "rate": 0.7572,
+          "currency": "USD",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 12,
+          "rate": 0.409,
+          "currency": "USD",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 13,
+          "rate": 0.5801,
+          "currency": "USD",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 14,
+          "rate": 0.554,
+          "currency": "USD",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 15,
+          "rate": 1.2293,
+          "currency": "USD",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 16,
+          "rate": 1.6039,
+          "currency": "USD",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 17,
+          "rate": 2.3029,
+          "currency": "USD",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 18,
+          "rate": 1.7287,
+          "currency": "USD",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 19,
+          "rate": 0.1808,
+          "currency": "USD",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": 18500.0,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 20,
+          "rate": 0.2116,
+          "currency": "USD",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": 18500.0,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 21,
+          "rate": 0.4489,
+          "currency": "USD",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": 18500.0,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 22,
+          "rate": 0.467,
+          "currency": "USD",
+          "basis": "per_kg",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 23,
+          "rate": 0.5369,
+          "currency": "USD",
+          "basis": "per_kg",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 24,
+          "rate": 0.5116,
+          "currency": "USD",
+          "basis": "per_kg",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 25,
+          "rate": 0.4876,
+          "currency": "USD",
+          "basis": "per_kg",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 26,
+          "rate": 0.5328,
+          "currency": "USD",
+          "basis": "per_kg",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 27,
+          "rate": 0.1498,
+          "currency": "USD",
+          "basis": "per_piece",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 28,
+          "rate": 0.1029,
+          "currency": "USD",
+          "basis": "per_set",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 29,
+          "rate": 0.1206,
+          "currency": "USD",
+          "basis": "per_set",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 30,
+          "rate": 0.0969,
+          "currency": "USD",
+          "basis": "per_set",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        }
+      ],
+      "questionnaire": [
+        {
+          "q_no": 1,
+          "answer": "Yes - ISO 9001:2015, cert. TUV-IN-88214, valid to 14 Nov 2027",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 2,
+          "answer": "Yes",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 3,
+          "answer": "No",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 4,
+          "answer": "2200",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 5,
+          "answer": "Yes - Hosur unit",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 6,
+          "answer": "No",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 7,
+          "answer": "2",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 8,
+          "answer": "Bursting strength 1,400 kPa (TAPPI T810)",
+          "evidence_file": "meridian_test_report.pdf",
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 9,
+          "answer": "35",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        }
+      ],
+      "attachments": [
+        {
+          "filename": "meridian_test_report.pdf",
+          "kind": "test_report",
+          "valid_until": null,
+          "summary": "Bursting strength test report, TAPPI T810, 1,400 kPa."
+        }
+      ],
+      "freeform_terms": [
+        "Rates quoted in USD, ex-works Chennai. GST extra as applicable.",
+        "Rates hold at annual offtake above 50,000 pieces per line; below that volume an uplift of 12-15% applies.",
+        "Payment terms 90 days from bill of lading.",
+        "Tooling for die-cut items is charged separately at INR 18,500 per die.",
+        "Offer valid 30 days from date hereof."
+      ]
+    },
+    {
+      "vendor": {
+        "vendor_id": "ganesh",
+        "name": "Ganesh Boxes & Cartons",
+        "city": "Ambernath, Maharashtra",
+        "incumbent": false,
+        "reply_format": "photo",
+        "currency": "INR",
+        "incoterm": "ex_works",
+        "tax_basis": "gst_extra",
+        "payment_days": 30,
+        "validity_days": 21,
+        "early_payment_discount_pct": null,
+        "early_payment_within_days": null,
+        "moq_pieces": 2000,
+        "slabs": [],
+        "fx_rate_at_quote": null,
+        "freight_inr_per_shipment": 38000.0,
+        "shipments_per_year": 12
+      },
+      "line_quotes": [
+        {
+          "line_no": 1,
+          "rate": 1089.0,
+          "currency": "INR",
+          "basis": "per_100_pieces",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 2,
+          "rate": 1696.0,
+          "currency": "INR",
+          "basis": "per_100_pieces",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 3,
+          "rate": 817.0,
+          "currency": "INR",
+          "basis": "per_100_pieces",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 4,
+          "rate": 2275.0,
+          "currency": "INR",
+          "basis": "per_100_pieces",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 5,
+          "rate": 1311.0,
+          "currency": "INR",
+          "basis": "per_100_pieces",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 6,
+          "rate": 5864.0,
+          "currency": "INR",
+          "basis": "per_100_pieces",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 7,
+          "rate": 7763.0,
+          "currency": "INR",
+          "basis": "per_100_pieces",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 8,
+          "rate": 4177.0,
+          "currency": "INR",
+          "basis": "per_100_pieces",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 9,
+          "rate": 8198.0,
+          "currency": "INR",
+          "basis": "per_100_pieces",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 10,
+          "rate": 3655.0,
+          "currency": "INR",
+          "basis": "per_100_pieces",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 11,
+          "rate": 7517.0,
+          "currency": "INR",
+          "basis": "per_100_pieces",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 12,
+          "rate": 3824.0,
+          "currency": "INR",
+          "basis": "per_100_pieces",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 13,
+          "rate": 5436.0,
+          "currency": "INR",
+          "basis": "per_100_pieces",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 14,
+          "rate": 5027.0,
+          "currency": "INR",
+          "basis": "per_100_pieces",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 15,
+          "rate": 10546.0,
+          "currency": "INR",
+          "basis": "per_100_pieces",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 19,
+          "rate": 1650.0,
+          "currency": "INR",
+          "basis": "per_100_pieces",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 20,
+          "rate": 1947.0,
+          "currency": "INR",
+          "basis": "per_100_pieces",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 21,
+          "rate": 4111.0,
+          "currency": "INR",
+          "basis": "per_100_pieces",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 27,
+          "rate": 1339.0,
+          "currency": "INR",
+          "basis": "per_100_pieces",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 28,
+          "rate": 905.0,
+          "currency": "INR",
+          "basis": "per_100_pieces",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 29,
+          "rate": 1176.0,
+          "currency": "INR",
+          "basis": "per_100_pieces",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 30,
+          "rate": 890.0,
+          "currency": "INR",
+          "basis": "per_100_pieces",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        }
+      ],
+      "questionnaire": [
+        {
+          "q_no": 1,
+          "answer": "Not certified",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 2,
+          "answer": "No",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 3,
+          "answer": "No",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 4,
+          "answer": "260",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 5,
+          "answer": "No",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 6,
+          "answer": "Yes - Udyam-MH-19-0044821",
+          "evidence_file": "ganesh_udyam_certificate.pdf",
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 7,
+          "answer": "0",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 8,
+          "answer": "22 BF",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 9,
+          "answer": "12",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        }
+      ],
+      "attachments": [
+        {
+          "filename": "ganesh_udyam_certificate.pdf",
+          "kind": "msme",
+          "valid_until": "2027-08-31",
+          "summary": "Udyam MSME registration certificate."
+        }
+      ],
+      "freeform_terms": [
+        "Rates per 100 pieces, ex-works Ambernath. GST extra.",
+        "Payment 30 days. Offer valid 21 days."
+      ]
+    },
+    {
+      "vendor": {
+        "vendor_id": "apex",
+        "name": "Apex Packwell",
+        "city": "Bhiwandi, Maharashtra",
+        "incumbent": true,
+        "reply_format": "email",
+        "currency": "INR",
+        "incoterm": "freight_extra",
+        "tax_basis": "gst_extra",
+        "payment_days": 45,
+        "validity_days": null,
+        "early_payment_discount_pct": null,
+        "early_payment_within_days": null,
+        "moq_pieces": 5000,
+        "slabs": [],
+        "fx_rate_at_quote": null,
+        "freight_inr_per_shipment": 40000.0,
+        "shipments_per_year": 12
+      },
+      "line_quotes": [
+        {
+          "line_no": 1,
+          "rate": 38.0,
+          "currency": "INR",
+          "basis": "per_kg",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 2,
+          "rate": 38.0,
+          "currency": "INR",
+          "basis": "per_kg",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 3,
+          "rate": 38.0,
+          "currency": "INR",
+          "basis": "per_kg",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 4,
+          "rate": 38.0,
+          "currency": "INR",
+          "basis": "per_kg",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 5,
+          "rate": 38.0,
+          "currency": "INR",
+          "basis": "per_kg",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 6,
+          "rate": 42.0,
+          "currency": "INR",
+          "basis": "per_kg",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 7,
+          "rate": 42.0,
+          "currency": "INR",
+          "basis": "per_kg",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 8,
+          "rate": 42.0,
+          "currency": "INR",
+          "basis": "per_kg",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 9,
+          "rate": 42.0,
+          "currency": "INR",
+          "basis": "per_kg",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 10,
+          "rate": 42.0,
+          "currency": "INR",
+          "basis": "per_kg",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 11,
+          "rate": 42.0,
+          "currency": "INR",
+          "basis": "per_kg",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 12,
+          "rate": 42.0,
+          "currency": "INR",
+          "basis": "per_kg",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 13,
+          "rate": 42.0,
+          "currency": "INR",
+          "basis": "per_kg",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 14,
+          "rate": 42.0,
+          "currency": "INR",
+          "basis": "per_kg",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 15,
+          "rate": 42.0,
+          "currency": "INR",
+          "basis": "per_kg",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 16,
+          "rate": null,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": true,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": "rest same as last year"
+        },
+        {
+          "line_no": 17,
+          "rate": null,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": true,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": "rest same as last year"
+        },
+        {
+          "line_no": 18,
+          "rate": null,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": true,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": "rest same as last year"
+        },
+        {
+          "line_no": 19,
+          "rate": 38.0,
+          "currency": "INR",
+          "basis": "per_kg",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 20,
+          "rate": 38.0,
+          "currency": "INR",
+          "basis": "per_kg",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 21,
+          "rate": 42.0,
+          "currency": "INR",
+          "basis": "per_kg",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 22,
+          "rate": 38.0,
+          "currency": "INR",
+          "basis": "per_kg",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 23,
+          "rate": 42.0,
+          "currency": "INR",
+          "basis": "per_kg",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 24,
+          "rate": 42.0,
+          "currency": "INR",
+          "basis": "per_kg",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 25,
+          "rate": 38.0,
+          "currency": "INR",
+          "basis": "per_kg",
+          "refers_to_prior_contract": false,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": null
+        },
+        {
+          "line_no": 26,
+          "rate": null,
+          "currency": "INR",
+          "basis": "per_kg",
+          "refers_to_prior_contract": true,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": "rest same as last year"
+        },
+        {
+          "line_no": 27,
+          "rate": null,
+          "currency": "INR",
+          "basis": "per_piece",
+          "refers_to_prior_contract": true,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": "rest same as last year"
+        },
+        {
+          "line_no": 28,
+          "rate": null,
+          "currency": "INR",
+          "basis": "per_set",
+          "refers_to_prior_contract": true,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": "rest same as last year"
+        },
+        {
+          "line_no": 29,
+          "rate": null,
+          "currency": "INR",
+          "basis": "per_set",
+          "refers_to_prior_contract": true,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": "rest same as last year"
+        },
+        {
+          "line_no": 30,
+          "rate": null,
+          "currency": "INR",
+          "basis": "per_set",
+          "refers_to_prior_contract": true,
+          "tooling_inr": null,
+          "tooling_amortised": false,
+          "note": "rest same as last year"
+        }
+      ],
+      "questionnaire": [
+        {
+          "q_no": 1,
+          "answer": "Yes - ISO 9001:2015, cert. AP-9001-2311, valid to 31 Dec 2026",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 2,
+          "answer": "No",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 3,
+          "answer": "No",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 4,
+          "answer": "750",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 5,
+          "answer": "No",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 6,
+          "answer": "Yes",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 7,
+          "answer": "2",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 8,
+          "answer": "Meets buyer specification",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 9,
+          "answer": "15",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        }
+      ],
+      "attachments": [
+        {
+          "filename": "apex_rate_contract_fy26.pdf",
+          "kind": "prior_contract",
+          "valid_until": null,
+          "summary": "Last year's awarded rate contract - the context needed to resolve 'rest same as last year'."
+        }
+      ],
+      "freeform_terms": [
+        "Rs 42/kg for the 5-ply, 38 for the 3-ply, rest same as last year, freight extra."
+      ]
+    }
+  ]
+}

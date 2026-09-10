@@ -1,0 +1,60 @@
+{
+  "vendor": "Ganesh Boxes & Cartons",
+  "rfx_id": "RFX-2026-CORR-011",
+  "responses": [
+    {
+      "q_no": 1,
+      "question": "Are you ISO 9001:2015 certified? State certificate number and expiry date.",
+      "answer": "Not certified",
+      "evidence": null
+    },
+    {
+      "q_no": 2,
+      "question": "Do you hold FSC chain-of-custody certification?",
+      "answer": "No",
+      "evidence": null
+    },
+    {
+      "q_no": 3,
+      "question": "Do you hold BRCGS Packaging Materials certification (required for food-contact lines)?",
+      "answer": "No",
+      "evidence": null
+    },
+    {
+      "q_no": 4,
+      "question": "Monthly converting capacity, in tonnes.",
+      "answer": "260",
+      "evidence": null
+    },
+    {
+      "q_no": 5,
+      "question": "Do you operate a second plant or documented disaster-recovery arrangement?",
+      "answer": "No",
+      "evidence": null
+    },
+    {
+      "q_no": 6,
+      "question": "Are you registered as an MSME (Udyam)?",
+      "answer": "Yes - Udyam-MH-19-0044821",
+      "evidence": "ganesh_udyam_certificate.pdf"
+    },
+    {
+      "q_no": 7,
+      "question": "Number of quality escapes or recalls in the last 24 months.",
+      "answer": "0",
+      "evidence": null
+    },
+    {
+      "q_no": 8,
+      "question": "State board strength rating AND the test method used (e.g. ECT per ISO 3037, or bursting factor per IS 2771).",
+      "answer": "22 BF",
+      "evidence": null
+    },
+    {
+      "q_no": 9,
+      "question": "Standard production lead time in days, from PO to despatch.",
+      "answer": "12",
+      "evidence": null
+    }
+  ]
+}
