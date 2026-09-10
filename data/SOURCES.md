@@ -207,6 +207,47 @@ rather than during one.
 
 ---
 
+## 7. The artifact we are killing, in its own words
+
+A published **comparative statement of quotations** template for Indian
+procurement — the exact spreadsheet the brief describes a buyer retyping for
+three days. Its columns:
+
+    Sl | Description of Item / Material | Unit | Qty |
+    Vendor A Rate | Vendor B Rate | Vendor C Rate | L1 (Lowest)
+
+with two summary rows, `SUB-TOTAL (Basic)` and
+`GRAND TOTAL (incl. 18% GST)`. The lowest rate per line is highlighted; the
+vendor with the lowest total becomes the recommended bidder.
+
+The accompanying guidance says delivery period, payment terms, quotation
+validity and GST/MSME status "should be recorded", and that **"freight and
+discounts"** must be **"treated the same way for all vendors"**.
+
+**Read those two sentences against the column list.** Every defect this product
+exists to fix is visible in the structure of the thing itself:
+
+| The template does this | So it cannot represent |
+|---|---|
+| One `Unit` column — the buyer's | That the vendor quoted per kg when you buy per piece. There is nowhere to put the vendor's unit |
+| Payment terms and validity are a note, not a column | 30-day against 90-day terms. They cannot reach L1 because they are not in the arithmetic |
+| Freight and discounts "treated the same way" as guidance | Anything. It is an instruction to a human with no field to hold it — a hope, not a control |
+| Flat 18% GST at the bottom | A GST-inclusive quote next to a GST-extra one. They are compared as though identical |
+| `L1 (Lowest)` computed on the basic rate | That the lowest basic rate is frequently not the lowest landed cost |
+| No cell-level anything | Where a number came from, how confident it is, or that it is missing rather than zero |
+
+This is worth more to the argument than any single vendor document. It is not a
+strawman we built to knock down — it is what procurement teams actually use,
+published as best practice, and its own instructions describe work its own
+structure makes impossible.
+
+The landed-cost basis in §03 is not an improvement on this template. It is the
+minimum required for the template's own stated intent to be achievable.
+
+Source: [Comparative statement of quotations format](https://constructionsupply.ai/comparative-statement-format)
+
+---
+
 ## What is still synthetic, and why
 
 The five vendor **documents** are generated, because real vendor quotations are

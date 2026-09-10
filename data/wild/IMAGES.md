@@ -1,80 +1,67 @@
-# Real images for the wild set
+# Real-world test inputs
 
-Download these by hand and drop them in `data/wild/`. All are Wikimedia Commons
-files under free licences (CC BY-SA or public domain) — check the licence box on
-each page and keep the attribution line.
+**Correction to an earlier version of this file.** It listed photographed price
+lists from other domains — a temple rate board, a taxi tariff, a fish counter —
+and framed them as real-world validation. They are not. A temple rate list has
+zero lines that could match a corrugated BOM, so feeding one in produces zero
+matches, which is correct behaviour and proves nothing about this system. That
+was a narrow vision check presented as something bigger.
 
-They are here for one reason, and it is not extraction accuracy. It is that a
-product decision tested only against inputs we manufactured has not been tested.
-The question these answer is: **what does reality do to the assumptions?**
-
-Ranked by how much they stress the parts of the system that matter.
+What actually constitutes real-world testing here is in-domain, and most of it
+already exists.
 
 ---
 
-## 1. Indian phone photo of a printed rate board — the closest real analogue
+## Tier 1 — real, in-domain, already in the wild set
 
-**`File:Abishegam detail.jpg`** · 3,000 × 4,000 · 2.35 MB · CC BY-SA 4.0
+Fetched by `tools/fetch_wild_set.py`. Each one exercises a different part of the
+pipeline against a document nobody here wrote.
+
+| Document | What it actually tests |
+|---|---|
+| **YOJ Pack catalogue** | Relevance filtering. Real prices (₹160/sq m, ₹850/pallet) attached to a product range that is mostly honeycomb, not corrugated. Can the system find the few lines that matter among sixty that don't, and refuse to attach a catalogue price to a line it doesn't belong to? |
+| **Trident PBI brochure** | "Is this even a bid?" A real corrugated brochure with no prices anywhere. The correct output is a refusal, not a parse. |
+| **Pramukh brochure** | Same question, harder: a corrugated company whose brochure sells BOPP tape and stretch film. Superficially in-domain, actually irrelevant. |
+| **HAL tender spec** | Real Indian buyer spec wording — layer-stack GSM, `Ntl`/`Nlt`, kg/cm², bundled sub-components. Tests the RFx side, not the vendor side. |
+| **Walmart board spec** | The comparability problem at country scale: ECT-led rather than bursting-factor-led. Two real buyer specs for the same product that do not convert into one another. |
+
+That is five real in-domain documents. **This is the real-world testing.** It was
+already wired before the image detour.
+
+## Tier 2 — the one that is actually missing
+
+A real photographed corrugated rate card. It is almost certainly **not publicly
+available**, for the same reason real quotations aren't: rate cards are
+commercially sensitive and nobody publishes them.
+
+The route that works is not a search. It is asking a supplier.
+
+> Message three converters on IndiaMART or WhatsApp, say you are sourcing
+> corrugated packaging, and ask for their rate card. Twenty minutes. What comes
+> back is genuinely real, genuinely in-domain, and unarguable — and *"I asked
+> three converters for rate cards and this is what actually arrived"* is a far
+> better sentence in a product interview than any dataset provenance note.
+
+Whatever arrives goes in `data/wild/`. Label 10-15 fields by hand.
+
+## Tier 3 — optional, and honest about its scope
+
+If a general vision smoke test is wanted — can the model read a real
+photographed table of rows, labels and numbers under uncontrolled lighting at
+all — one image is enough, and it should be labelled as a smoke test rather than
+as validation:
+
+**`File:Abishegam detail.jpg`** · CC BY-SA 4.0 · shot on a Samsung SM-F127G, real EXIF
 https://commons.wikimedia.org/wiki/File:Abishegam_detail.jpg
 
-A printed service rate list at Sri Navabrindavanam, photographed on a Samsung
-SM-F127G — the EXIF is real: 1/50 sec, f/2, ISO 50, 4.6 mm. This is the Ganesh
-scenario with the category swapped: a printed board of line items and rates,
-shot on a phone, in India, in a script the extractor was not tuned for.
-
-If only one image gets labelled, make it this one.
-
-## 2. A wholesale trader's master price list — the closest to a vendor rate card
-
-**`File:Glavni cenik veletrgovine Merkur Peter Majdič Celje.jpg`** · 2,194 × 3,043 · 1.02 MB
-https://commons.wikimedia.org/wiki/File:Glavni_cenik_veletrgovine_Merkur_Peter_Majdi%C4%8D_Celje.jpg
-
-"Main price list of the Merkur wholesale trading company." Many line items,
-trade pricing, not retail. Structurally the nearest thing on Commons to the
-document a converter actually sends.
-
-## 3. A tariff board with FOUR different units in one document
-
-**Taxi fare board, Rhodes** — search Commons for
-`Preistafel für Taxifahrten Mattes 2022-10-08` · 1,680 × 3,648
-(in [Category:Pricelists](https://commons.wikimedia.org/wiki/Category:Pricelists))
-
-Base fare, per kilometre, waiting time per hour, luggage per piece, night
-surcharge. The unit-normalisation problem in miniature, in a document small
-enough to label in five minutes. Worth more than its size suggests.
-
-## 4. Large, angled, real shop lighting
-
-**`File:Cieszyn, Regera, PSS Społem, sklep z kanapkami cieszyńskimi - cennik ryb.jpg`**
-· 6,000 × 8,000 · 6.54 MB
-**`File:Corona test supermarket, Heiligenstädter Straße 125, Vienna - pricelist.jpg`**
-· 3,792 × 4,952 · 8.84 MB
-
-Both are price lists photographed in situ. Uncontrolled lighting, glare,
-perspective — the conditions the synthetic photo approximates.
-
-## 5. Scanned historical print — an OCR floor test
-
-**`File:Chemist's price list, 1878 Wellcome L0026388.jpg`** · 1,306 × 1,698 · public domain
-https://commons.wikimedia.org/wiki/File:Chemist%27s_price_list,_1878_Wellcome_L0026388.jpg
-
-Dense multi-column printed price list, 19th-century type, scanned. Useful as the
-low-water mark: if this fails, say so and say why rather than hiding it.
+It answers "does the vision path work on a real phone photo of a printed board."
+It answers nothing about matching, normalisation, or comparison. Do not put it
+in the demo.
 
 ---
 
-## The one that costs nothing and may be worth the most
+## What to record
 
-Photograph a printed rate list yourself — a hardware shop's board, a printer's
-rate card, a restaurant menu, a builder's quotation. Thirty seconds, genuinely
-uncontrolled, and nobody can say it was selected to flatter the system.
-
-## How to label
-
-Do not label everything. Pick 10-15 fields per image: the item text, the rate,
-the unit, and whatever the document does that our generated set never does.
-Write them into `data/wild/labels.json` in the same shape as
-`ground_truth.json`, and the harness scores them alongside the demo set.
-
-What to record is not just accuracy. Record **what surprised you** — that is the
-finding, and it is the part worth putting in the one-pager.
+Not the accuracy number. **What surprised you.** "I assumed a rate card has one
+unit per document" is a product finding. "94.2% field accuracy" is an
+engineering artifact nobody asked for.
