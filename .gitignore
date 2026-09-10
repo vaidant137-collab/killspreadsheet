@@ -3,3 +3,10 @@ __pycache__/
 *.pyc
 *.db
 .venv/
+
+# Wild set: real documents are fetched/downloaded locally, not redistributed.
+# The manifests that say WHAT to get and WHY are tracked.
+data/wild/*
+!data/wild/IMAGES.md
+!data/wild/MANIFEST.md
+!data/wild/labels.json
