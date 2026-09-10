@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kill the Quote Spreadsheet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:wght@400;500&family=Public+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --paper:#F1F0EC; --surface:#FAFAF8; --surface-2:#E8E7E1; --ink:#16191C;
+  --ink-soft:#585F66; --ink-faint:#8B9198; --rule:#D8D6CE; --rule-soft:#E4E2DA;
+  --accent:#17416B; --accent-soft:#E2EAF2;
+  --ok:#2F6F4E; --derived:#8A6110; --derived-bg:#F6EEDC; --derived-line:#D9BC7A;
+  --risk:#9E2C2C; --risk-bg:#F7E6E4; --risk-line:#DFA9A3;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){
+  --paper:#14171A; --surface:#1B1F23; --surface-2:#23282D; --ink:#E7E5DF;
+  --ink-soft:#A3AAB1; --ink-faint:#6F777E; --rule:#2C3237; --rule-soft:#242A2F;
+  --accent:#7FADD6; --accent-soft:#1D2A38;
+  --ok:#79BF97; --derived:#D6AC5E; --derived-bg:#2B2415; --derived-line:#6B5A2F;
+  --risk:#E08B84; --risk-bg:#301E1C; --risk-line:#6E3B36; color-scheme:dark;}}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:"Public Sans",system-ui,sans-serif;font-size:14px;line-height:1.55;
+  -webkit-font-smoothing:antialiased;display:flex;flex-direction:column}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
+
+/* ---------- header ---------- */
+header{border-bottom:1px solid var(--rule);background:var(--surface);
+  padding:12px 20px;display:flex;gap:18px;align-items:baseline;flex-wrap:wrap;flex:none}
+header h1{font-family:Newsreader,Georgia,serif;font-weight:500;font-size:1.15rem;margin:0;
+  letter-spacing:-.01em;white-space:nowrap}
+header .meta{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--ink-faint);display:flex;gap:16px;flex-wrap:wrap}
+header .meta b{color:var(--ink);font-weight:500}
+header .spacer{flex:1}
+.chip{font-family:"IBM Plex Mono",monospace;font-size:10.5px;font-weight:600;
+  padding:3px 8px;border-radius:2px;letter-spacing:.04em;cursor:pointer;border:0}
+.chip.warn{background:var(--derived-bg);color:var(--derived)}
+.chip.risk{background:var(--risk-bg);color:var(--risk)}
+
+/* ---------- layout ---------- */
+main{flex:1;display:grid;grid-template-columns:minmax(0,1fr);min-height:0}
+#stage{display:flex;flex-direction:column;min-height:0;min-width:0}
+
+/* ---------- pinned comparison ---------- */
+#pinned{border-bottom:1px solid var(--rule);background:var(--surface);
+  display:flex;flex-direction:column;min-height:0;max-height:48vh}
+#pinned .bar{display:flex;align-items:baseline;gap:12px;padding:9px 20px 7px;flex:none}
+#pinned .bar h2{font-size:.86rem;font-weight:600;margin:0}
+#pinned .bar .sub{font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--ink-faint);
+  letter-spacing:.04em}
+#pinned .bar .right{margin-left:auto;display:flex;gap:14px;align-items:center}
+.legend{display:flex;gap:12px;font-size:10.5px;color:var(--ink-soft);align-items:center}
+.legend i{width:11px;height:11px;display:inline-block;border:1px solid var(--rule);
+  margin-right:5px;vertical-align:-1px}
+.legend .d{background:var(--derived-bg);border-color:var(--derived-line)}
+.legend .u{background:var(--risk-bg);border-color:var(--risk-line)}
+#tableWrap{overflow:auto;min-height:0}
+table{border-collapse:separate;border-spacing:0;width:100%;font-size:12.5px}
+thead th{position:sticky;top:0;z-index:2;background:var(--surface-2);
+  font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--ink-soft);font-weight:600;text-align:left;
+  padding:7px 10px;border-bottom:1px solid var(--rule);white-space:nowrap}
+thead th.num{text-align:right}
+tbody td{padding:5px 10px;border-bottom:1px solid var(--rule-soft);vertical-align:top}
+tbody td.num{text-align:right;font-family:"IBM Plex Mono",monospace;
+  font-variant-numeric:tabular-nums;white-space:nowrap;cursor:pointer}
+tbody td.num:hover{outline:1.5px solid var(--accent);outline-offset:-1.5px}
+td.s-derived{background:var(--derived-bg);box-shadow:inset 2px 0 0 var(--derived-line)}
+td.s-unresolved{background:var(--risk-bg);box-shadow:inset 2px 0 0 var(--risk-line);
+  color:var(--risk);font-weight:600}
+td.s-extracted{background:transparent}
+td.item{max-width:340px;font-size:12px;line-height:1.35}
+td.item small{display:block;color:var(--ink-faint);font-family:"IBM Plex Mono",monospace;
+  font-size:9.5px;letter-spacing:.03em}
+tr.flash td{animation:flash .9s ease-out}
+@keyframes flash{0%{background:var(--accent-soft)}100%{}}
+#foot{padding:7px 20px;font-size:11px;color:var(--ink-soft);border-top:1px solid var(--rule-soft);flex:none}
+
+/* ---------- chat ---------- */
+#chat{flex:1;overflow:auto;padding:18px 20px 8px;min-height:0}
+.turn{max-width:78ch;margin:0 0 16px}
+.turn.you{margin-left:auto;text-align:right}
+.turn.you .bubble{display:inline-block;background:var(--accent);color:#fff;
+  padding:7px 13px;border-radius:3px;text-align:left;font-size:13.5px}
+.who{font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--ink-faint);margin-bottom:5px;font-weight:600}
+.block{margin:0 0 10px}
+.block p{margin:0 0 8px}
+.status{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--ink-faint)}
+details.qry{border-left:2px solid var(--rule);padding-left:10px;margin:6px 0}
+details.qry summary{cursor:pointer;font-family:"IBM Plex Mono",monospace;font-size:10.5px;
+  color:var(--ink-faint);letter-spacing:.05em}
+details.qry pre{font-family:"IBM Plex Mono",monospace;font-size:11px;white-space:pre-wrap;
+  background:var(--surface);padding:9px 11px;margin:6px 0 0;overflow-x:auto;
+  border:1px solid var(--rule-soft)}
+.refusal{border-left:3px solid var(--derived);background:var(--surface);padding:12px 15px}
+.refusal .h{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--derived);font-weight:600;margin-bottom:5px}
+.refusal ul{margin:7px 0 0;padding-left:18px;font-size:12.5px;color:var(--ink-soft)}
+.card{border:1px solid var(--rule);background:var(--surface);padding:11px 13px;margin:0 0 8px}
+.card .top{display:flex;gap:10px;align-items:baseline;margin-bottom:5px}
+.card .conf{font-family:"IBM Plex Mono",monospace;font-size:10.5px;font-weight:600;
+  color:var(--risk);background:var(--risk-bg);padding:2px 6px;border-radius:2px}
+.card .why{font-size:12px;color:var(--ink-soft);margin:4px 0 8px}
+.card button{font-size:11.5px;padding:4px 10px;margin-right:6px;border:1px solid var(--rule);
+  background:var(--surface-2);color:var(--ink);cursor:pointer;border-radius:2px;
+  font-family:inherit}
+.card button:hover{border-color:var(--accent);color:var(--accent)}
+.asm{width:100%;font-size:12px}
+.asm td{padding:4px 8px;border-bottom:1px solid var(--rule-soft)}
+.asm input{width:88px;font-family:"IBM Plex Mono",monospace;font-size:11.5px;
+  background:var(--surface);color:var(--ink);border:1px solid var(--rule);padding:2px 5px}
+svg.chart text{font-family:"IBM Plex Mono",monospace;font-size:9px;fill:var(--ink-soft)}
+
+/* ---------- composer ---------- */
+#composer{flex:none;border-top:1px solid var(--rule);background:var(--surface);padding:11px 20px}
+#composer form{display:flex;gap:9px}
+#q{flex:1;font-family:inherit;font-size:14px;padding:9px 12px;background:var(--paper);
+  color:var(--ink);border:1px solid var(--rule);border-radius:3px}
+#q:focus{outline:2px solid var(--accent);outline-offset:-1px}
+#composer button{padding:9px 18px;background:var(--accent);color:#fff;border:0;
+  border-radius:3px;font-family:inherit;font-size:13.5px;font-weight:500;cursor:pointer}
+.suggest{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+#composer .suggest button{background:transparent;border:1px solid var(--rule);
+  color:var(--ink-soft);font-size:11.5px;padding:4px 9px;border-radius:2px;
+  cursor:pointer;font-family:inherit;font-weight:400}
+#composer .suggest button:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ---------- drawer ---------- */
+#drawer{position:fixed;top:0;right:0;height:100%;width:min(520px,92vw);
+  background:var(--surface);border-left:1px solid var(--rule);z-index:40;
+  transform:translateX(101%);transition:transform .22s ease;display:flex;
+  flex-direction:column;box-shadow:-8px 0 28px rgba(0,0,0,.10)}
+#drawer.open{transform:none}
+#drawer .dh{padding:13px 16px;border-bottom:1px solid var(--rule);display:flex;
+  align-items:baseline;gap:10px;flex:none}
+#drawer .dh h3{margin:0;font-size:.9rem;font-weight:600}
+#drawer .dh button{margin-left:auto;background:none;border:0;color:var(--ink-faint);
+  font-size:19px;cursor:pointer;line-height:1}
+#drawer .db{overflow:auto;padding:14px 16px;flex:1}
+#drawer img{width:100%;border:1px solid var(--rule)}
+#drawer iframe{width:100%;height:420px;border:1px solid var(--rule);background:#fff}
+.kv{font-size:12px;margin:0 0 12px}
+.kv div{display:flex;gap:10px;padding:3px 0;border-bottom:1px solid var(--rule-soft)}
+.kv span:first-child{color:var(--ink-faint);min-width:118px;
+  font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.04em;
+  text-transform:uppercase;padding-top:2px}
+.kv b{font-weight:600}
+.derivation{background:var(--paper);border:1px solid var(--rule-soft);padding:10px 12px;
+  font-size:12px;margin:0 0 12px}
+.derivation h4{margin:0 0 6px;font-family:"IBM Plex Mono",monospace;font-size:10px;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint)}
+.derivation li{margin-bottom:5px;color:var(--ink-soft)}
+#scrim{position:fixed;inset:0;background:rgba(10,12,14,.30);z-index:39;display:none}
+#scrim.on{display:block}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Kill the Quote Spreadsheet</h1>
+  <div class="meta" id="meta"></div>
+  <div class="spacer"></div>
+  <button class="chip risk" id="chipReview" hidden></button>
+  <button class="chip warn" id="chipAsm">assumptions</button>
+</header>
+
+<main>
+  <div id="stage">
+    <section id="pinned">
+      <div class="bar">
+        <h2 id="pinTitle">Side-by-side comparison</h2>
+        <span class="sub" id="pinSub"></span>
+        <div class="right">
+          <div class="legend">
+            <span><i class="e"></i>extracted</span>
+            <span><i class="d"></i>derived</span>
+            <span><i class="u"></i>unresolved</span>
+          </div>
+        </div>
+      </div>
+      <div id="tableWrap"></div>
+      <div id="foot"></div>
+    </section>
+
+    <div id="chat"></div>
+
+    <div id="composer">
+      <form id="f">
+        <input id="q" autocomplete="off" placeholder="Ask about the comparison…">
+        <button type="submit">Ask</button>
+      </form>
+      <div class="suggest" id="suggest"></div>
+    </div>
+  </div>
+</main>
+
+<div id="scrim"></div>
+<aside id="drawer" aria-hidden="true">
+  <div class="dh"><h3 id="dTitle">Evidence</h3><button id="dClose" aria-label="Close">×</button></div>
+  <div class="db" id="dBody"></div>
+</aside>
+
+<script>
+const $ = s => document.querySelector(s);
+const el = (t, c, h) => { const e = document.createElement(t); if (c) e.className = c;
+  if (h !== undefined) e.innerHTML = h; return e; };
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const inr = n => '₹' + Number(n).toLocaleString('en-IN', {maximumFractionDigits:2});
+
+let STATE = null;
+
+/* ---------------- boot ---------------- */
+async function boot(){
+  STATE = await (await fetch('/api/state')).json();
+  const r = STATE.rfx, c = STATE.counts;
+  $('#meta').innerHTML = `
+    <span>${esc(r.rfx_id)}</span>
+    <span>Buyer <b>${esc(r.buyer_org)}</b></span>
+    <span>Lines <b>${STATE.comparison.rows.length}</b></span>
+    <span>Vendors <b>${STATE.vendors.length}</b></span>
+    <span>Terms <b>${esc(r.required_payment_terms)}</b></span>
+    <span>Unresolved <b>${c.unresolved}</b></span>`;
+  if (STATE.open_reviews){
+    const b = $('#chipReview'); b.hidden = false;
+    b.textContent = STATE.open_reviews + ' need review';
+    b.onclick = showReviews;
+  }
+  $('#chipAsm').onclick = showAssumptions;
+  renderTable(STATE.comparison);
+  greet();
+}
+
+/* ---------------- the pinned artifact ---------------- */
+function renderTable(tb, flash){
+  $('#pinTitle').textContent = tb.title || 'Side-by-side comparison';
+  $('#pinSub').textContent = `${tb.rows.length} lines · ${tb.columns.length - 3} vendors`;
+  const t = el('table');
+  const thead = el('thead'); const tr = el('tr');
+  tb.columns.forEach(c => { const th = el('th', c.numeric ? 'num' : '');
+    th.textContent = c.label; tr.appendChild(th); });
+  thead.appendChild(tr); t.appendChild(thead);
+  const tbody = el('tbody');
+  tb.rows.forEach(row => {
+    const r = el('tr'); if (flash) r.className = 'flash';
+    tb.columns.forEach(c => {
+      const cell = row[c.key] || {};
+      const td = el('td', (c.numeric ? 'num ' : '') + (c.key === 'item' ? 'item ' : '') +
+        (cell.state && cell.state !== 'plain' ? 's-' + cell.state : ''));
+      if (c.key === 'item'){
+        td.innerHTML = esc(cell.value) + (cell.note ? `<small>${esc(cell.note)}</small>` : '');
+      } else {
+        td.textContent = cell.value === null || cell.value === undefined ? '—' : cell.value;
+        if (cell.note) td.title = cell.note;
+        if (cell.evidence_id){ td.onclick = () => openEvidence(cell.evidence_id); }
+        else if (cell.state === 'unresolved' && cell.note) td.onclick = () => explainGap(cell.note);
+      }
+      r.appendChild(td);
+    });
+    tbody.appendChild(r);
+  });
+  t.appendChild(tbody);
+  $('#tableWrap').replaceChildren(t);
+  $('#foot').innerHTML = (tb.footnotes || []).map(esc).join(' &nbsp;·&nbsp; ');
+}
+
+/* ---------------- chat ---------------- */
+function turn(who, cls){ const d = el('div', 'turn ' + (cls || ''));
+  d.appendChild(el('div', 'who', who)); $('#chat').appendChild(d);
+  $('#chat').scrollTop = 1e9; return d; }
+
+function greet(){
+  const t = turn('Analyst');
+  const c = STATE.counts, dq = STATE.vendors.filter(v => !v.qualified);
+  t.appendChild(el('div','block',`<p>Five responses in, in five formats. Every rate is
+    landed to ₹ per buyer unit, pre-tax, adjusted to the ${esc(STATE.rfx.required_payment_terms)}
+    the RFx asked for.</p>
+    <p><b>${c.cells} cells. ${c.extracted} were comparable exactly as quoted.</b>
+    ${c.derived} needed at least one assumption; ${c.unresolved} could not be derived at
+    all and are shown as gaps, never as zero.</p>` +
+    (dq.length ? '<p>' + dq.map(v => `<b>${esc(v.name.split(' ')[0])}</b> did not clear the
+      questionnaire — ${esc((v.disqualified_because[0] || '').toLowerCase())}.`).join(' ')
+      + '</p>' : '')));
+  const s = $('#suggest');
+  ['Where are you unsure?',
+   'Cheapest per line among vendors who cleared the questionnaire — and what does that cost versus single-sourcing?',
+   'Which vendors’ certifications are actually valid?',
+   'If I take that split, does anyone fall below their minimum order?',
+   'Which vendor is most reliable?'].forEach(x => {
+    const b = el('button', '', esc(x.length > 46 ? x.slice(0,44) + '…' : x));
+    b.title = x; b.onclick = () => ask(x); s.appendChild(b); });
+}
+
+async function ask(q){
+  turn('You','you').appendChild(el('div','bubble', esc(q)));
+  $('#q').value = '';
+  const t = turn('Analyst');
+  const status = el('div','status','thinking…'); t.appendChild(status);
+  const res = await fetch('/api/ask', {method:'POST',
+    headers:{'Content-Type':'application/json'}, body: JSON.stringify({question:q})});
+  const rd = res.body.getReader(); const dec = new TextDecoder(); let buf = '';
+  while (true){
+    const {done, value} = await rd.read(); if (done) break;
+    buf += dec.decode(value, {stream:true});
+    const parts = buf.split('\n\n'); buf = parts.pop();
+    for (const p of parts){
+      if (!p.startsWith('data: ')) continue;
+      const m = JSON.parse(p.slice(6));
+      if (m.kind === 'done'){ status.remove(); break; }
+      if (m.kind === 'status'){ status.textContent = m.payload; continue; }
+      status.remove(); t.appendChild(renderBlock(m.payload));
+      $('#chat').scrollTop = 1e9;
+    }
+  }
+  status.remove();
+}
+
+function renderBlock(b){
+  if (b.type === 'text') return el('div','block', mdish(b.text));
+  if (b.type === 'query') return renderQuery(b);
+  if (b.type === 'table'){
+    if (b.pin){ renderTable(b, true);
+      return el('div','block status','↑ comparison updated in place'); }
+    return el('div','block', '<em>table</em>');
+  }
+  if (b.type === 'chart') return renderChart(b);
+  if (b.type === 'evidence'){
+    const d = el('div','block');
+    const btn = el('button','', 'Open ' + esc(b.doc_id) + ' · ' + esc(b.locator));
+    btn.className = 'chip warn'; btn.onclick = () => openEvidence(b.evidence_id);
+    d.appendChild(btn); if (b.snippet) d.appendChild(el('div','status', esc(b.snippet)));
+    return d;
+  }
+  if (b.type === 'review') return renderReviews(b);
+  if (b.type === 'assumptions') return renderAssumptions(b);
+  if (b.type === 'refusal'){
+    const d = el('div','block refusal');
+    d.innerHTML = `<div class="h">Not answerable from this data</div>
+      <div>${esc(b.reason)}</div>` +
+      (b.would_need?.length ? `<ul>${b.would_need.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>` : '');
+    return d;
+  }
+  return el('div','block status', esc(JSON.stringify(b).slice(0,200)));
+}
+
+const mdish = s => '<p>' + esc(s).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')
+  .replace(/\n\n/g,'</p><p>').replace(/\n/g,'<br>') + '</p>';
+
+function renderQuery(b){
+  const d = el('details','qry');
+  d.appendChild(el('summary','', (b.sql ? 'SQL' : 'computation') + ` · ${b.row_count} rows`));
+  d.appendChild(el('pre','', esc(b.sql || b.code || '')));
+  return d;
+}
+
+function renderChart(b){
+  const w = 640, h = 210, pad = 44, n = b.categories.length;
+  const all = b.series.flatMap(s => s.values); const max = Math.max(...all, 1);
+  const bw = (w - pad*2) / n * 0.62;
+  let bars = '', labels = '', ticks = '';
+  for (let i=0;i<4;i++){ const v = max*i/3, y = h - pad - (h-pad*1.5)*(i/3);
+    ticks += `<line x1="${pad}" x2="${w-8}" y1="${y}" y2="${y}" stroke="currentColor"
+      stroke-opacity=".12"/><text x="${pad-6}" y="${y+3}" text-anchor="end">${
+      Math.round(v).toLocaleString('en-IN')}</text>`; }
+  b.categories.forEach((c,i) => {
+    const x = pad + (w-pad*2)*(i+0.5)/n;
+    b.series.forEach((s,j) => {
+      const v = s.values[i] ?? 0, hh = (h-pad*1.5)*(v/max);
+      const bx = x - bw/2 + (j*bw/b.series.length);
+      bars += `<rect x="${bx}" y="${h-pad-hh}" width="${bw/b.series.length - 2}"
+        height="${Math.max(hh,1)}" fill="var(--accent)" fill-opacity="${1-j*0.35}"/>`; });
+    labels += `<text x="${x}" y="${h-pad+13}" text-anchor="middle">${esc(c).slice(0,11)}</text>`; });
+  const d = el('div','block');
+  d.innerHTML = `<div class="who">${esc(b.title)}</div>
+    <svg class="chart" viewBox="0 0 ${w} ${h}" style="width:100%;max-width:${w}px;color:var(--ink-soft)">
+    ${ticks}${bars}${labels}</svg>`;
+  return d;
+}
+
+function renderReviews(b){
+  const d = el('div','block');
+  d.appendChild(el('div','who', esc(b.title)));
+  b.cards.forEach(c => {
+    const card = el('div','card');
+    card.innerHTML = `<div class="top"><b>${esc(c.vendor_id)}</b>
+      <span class="mono" style="font-size:11px;color:var(--ink-faint)">line ${c.line_no ?? '—'} · ${esc(c.field)}</span>
+      <span class="conf">${(c.confidence*100).toFixed(0)}%</span></div>
+      <div class="mono" style="font-size:12px">${esc(c.proposed_value ?? '—')}</div>
+      <div class="why">${esc(c.reason || 'Below the confidence threshold.')}</div>`;
+    const accept = el('button','','Accept');
+    accept.onclick = () => decide(c.review_id, 'accept', null, card);
+    const fix = el('button','','Correct…');
+    fix.onclick = () => { const v = prompt('Corrected value', c.proposed_value || '');
+      if (v !== null) decide(c.review_id, 'correct', v, card); };
+    const ev = el('button','','Source');
+    ev.onclick = () => openEvidence(c.evidence_id);
+    card.appendChild(accept); card.appendChild(fix);
+    if (c.evidence_id) card.appendChild(ev);
+    d.appendChild(card);
+  });
+  if (b.remaining) d.appendChild(el('div','status', `${b.remaining} more in the queue.`));
+  return d;
+}
+
+async function decide(id, action, value, card){
+  const r = await (await fetch('/api/review/' + id, {method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({action, value})})).json();
+  card.style.opacity = .45;
+  card.querySelectorAll('button').forEach(b => b.disabled = true);
+  card.appendChild(el('div','status', action === 'accept' ? 'accepted' : 'corrected'));
+  const chip = $('#chipReview');
+  if (r.open){ chip.textContent = r.open + ' need review'; } else { chip.hidden = true; }
+}
+
+function renderAssumptions(b){
+  const d = el('div','block');
+  d.appendChild(el('div','who', esc(b.title)));
+  const t = el('table','asm');
+  b.rows.forEach(r => {
+    const tr = el('tr');
+    tr.innerHTML = `<td>${esc(r.label)}</td>
+      <td class="mono">${esc(r.value)}${r.unit ? ' ' + esc(r.unit) : ''}</td>
+      <td style="color:var(--ink-faint);font-size:11px">${esc(r.source)}</td>`;
+    t.appendChild(tr);
+  });
+  d.appendChild(t);
+  if (b.note) d.appendChild(el('div','status', esc(b.note)));
+  return d;
+}
+
+async function showReviews(){
+  const r = await (await fetch('/api/reviews?limit=8')).json();
+  const t = turn('Review queue');
+  t.appendChild(renderReviews({title: `${r.open} cells below the ${r.threshold} threshold`,
+    cards: r.items.map(i => ({review_id:i.id, vendor_id:i.vendor_id, line_no:i.line_no,
+      field:i.field, proposed_value:i.proposed_value, confidence:i.confidence,
+      evidence_id:i.evidence_id,
+      reason: i.missing_fact || i.match_rationale || i.unresolved_reason})),
+    remaining: Math.max(0, r.open - r.items.length)}));
+}
+
+async function showAssumptions(){
+  const r = await (await fetch('/api/assumptions')).json();
+  turn('Assumptions').appendChild(renderAssumptions({title:'Assumptions in force',
+    rows: r.rows, note:'Every derived number rests on these.'}));
+}
+
+function explainGap(note){
+  const t = turn('Analyst');
+  t.appendChild(el('div','block refusal',
+    `<div class="h">This cell is empty on purpose</div><div>${esc(note)}</div>`));
+}
+
+/* ---------------- evidence drawer ---------------- */
+async function openEvidence(id){
+  if (!id) return;
+  const res = await fetch('/api/evidence/' + id);
+  if (!res.ok){
+    $('#dTitle').textContent = 'No source on file';
+    $('#dBody').replaceChildren(el('div','derivation',
+      `<h4>Nothing to open</h4><div>This cell has no evidence record
+       (<span class="mono">${esc(id)}</span>). That happens when a value was
+       supplied by a human correction rather than read from a document — the
+       correction is recorded in the review log instead.</div>`));
+    $('#drawer').classList.add('open'); $('#scrim').classList.add('on');
+    return;
+  }
+  const e = await res.json();
+  $('#dTitle').textContent = e.doc_id;
+  const b = $('#dBody'); b.replaceChildren();
+
+  const kv = el('div','kv');
+  const cell = e.cell || {}, q = e.quote || {};
+  kv.innerHTML =
+    `<div><span>Locator</span><b class="mono">${esc(e.locator)}</b></div>` +
+    (q.vendor_label ? `<div><span>Vendor calls it</span><b>${esc(q.vendor_label)}</b></div>` : '') +
+    (cell.as_quoted ? `<div><span>As quoted</span><b class="mono">${esc(cell.as_quoted)}</b></div>` : '') +
+    (cell.landed_inr != null ? `<div><span>Landed</span><b class="mono">${inr(cell.landed_inr)}</b></div>` : '') +
+    (cell.state ? `<div><span>State</span><b>${esc(cell.state)}</b></div>` : '') +
+    (cell.extraction_confidence != null ?
+      `<div><span>Confidence</span><b class="mono">extract ${(cell.extraction_confidence*100).toFixed(0)}% ·
+       match ${(cell.match_confidence*100).toFixed(0)}%</b></div>` : '');
+  b.appendChild(kv);
+
+  if (q.match_rationale){
+    const d = el('div','derivation');
+    d.innerHTML = `<h4>Why this line</h4><div>${esc(q.match_rationale)}</div>`;
+    b.appendChild(d);
+  }
+  if (cell.caveats?.length){
+    const d = el('div','derivation');
+    d.innerHTML = `<h4>How it was derived</h4><ul>${
+      cell.caveats.map(c => `<li>${esc(c)}</li>`).join('')}</ul>`;
+    b.appendChild(d);
+  }
+  if (cell.missing_fact){
+    const d = el('div','derivation');
+    d.innerHTML = `<h4>Why it is empty</h4><div>${esc(cell.unresolved_reason || '')}</div>
+      <div style="margin-top:6px"><b>Needs:</b> <span class="mono">${esc(cell.missing_fact)}</span></div>`;
+    b.appendChild(d);
+  }
+
+  b.appendChild(el('div','who','Source document'));
+  if (e.kind === 'image'){
+    const img = el('img'); img.src = e.url; img.alt = e.doc_id; b.appendChild(img);
+    const m = /crop:([\d.]+),([\d.]+),([\d.]+),([\d.]+)/.exec(e.locator);
+    if (m) b.appendChild(el('div','status',
+      `Region ${(+m[2]*100).toFixed(0)}% down the page, ${(+m[4]*100).toFixed(1)}% tall.`));
+  } else if (e.kind === 'pdf'){
+    const f = el('iframe'); f.src = e.url + '#page=' +
+      (/^p(\d+)/.exec(e.locator)?.[1] || 1); b.appendChild(f);
+  } else {
+    const a = el('a','', 'Open ' + esc(e.doc_id));
+    a.href = e.url; a.target = '_blank'; a.style.color = 'var(--accent)';
+    b.appendChild(a);
+  }
+  $('#drawer').classList.add('open'); $('#scrim').classList.add('on');
+  $('#drawer').setAttribute('aria-hidden','false');
+}
+function closeDrawer(){ $('#drawer').classList.remove('open');
+  $('#scrim').classList.remove('on'); $('#drawer').setAttribute('aria-hidden','true'); }
+$('#dClose').onclick = closeDrawer; $('#scrim').onclick = closeDrawer;
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+
+$('#f').onsubmit = e => { e.preventDefault();
+  const v = $('#q').value.trim(); if (v) ask(v); };
+
+boot();
+</script>
+</body>
+</html>

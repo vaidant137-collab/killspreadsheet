@@ -170,9 +170,39 @@ is that they were tried, measured, and the ones we don't handle are named.
 
 ```bash
 pip install -r requirements.txt
-cp .env.example .env          # add your model API key
-python -m data.build_ground_truth
-python -m tools.render_all
+./run.sh                      # everything, in order
+```
+
+**No API key is needed for any of that.** `EXTRACTOR=fixture` (the default)
+replays known-good extraction output in place of the model, so the store,
+matcher, normaliser, allocator, review queue, evidence drawer and UI all run
+and can be judged before a key exists. Drop a key in `.env` and set
+`EXTRACTOR=model` to swap in the real extraction path — one line, nothing else
+changes.
+
+The matcher is **not** faked in fixture mode. It runs for real against each
+vendor's own labels, which is deliberate: matching is the half that breaks
+quietly in production, so it is the half that must be exercised either way.
+
+Individual pieces, each self-testing:
+
+```bash
+python -m normalize.engine --self-test    # 8 steps from quote to landed cost
+python -m match.matcher   --self-test     # vendor label -> buyer line
+python -m allocate.subsets --self-test    # 25 splits, questionnaire gate
+python -m eval.harness                    # the scorecard
+python -m tools.fetch_wild_set            # real documents, on your machine
+```
+
+## Where it stands
+
+```
+extraction     97.1% field · 97.1% unit · 100% match
+escape rate    0%      every error was caught by the confidence gate
+calibration    accuracy spans 33 points across confidence buckets
+comparability  0 of 139 cells were comparable exactly as quoted
+unresolved     7 cells refused rather than estimated
+review queue   29 cells at threshold 0.82
 ```
 
 Deployed for a URL; **the live demo runs locally**, because free-tier cold starts

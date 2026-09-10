@@ -21,6 +21,11 @@ DB_PATH = ROOT / "killspreadsheet.db"
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "auto")     # auto | anthropic | openai
 ALLOCATOR    = os.getenv("ALLOCATOR", "subsets")     # naive | subsets | milp
 ANALYST      = os.getenv("ANALYST", "toolloop")      # toolloop | langgraph
+# "fixture" replays known-good extraction output in place of the model, so the
+# store, matcher, normaliser, allocator, analyst and UI all run with no API key.
+# The matcher is NOT faked in fixture mode - it runs for real against the
+# vendor's own labels, so the hard half is genuinely exercised either way.
+EXTRACTOR    = os.getenv("EXTRACTOR", "fixture")     # fixture | model
 
 # --- product decisions, not hyperparameters ---------------------------------
 # Extraction confidence below this routes a cell to the human review queue.

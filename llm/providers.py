@@ -98,3 +98,51 @@ def get_client():
         "  python -m tools.render_all\n"
         "  python -m normalize.engine --self-test\n"
         "  python -m allocate.subsets --self-test")
+
+
+# ---------------------------------------------------------------------------
+# Raw multi-turn tool calling, for the analyst loop. Kept separate from
+# `structured()` because extraction wants exactly one shape back and nothing
+# else, while the analyst needs a conversation.
+# ---------------------------------------------------------------------------
+
+def _anthropic_raw(self, *, system, messages, tools, max_tokens=4000):
+    msgs = []
+    for m in messages:
+        if m.get("_tool_results"):
+            msgs.append({"role": "user", "content": [
+                {"type": "tool_result", "tool_use_id": r["id"], "content": r["content"]}
+                for r in m["content"]]})
+        else:
+            msgs.append({"role": m["role"], "content": m["content"]})
+    r = self._c.messages.create(model=self.model, max_tokens=max_tokens,
+                                system=system, tools=tools, messages=msgs)
+    text = "".join(b.text for b in r.content if b.type == "text").strip()
+    calls = [{"id": b.id, "name": b.name, "input": b.input}
+             for b in r.content if b.type == "tool_use"]
+    return {"text": text, "tool_calls": calls, "content": r.content}
+
+
+def _openai_raw(self, *, system, messages, tools, max_tokens=4000):
+    msgs = [{"role": "system", "content": system}]
+    for m in messages:
+        if m.get("_tool_results"):
+            for r in m["content"]:
+                msgs.append({"role": "tool", "tool_call_id": r["id"],
+                             "content": r["content"]})
+        else:
+            msgs.append({"role": m["role"], "content": m["content"]})
+    spec = [{"type": "function", "function": {
+        "name": t["name"], "description": t["description"],
+        "parameters": t["input_schema"]}} for t in tools]
+    r = self._c.chat.completions.create(model=self.model, max_tokens=max_tokens,
+                                        messages=msgs, tools=spec)
+    m = r.choices[0].message
+    calls = [{"id": c.id, "name": c.function.name,
+              "input": json.loads(c.function.arguments or "{}")}
+             for c in (m.tool_calls or [])]
+    return {"text": (m.content or "").strip(), "tool_calls": calls, "content": m}
+
+
+AnthropicClient.raw_turn = _anthropic_raw
+OpenAIClient.raw_turn = _openai_raw
