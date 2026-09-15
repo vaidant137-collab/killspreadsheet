@@ -14,6 +14,8 @@ way to one.
 
 from __future__ import annotations
 
+from contracts.rfx import uom_label
+
 import json
 from datetime import date
 
@@ -64,16 +66,22 @@ def build(conn, alloc: Allocation) -> str:
         A(f"- **{a['label']}**: {a['value']}{' ' + a['unit'] if a['unit'] else ''} "
           f"— {a['source']}")
     A("")
+    units = {r["line_no"]: uom_label(r["uom"]) for r in
+             conn.execute("SELECT line_no, uom FROM rfx_line").fetchall()}
     A("## Award by line")
     A("")
-    A("| Line | Vendor | ₹ / unit | Annual qty | Annual ₹ |")
-    A("|---|---|---:|---:|---:|")
+    # The unit is a COLUMN, not a footnote. Line 1 is 8.03 a piece and line 27
+    # is 1,339.00 a hundred; without the unit on the row those two numbers sit in
+    # one column inviting a comparison that is wrong by a factor of a hundred.
+    A("| Line | Vendor | ₹ / unit | Unit | Annual qty | Annual ₹ |")
+    A("|---|---|---:|---|---:|---:|")
     for aw in alloc.awards:
+        u = units.get(aw.line_no, "")
         if aw.vendor_id:
             A(f"| {aw.line_no} | {vendors[aw.vendor_id]['name']} | {aw.unit_inr:,.2f} "
-              f"| {aw.annual_qty:,} | {aw.annual_inr:,.0f} |")
+              f"| {u} | {aw.annual_qty:,} | {aw.annual_inr:,.0f} |")
         else:
-            A(f"| {aw.line_no} | — | — | {aw.annual_qty:,} | **not awarded** |")
+            A(f"| {aw.line_no} | — | — | {u} | {aw.annual_qty:,} | **not awarded** |")
     A("")
 
     if alloc.caveats:

@@ -225,6 +225,8 @@ main{flex:1;display:grid;grid-template-columns:minmax(0,1fr);min-height:0}
 .legend .r{background:var(--rank);border:0;width:14px;height:2px;opacity:.75}
 .legend .sep{width:1px;height:12px;background:var(--rule)}
 #tableWrap{overflow:auto;min-height:0}
+#tableWrap td.num small{display:block;font-size:9.5px;color:var(--ink-faint);
+  font-family:"IBM Plex Mono",monospace;letter-spacing:.02em;margin-top:1px}
 table{border-collapse:separate;border-spacing:0;width:100%;font-size:12.5px}
 thead th{position:sticky;top:0;z-index:2;background:var(--surface-2);
   font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.06em;
@@ -777,7 +779,13 @@ function renderTable(tb, flash){
       const td = el('td', (c.numeric ? 'num ' : '') + (c.key === 'item' ? 'item ' : '') +
         (cell.state && cell.state !== 'plain' ? 's-' + cell.state + ' ' : '') +
         (isBest ? 'best' : ''));
-      if (c.key === 'item'){
+      // The unit goes UNDER the quantity, visibly. It was a tooltip, which is
+      // the same as not being there: these thirty lines are priced per piece,
+      // per kilogram, per set and per hundred pieces, and every vendor column
+      // is "landed rupees per one of these". A rate column showing 8.03 above
+      // 1,339.00 with the unit hidden is the exact comparison this project is
+      // about not making.
+      if (c.key === 'item' || c.key === 'qty'){
         td.innerHTML = esc(cell.value) + (cell.note ? `<small>${esc(cell.note)}</small>` : '');
       } else {
         td.textContent = cell.value === null || cell.value === undefined ? '—' : cell.value;

@@ -21,6 +21,7 @@ from contracts.blocks import (
     AssumptionBlock, AssumptionRow, Cell, ChartBlock, Column, EvidenceBlock,
     QueryBlock, RefusalBlock, ReviewBlock, ReviewCard, Series, TableBlock,
 )
+from contracts.rfx import uom_label
 from store import repo
 
 # The typed tools come first deliberately. Free-form SQL against a ten-table
@@ -457,7 +458,11 @@ def build_comparison(conn, line_nos=None, vendor_ids=None, title=None):
     for l in lines:
         row = {"line": Cell(value=l["line_no"]),
                "item": Cell(value=l["description"][:72], note=l["code"]),
-               "qty": Cell(value=f"{l['annual_qty']:,}")}
+               # Same reason as the memo: the unit belongs on the row. These
+               # thirty lines are priced in pieces, kilograms, sets and hundreds
+               # of pieces, and the vendor columns are all "landed rupees per
+               # ONE OF THESE".
+               "qty": Cell(value=f"{l['annual_qty']:,}", note=uom_label(l["uom"]))}
         for v in vends:
             n = nl.get((v["vendor_id"], l["line_no"]))
             if not n:

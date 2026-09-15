@@ -25,6 +25,19 @@ class Uom(str, Enum):
     HUNDRED = "100_pieces"
 
 
+def uom_label(uom) -> str:
+    """How a unit of measure is written on screen and in the memo.
+
+    Small, and it matters more than its size suggests: this dataset prices in
+    pieces, kilograms, sets and hundreds of pieces, and a rate column that shows
+    8.03 next to 1,339.00 with no unit anywhere invites exactly the comparison
+    this whole project exists to stop. The 1,339 is a layer pad per HUNDRED.
+    """
+    return {"piece": "pcs", "kg": "kg", "set": "sets",
+            "100_pieces": "\u00d7100 pcs"}.get(
+                getattr(uom, "value", uom), str(getattr(uom, "value", uom)))
+
+
 class BoxStyle(str, Enum):
     """FEFCO codes. 0201 = Regular Slotted Container, 0203 = Half Slotted,
     0427 = die-cut mailer. Sheets and pads have no FEFCO style."""
