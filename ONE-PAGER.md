@@ -1,155 +1,77 @@
-# Kill the Quote Spreadsheet — decisions, and deliberate omissions
+# Kill the Quote Spreadsheet — what I decided, and what I left out
 
-**Vaidant** · corrugated packaging · 5 vendors · 30 lines · 9-question questionnaire
+**Vaidant** · corrugated packaging · 5 vendors · 30 lines · 9 questions · 7 attachments
+*The same argument at length, with the workings: `NOTES-APPENDIX.md`.*
 
-## The interesting problem was somewhere else
+**The bet.** Every extraction problem in this brief is a structuring problem
+declined nine days earlier: of 139 vendor-line cells, **zero were comparable
+exactly as quoted.** Forcing structure upstream is what every e-sourcing suite
+has tried and lost with — a tier-3 converter with a printed rate card does not
+log into a buyer's portal. Parsing chaos is the right wedge and the wrong
+destination. Every parse should also send that vendor a one-click link back,
+pre-filled with what we read: *"this is what we understood, correct it here."*
+Less effort than replying by email, so the next RFx comes back structured without
+anyone adopting anything. **The moat isn't the parser; it's the reconciliation
+graph it builds.**
 
-Every extraction problem here is a **structuring problem declined nine days
-earlier**. Of 139 vendor-line cells, **zero were comparable exactly as quoted** —
-every one needed an assumption before it could sit beside another.
+## What I decided
 
-Forcing structure upstream is what every e-sourcing suite has tried and lost
-with: a tier-3 converter with a printed rate card does not log into a buyer's
-portal, and the buyer needs them more than they need the RFx. Parsing chaos is
-the right **wedge** and the wrong destination. Every parse should also emit a
-one-click reply link back to that vendor, pre-filled with what we just read —
-*"this is what we understood, correct it here."* Less effort than replying by
-email, so the next RFx returns structured without anyone adopting anything, and
-it accrues the asset nobody has: vendor-confirmed unit bases, box weights and
-line mappings — the exact bridge facts my system has to refuse for want of
-today. **The moat isn't the parser; it's the reconciliation graph it builds.**
+- **The conversation is the product, and it is one column.** Items → vendors →
+  questions → the covering mail → the round → the table → what to do about it,
+  each a card in that column, nothing behind a tab. The first build pinned the
+  grid above a chat with six tabs inside it: everything a buyer needed was on
+  screen and none of it was where they were looking.
+- **The buyer authors the tender, and it is not theatre.** Four editable steps,
+  every click writing to the draft with no model call — ticking twelve line items
+  is data entry, not judgement. Every choice runs downstream: 45-day terms to 30
+  re-prices all 139 cells; un-gating one question returns a disqualified vendor
+  to contention. Sending is a button on a mail they have read in full.
+- **Lead with the decision, end with the memo.** Cheapest, fastest,
+  single-vendor, each with cost and lead time — ₹1,106 buys 14 days, and nothing
+  joins those two numbers by hand today. Then the award justification Finance
+  asks for in March. Ending at the table is why the spreadsheet survives.
+- **A gap is not an answer; it is a mail.** Seven cells nobody could price is the
+  honest output of round one and half a product. The screen says what each vendor
+  is missing and what answering is worth in units of the schedule, writes the
+  follow-up, and re-runs the whole pipeline on the reply.
 
-## Decisions
+## Trust
 
-- **The conversation is the product.** A grid with a chat panel is a better
-  spreadsheet; a chat stream is a transcript of stale copies. So there is **one
-  column**, in the order the work happens — items, vendors, questions, the mail,
-  the round, the table, what to do about it — and each artifact is a card that
-  mutates in place rather than printing a second copy. Nothing is behind a tab.
-  Any cell opens its source in a drawer — the workbook, the mail, the photograph
-  — never a download.
-- **The buyer authors the RFx, and it is not theatre.** Four editable steps —
-  the schedule, the vendor list, the questionnaire and its gates, then the actual
-  covering mail — each one a card, each click writing straight to the draft with
-  no model call, and `issue_rfx` refusing until Send has been pressed on a mail
-  the buyer has read. Editing the wording clears the approval. Every choice runs
-  downstream: 45-day terms to 30 re-prices all 139 cells; un-gating ISO returns a
-  vendor disqualified by an expired certificate to contention. Only the send is
-  stubbed, and it says so.
-- **A gap is not an answer; it is a mail.** Seven cells nobody can price are the
-  honest output of the first round and half a product. So the screen says what is
-  missing from each vendor and what answering is worth in units of the schedule,
-  composes the follow-up from the gaps, and — when it comes back — re-runs the
-  whole pipeline on the reply and says what moved. Six cells resolve, and a
-  vendor's minimum order drops from 50,000 to 9,000.
-- **Extraction writes to a relational store; the analyst queries it with typed
-  tools.** Deterministic arithmetic, provenance as a foreign key, and an honest
-  "where are you unsure" — because unsureness is a column. Free-form SQL is an
-  escape hatch, not the path: a model writing SQL rarely errors, it returns a
-  number wrong in a way nothing on screen can show.
-- **The review queue is three decisions, not twenty-eight cells.** Twenty-eight
-  cells sit below the 0.82 threshold, and a queue that long gets rubber-stamped
-  — but they are uncertain for three reasons: a rate card in inches against a
-  schedule in millimetres, an incumbent who wrote *"rest same as last year"*
-  instead of a price, and vendors whose word for the item is not the buyer's.
-  Accepting a cause is one judgement about one convention. Correcting stays per
-  cell, because "every one of these rates is the same wrong number" never is.
-  Shortening the queue by raising the threshold would have shortened it by
-  hiding errors.
-- **The screen leads with the decision, not the table.** Cheapest, fastest,
-  single-vendor, each with cost and lead time. Here ₹1,106 buys 14 days — cost
-  lives in the grid, lead time in the questionnaire, and nobody joins them by
-  hand. Ending at the table is why the spreadsheet survives.
-- **Normalisation contains zero AI.** Eight ordered steps to landed cost. The
-  moment a model does the arithmetic, nothing on screen is auditable.
-- **The system never invents a number it will compare on.** Seven cells are empty
-  because the incumbent priced *board* per kg and six lines are new this year, so
-  no weight exists. It names the missing fact instead of estimating one.
-- **Extraction and matching are separate, with separate confidence scores.** The
-  dangerous failure is a *perfect* extraction on the wrong line. Extraction runs
-  for real at build time and the UI says which model read which document.
-- **No agent framework; 25 splits is a `for` loop, not a solver.** Every seam is a
-  Pydantic contract, so swapping either costs one file.
+The system never invents a number it will compare on — extracted, derived,
+unresolved, and a gap is never a zero. **Escape rate is the metric, not
+accuracy:** 90% accurate catching every error beats 98% hiding 2%, because the
+98% is unverifiable without the refusals. The arithmetic is plain code; the
+moment a model does it, nothing on screen is auditable. Every number opens the
+document it came from, the header admits when a fixture rather than a model read
+those documents, and nothing a vendor has not sent can reach the drafting screen
+— enforced at the endpoint, not merely left out of the markup.
 
-## What testing found that reasoning didn't
+## Judgment and taste
 
-- The questionnaire gate **failed dangerously**: `"1 (minor — print registration,
-  Aug 2025)"` parsed as 12,025 quality escapes and silently disqualified the one
-  vendor who passes everything.
-- **Inch rounding destroys what separates two SKUs.** `16X12X10` and `17X13X10`
-  both landed on one line, leaving its neighbour silently unquoted — and the
-  silent half is the expensive half.
-- **My eval harness was flattering the system**, scoring what the matcher emitted
-  rather than the gold set, so a line matched to nothing scored as correct.
-- **Two of five adversarial defences hold**, and the matcher case is the one
-  worth reading. It correctly refuses to put two rows on one buyer line and
-  leaves the second unmatched — then `pipeline.run` keeps only rows with a line
-  number, so the *amended* rate disappears without trace. The dangerous half of
-  the defence held and the quiet half did not. Reading the code would not have
-  produced that distinction; running the attack did.
-- **Half the screen referred to code that did not exist.** `openTab`,
-  `refreshDraft` and `renderDraftPanel` were called in four places and defined in
-  none; `renderTable` still wrote to a header element I had deleted. Two
-  exceptions, and between them they took out the tabs, the RFx draft card, the
-  co-pilot's first reply *and the comparison grid itself* — while the page
-  otherwise looked fine, because a thrown exception in a boot path leaves the
-  static HTML on screen and stops. The reply had arrived and the browser simply
-  could not draw it. Nothing in the Python suite could see any of this: it is all
-  downstream of the API, which was answering correctly throughout.
-- **The co-pilot asked for payment terms four times in one reply.** It called
-  the picker tool, got back a cheerful acknowledgement, and had no reason to
-  stop — so it asked again, until it ran out of steps. The prompt said one
-  decision at a time; a prompt is a request. Now the loop ends the turn the
-  moment a block that *asks the buyer something* reaches the screen, and the
-  tool refuses a second question in the same turn. Nothing the model says after
-  a question can matter until it is answered.
-- **The answer to the flagship question was three cards and not one word.** The
-  model had put its explanation in the same turn as its final tool call, where
-  the loop treats text as thinking and shows it as a status that disappears.
-  Correct for narration, and it threw away the answer.
-- **The live site 500'd on the half of the product nobody had reached.** Issuing
-  an RFx re-runs the pipeline, the deploy sets `EXTRACTOR=replay`, and a build
-  whose recording had failed shipped with nothing to replay — so the extractor
-  refused, correctly, and the API turned that into a 500. Every local check
-  passed, because locally the extractor defaults to `fixture`. Refusing was
-  right for the extractor; deciding what to do about the refusal belongs in the
-  composition root, and there was no decision there at all.
-- **The flagship interaction returned a non-answer, silently.** Asked which single
-  vendor was cheapest, the analyst ran its query, got rows back, said "I will
-  calculate the total" — and stopped. A malformed tool-call round-trip drew an
-  empty completion, and the loop ended having said nothing. No error, no failing
-  test: the only way to find it was to ask something the suggestion chips had not
-  pre-baked.
+Mostly things taken out. The drafting screen used to say *"Shakti saves you
+₹445,474 against 45-day terms"* — correct, computed, traceable and indefensible,
+because Shakti had not replied. It told the buyer what to ask for by reading the
+answers. The review queue is 29 cells and **three decisions**, because a queue of
+29 gets rubber-stamped and raising the threshold would shorten it by hiding
+errors. The mail asks for exactly the questions the buyer kept. The unit sits
+under the quantity, because 8.03 above 1,339.00 in one rupee column is the
+comparison this project exists to refuse.
 
-## Where it stands
+## The ugly edges
 
-```
-97.1% field · 97.1% unit · 100% match · 0% escape rate
-0 of 139 cells comparable as quoted · 7 refused rather than estimated
-29-item review queue at threshold 0.82 — a product decision, displayed
-```
-
-Every bug in the list above was found by deploying the thing and using it, and
-none by a test I wrote first. That is the argument for the escape rate too, and
-the reason the browser is now driven headlessly against a local server on every
-change: the seam tests prove the modules meet their contracts, and the only thing
-that proves the product works is working it.
-
-Escape rate is the metric that matters: 90% accurate and catching every error
-beats 98% accurate and hiding 2%, because the 98% is unverifiable without the
-refusals.
+The send is stubbed and says so on its own card. Freight in the table assumes
+each vendor wins everything they quoted — the allocator re-derives it per split,
+so the table is the pessimistic view. Two of five adversarial defences hold, and
+the three that do not are named on screen rather than averaged away. **97.1%
+measures everything downstream of the read**, against documents this repo
+generated; accuracy on documents I did not write is the number I do not have, and
+five real ones sit wired in and unlabelled. Every bug worth listing was found by
+using the thing, not by a test I wrote first.
 
 ## Deliberately left out
 
-The reply-back link above. A true optimiser — 25 items is not a solver problem.
-Negotiation round two, where the next rupee is. Collusion detection, should-cost
-modelling, ERP integration, auth. A real mail path: the brief permits the stub,
-and building it buys a checkbox rather than an argument. Voice authoring, because
-speech mangles "FEFCO 0201" and "180 GSM BF22" — the exact vocabulary that proves
-category knowledge.
-
-**Known weaknesses.** Those figures measure everything *downstream of the read* —
-matching, normalisation, the gate — against cells I deliberately made hard. Model
-extraction accuracy on documents I did not generate is the number I do not have:
-five real in-domain documents are wired in to get it, and I have not labelled them
-yet. I'd rather say that than quote 97% as though it settled the matter.
+The reply-back link above. A true optimiser — 25 splits is a `for` loop, not a
+solver problem. Collusion detection, should-cost modelling, ERP integration,
+auth, a real mail path. Voice authoring, because speech mangles "FEFCO 0201" and
+"180 GSM BF22" — the vocabulary that proves category knowledge. Each buys a
+checkbox; none of them is the argument.

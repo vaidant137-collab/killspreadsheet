@@ -47,16 +47,46 @@ ends at a generated, provenance-backed decision record.
 **The conversation is the product, not a grid with a chat panel.** A comparison
 grid is a better spreadsheet, which is the one thing the title rules out. But the
 brief also asks for "a *single* side-by-side comparison", and a pure chat stream
-is a transcript with stale copies of the table at messages 7 and 19. So: the
-comparison renders **once, pinned**, and each turn mutates it in place. Clicking
-any cell slides an evidence drawer over the source. Chat drives, one canvas
-mutates, one drawer opens.
+is a transcript with stale copies of the table at messages 7 and 19. So there is
+**one column**, in the order the work happens — items, vendors, questions, the
+covering mail, the round, the table, what to do about it — and every artifact is
+a card in it that mutates in place rather than printing a second copy. Clicking
+any cell slides an evidence drawer over the source.
 
-**Extraction writes into a relational store; the analyst answers by writing SQL
-against it.** Not a chat context. This buys deterministic arithmetic (a model
-cannot be trusted to sum 150 numbers), an auditable query on screen, charts from
+That shape was a rewrite, and the first one is the more useful thing to describe.
+It had the comparison pinned above the chat with six tabs inside it. Everything a
+buyer needed was on screen and none of it was where they were looking: the table
+they had just waited for was behind a tab, the item master was a place you went
+rather than a step you took, and the conversation scrolled underneath all of it.
+Nobody reported a bug. It simply did not read as one piece of work.
+
+**The buyer authors the tender in four editable steps, and every click writes to
+the draft with no model call.** The schedule, the vendor list, the questionnaire
+and its gates, the covering mail. Ticking twelve line items is data entry, not
+judgement, and routing it through a co-pilot costs a model call per click and
+occasionally gets it wrong. The model is for the decisions; the picker edits its
+own field. And each decision runs downstream for real — 45-day terms to 30
+re-prices all 139 cells; un-gating one question returns a vendor disqualified by
+an expired certificate to contention.
+
+**A gap is not an answer; it is a mail.** Seven unresolved cells is the honest
+output of round one and half a product: a buyer looking at a gap does not admire
+the refusal, they write to the vendor. So the screen says what each vendor is
+missing and what answering is worth in units of the schedule, composes the
+follow-up from the gaps rather than writing it with a model, and re-runs the
+whole pipeline on the reply. Six cells resolve, a renewed certificate
+re-qualifies a vendor, and a 50,000-piece minimum drops to 9,000. A reply that
+only updated a display would be the same failure as a review queue that does not
+change the answer.
+
+**Extraction writes into a relational store; the analyst answers with typed
+tools.** Not a chat context. This buys deterministic arithmetic (a model cannot
+be trusted to sum 150 numbers), an auditable computation on screen, charts from
 real rows, provenance as a foreign key rather than a feature, and an honest
 answer to *"where are you unsure"* — because unsureness is a column, not a vibe.
+Free-form SQL exists as an escape hatch, read-only at the tool boundary; it is
+not the path, because a model writing SQL rarely errors — it returns a number
+wrong in a way nothing on screen can show.
 
 **Normalisation contains zero AI, deliberately.** Eight ordered steps from quoted
 rate to landed cost: unit basis, prior-contract lookup, currency, tax, discount,
@@ -90,7 +120,8 @@ rejected split can say why — which a solver reporting "infeasible" cannot.
 
 ## What testing found that reasoning didn't
 
-The scorecard is not the point. These are:
+The scorecard is not the point. These are — and every one of them was found by
+deploying the thing and using it, not by a test written first:
 
 **The questionnaire gate failed dangerously, not safely.** Quality-escape parsing
 read `"1 (minor — print registration, Aug 2025)"` as **12,025 escapes** and
@@ -106,6 +137,42 @@ dimension proximity plus global one-to-one assignment.
 **My own eval harness was flattering the system.** It scored what the matcher
 emitted rather than the gold set, so a line matched to nothing counted as
 "correctly matched to nothing."
+
+**Two of five adversarial defences hold, and the matcher case is the one worth
+reading.** It correctly refuses to put two rows on one buyer line and leaves the
+second unmatched — then the pipeline keeps only rows that carry a line number, so
+the *amended* rate disappears without trace. The dangerous half of the defence
+held and the quiet half did not. Reading the code would not have produced that
+distinction; running the attack did.
+
+**Half the screen referred to code that did not exist.** Three functions were
+called in four places and defined in none, and a fourth still wrote to a header
+element I had deleted. Two exceptions, and between them they took out the tabs,
+the draft card, the co-pilot's first reply *and the comparison grid itself* —
+while the page looked fine, because a thrown exception in a boot path leaves the
+static HTML on screen and stops. Every API behind it was answering correctly.
+The browser is now driven headlessly against a real server on every change.
+
+**The co-pilot asked for payment terms four times in one reply.** It called the
+picker tool, got back a cheerful acknowledgement, and had no reason to stop. The
+prompt said one decision at a time; a prompt is a request. The loop now ends the
+turn the moment a block that *asks the buyer something* reaches the screen —
+nothing the model says after a question can matter until it is answered.
+
+**The live site 500'd on the half of the product nobody had reached.** The deploy
+sets `EXTRACTOR=replay`, a build whose recording had failed shipped with nothing
+to replay, and the extractor refused — correctly. Refusing was right; deciding
+what to do about the refusal belongs in the composition root, and there was no
+decision there at all. Every local check passed, because locally the extractor
+defaults to `fixture`. A check that runs a configuration nobody ships is checking
+the wrong program.
+
+**Recording the walkthrough found four more, all of them text a supplier would
+have read.** "the a prior rate for 2 lines", because the missing fact carries its
+own article and the ask wrapped it in another. "not iso 9001 certified", because
+lower-casing a reason to run it into a sentence flattened the acronym with it. A
+mail whose attachment line said "30 lines" over a 31-line schedule. Watching the
+product at talking pace is a different test from clicking through it.
 
 ---
 
@@ -141,7 +208,9 @@ gold set free rather than a labelling chore.
 - **The structured reply-back link.** The argument above, not an omission.
 - **A true constrained optimiser.** The search space was 25 items. A solver would
   have been a decision made for the résumé.
-- **Negotiation round two** — where the next rupee actually is, once you can compare.
+- **A negotiation round.** Round two here asks for missing *facts*, not a better
+  price. Asking a vendor to sharpen a rate is a different product with different
+  ethics, and it needs the buyer's leverage modelled, not guessed.
 - **Collusion and anomaly detection.** Real; reads as a stuffed dataset in a demo.
 - **Should-cost modelling** from kraft paper indices.
 - **ERP/P2P integration, auth, tenancy.** Plumbing, and the brief said stub it.
@@ -159,4 +228,10 @@ gold set free rather than a labelling chore.
   documents I didn't make?* — and I have not labelled them yet. I would rather
   say that than quote the 97% as if it settled the matter.
 - **Freight is allocated assuming each vendor wins everything they quoted.** The
-  allocator re-derives it per split; the pinned comparison does not.
+  allocator re-derives it per split; the table does not, so the table is the
+  pessimistic view of a multi-vendor award.
+- **The analyst's turns are the one part a reviewer cannot see without a key.**
+  Everything else on the screen — the four steps, the mail, the round, the table,
+  the summary, round two, the review queue, the memo — is served from the store
+  and needs no model at all. That is a deliberate split, and it is also why the
+  recorded walkthrough is silent on those beats.
