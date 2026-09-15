@@ -19,7 +19,8 @@ from typing import Any
 
 from contracts.blocks import (
     AssumptionBlock, AssumptionRow, Cell, ChartBlock, Column, EvidenceBlock,
-    QueryBlock, RefusalBlock, ReviewBlock, ReviewCard, Series, TableBlock,
+    QueryBlock, RefusalBlock, ReviewBlock, ReviewCard, ReviewGroup, Series,
+    TableBlock,
 )
 from contracts.rfx import uom_label
 from store import repo
@@ -377,23 +378,46 @@ class Tools:
 
     # -- show_review_queue ---------------------------------------------------
     def show_review_queue(self, limit: int = 8) -> tuple[dict, list]:
-        rows = self.conn.execute(
-            "SELECT r.*, n.unresolved_reason, n.missing_fact, q.match_rationale "
-            "FROM review_item r "
-            "LEFT JOIN normalised_line n ON n.vendor_id=r.vendor_id AND n.line_no=r.line_no "
-            "LEFT JOIN vendor_quote_line q ON q.vendor_id=r.vendor_id AND q.line_no=r.line_no "
-            "WHERE r.status='open' ORDER BY r.confidence ASC LIMIT ?", (limit,)).fetchall()
-        total = self.conn.execute(
-            "SELECT COUNT(*) c FROM review_item WHERE status='open'").fetchone()["c"]
-        cards = [ReviewCard(
-            review_id=r["id"], vendor_id=r["vendor_id"], line_no=r["line_no"],
-            field=r["field"], proposed_value=r["proposed_value"],
-            confidence=r["confidence"], evidence_id=r["evidence_id"],
-            reason=r["missing_fact"] or r["match_rationale"] or r["unresolved_reason"])
-            for r in rows]
-        b = ReviewBlock(title=f"{total} cells below the confidence threshold",
-                        cards=cards, remaining=max(0, total - len(cards)))
-        return {"open": total, "shown": len(cards)}, [b]
+        """"Where are you unsure?" — answered as decisions, not as a list.
+
+        The header chip and this tool must agree. They did not: the chip opened
+        a grouped queue and the analyst answered the same question with eight
+        loose cards, which is two different stories about the same twenty-eight
+        cells on one screen. Both read store.repo.group_reviews now.
+        """
+        groups = repo.group_reviews(self.conn)
+        total = sum(g["count"] for g in groups)
+
+        def card(r: dict) -> ReviewCard:
+            return ReviewCard(
+                review_id=int(r["id"]), vendor_id=r["vendor_id"],
+                line_no=r["line_no"], field=r["field"],
+                proposed_value=r["proposed_value"], confidence=r["confidence"],
+                evidence_id=r["evidence_id"],
+                reason=(r.get("missing_fact") or r.get("match_rationale")
+                        or r.get("unresolved_reason")))
+
+        blocks = [ReviewGroup(
+            key=g["key"], title=g["title"], why=g["why"], count=g["count"],
+            vendors=g["vendors"], confidence_min=g["confidence_min"],
+            confidence_max=g["confidence_max"],
+            cards=[card(i) for i in g["items"]]) for g in groups]
+        b = ReviewBlock(
+            title=f"{total} cells below the confidence threshold — "
+                  f"{len(groups)} decision{'' if len(groups) == 1 else 's'}",
+            cards=[], groups=blocks, remaining=0)
+        # What the MODEL sees: the shape of the queue, not twenty-eight rows of
+        # it. It has no business summarising cells the screen is already showing.
+        return ({"open": total,
+                 "decisions": [{"title": g["title"], "cells": g["count"],
+                                "vendors": g["vendors"],
+                                "confidence": [g["confidence_min"],
+                                               g["confidence_max"]]}
+                               for g in groups],
+                 "note": "On screen, grouped, with the cells one click away. Say "
+                         "what the groups ARE and why the queue being long is the "
+                         "honest failure. Do not list cells."},
+                [b])
 
     # -- show_assumptions ----------------------------------------------------
     def show_assumptions(self) -> tuple[dict, list]:
