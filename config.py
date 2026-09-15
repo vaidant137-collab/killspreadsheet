@@ -14,6 +14,22 @@ import os
 from pathlib import Path
 
 ROOT = Path(__file__).parent
+
+# Load .env before anything reads an environment variable. Without this the
+# file is inert and a correct key sitting in a correct file is silently ignored
+# -- which fails in the most expensive possible way: it looks like a bad key.
+try:
+    from dotenv import load_dotenv
+    load_dotenv(ROOT / ".env")
+except ImportError:                       # dotenv is optional; real env vars still work
+    _envfile = ROOT / ".env"
+    if _envfile.exists():
+        for _line in _envfile.read_text(encoding="utf-8").splitlines():
+            _line = _line.strip()
+            if not _line or _line.startswith("#") or "=" not in _line:
+                continue
+            _k, _v = _line.split("=", 1)
+            os.environ.setdefault(_k.strip(), _v.strip().strip('"').strip("'"))
 DATA = ROOT / "data"
 DB_PATH = ROOT / "killspreadsheet.db"
 
