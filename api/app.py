@@ -171,6 +171,20 @@ def db():
     return repo.connect(DB_PATH)
 
 
+def _require_issued(what: str) -> None:
+    """Refuse to describe responses that have not arrived.
+
+    Same rule as the drafting screen, applied at the door rather than in the
+    markup. There is no comparison before there are quotes; an endpoint that
+    answers anyway is a back way into the thing the screen is careful not to
+    show, and "the UI does not call it" is not a property of the system.
+    """
+    if SESSION["phase"] == "draft":
+        raise HTTPException(
+            409, f"No {what} yet — the RFx has not been issued. "
+                 f"Nothing has come back from any vendor.")
+
+
 @app.get("/healthz")
 def healthz() -> dict:
     """Hosts poll this to decide the service is alive. Kept free of database
@@ -280,6 +294,7 @@ def _provenance() -> dict:
 
 @app.get("/api/comparison")
 def comparison(lines: str | None = None, vendors: str | None = None) -> dict:
+    _require_issued("a comparison")
     conn = db()
     ln = [int(x) for x in lines.split(",")] if lines else None
     vd = vendors.split(",") if vendors else None
@@ -363,6 +378,7 @@ def reviews(limit: int = 30) -> dict:
     Three a buyer can actually hold. Twenty-eight they accept in a block, which
     is the failure the queue exists to prevent, arriving by a different route.
     """
+    _require_issued("review queue")
     conn = db()
     groups = repo.group_reviews(conn)
     total = conn.execute(
@@ -648,6 +664,7 @@ def options() -> dict:
     that the schema does not persist — reading it back from the template would
     quietly answer a question about a tender nobody issued.
     """
+    _require_issued("set of options")
     import json as _json
 
     import pipeline
@@ -667,6 +684,7 @@ def options() -> dict:
 @app.get("/api/memo")
 def memo() -> dict:
     """The decision record. The artifact that actually leaves the tool."""
+    _require_issued("award memo")
     conn = db()
     from allocate.subsets import allocate
     from pipeline import load_gt
@@ -688,6 +706,7 @@ def memo() -> dict:
 
 @app.get("/api/assumptions")
 def assumptions() -> dict:
+    _require_issued("set of assumptions")
     conn = db()
     return {"rows": [dict(r) for r in conn.execute(
         "SELECT * FROM assumption ORDER BY key").fetchall()]}

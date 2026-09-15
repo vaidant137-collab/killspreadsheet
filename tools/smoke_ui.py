@@ -131,9 +131,13 @@ async def run(port: int, c: Checks) -> None:
         # the stylesheet names a real fallback stack for exactly that case.
         pg.on("requestfailed", lambda r: problems.append(f"request failed: {r.url}")
               if r.url.startswith(url) else None)
+        # 409 is this app saying "the RFx has not been issued", which is the
+        # behaviour two checks below deliberately provoke. Every other 4xx/5xx
+        # is a bug.
         pg.on("response", lambda r: problems.append(
             f"HTTP {r.status}: {r.url}  [after {len(c.rows)} checks]")
-              if r.status >= 400 and r.url.startswith(url) else None)
+              if r.status >= 400 and r.status != 409 and r.url.startswith(url)
+              else None)
 
         # ---- drafting half -------------------------------------------------
         import httpx
@@ -180,6 +184,19 @@ async def run(port: int, c: Checks) -> None:
         c.is_(not leaked,
               "nothing a vendor has not sent reaches the drafting screen",
               "; ".join(leaked))
+
+        # And the door, not only the markup. "The UI does not call it" is not a
+        # property of the system.
+        codes = await pg.evaluate(r"""async () => {
+          const out = {};
+          for (const p of ["comparison", "options", "memo", "reviews",
+                           "assumptions"])
+            out[p] = (await fetch("/api/" + p)).status;
+          return out;
+        }""")
+        c.is_(all(v == 409 for v in codes.values()),
+              "endpoints that describe responses refuse before the RFx is issued",
+              str(codes))
 
         c.at_least(await pg.locator("#suggest button").count(), 3,
                    "the empty chat offers openers")
