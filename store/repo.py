@@ -246,3 +246,98 @@ def record_correction(conn, review_id: int, corrected: str, reviewer: str) -> No
         (corrected, reviewer, datetime.now(timezone.utc).isoformat(timespec="seconds"),
          review_id))
     conn.commit()
+
+
+# ---------------------------------------------------------------------------
+# Why a cell is in the review queue
+# ---------------------------------------------------------------------------
+# The queue is the known weakness of this build: 28 cells at threshold 0.82,
+# which is too many for anyone to read, and a queue nobody reads gets
+# rubber-stamped. Lowering the threshold would shorten it by hiding errors,
+# which is the wrong fix for the right complaint.
+#
+# The right fix is that 28 cells are not 28 decisions. They are three or four
+# decisions — about an inch-to-millimetre conversion, about an incumbent who
+# wrote "rest same as last year", about vendors whose word for a thing is not
+# the buyer's word — each touching several cells. A buyer can hold four
+# decisions in their head. Twenty-eight they cannot, so they accept them all.
+#
+# Classification is deterministic and reads the matcher's own rationale. No
+# model: a queue whose grouping was itself a guess would need a queue.
+
+REVIEW_CAUSES = [
+    ("inch_conversion",
+     "Dimensions converted from inches",
+     "This vendor's rate card is in inches and the buyer's schedule is in "
+     "millimetres, so every match here rests on that conversion and a 15 mm "
+     "tolerance. Check one and you have checked the convention.",
+     lambda r: "converted from inches" in (r.get("match_rationale") or "")),
+
+    ("prior_contract",
+     "Rate taken from last year's contract, not from this quote",
+     "The vendor wrote \"rest same as last year\" where a rate should be. The "
+     "number comes from the FY26 rate contract attached to their reply. It is a "
+     "pointer, not a price, and it is only as current as that contract.",
+     lambda r: "same as last year" in ((r.get("match_rationale") or "")
+                                       + (r.get("proposed_value") or "")).lower()),
+
+    ("vendor_wording",
+     "The vendor's word for the item is not the buyer's word",
+     "Partition, pad, cap tray, fitment: dimensions and ply agree, the label "
+     "does not. This is the dangerous shape of error — a perfect read on the "
+     "wrong line — so the match is held rather than trusted.",
+     lambda r: ("vendor calls it" in (r.get("match_rationale") or "")
+                or "suffix matches" in (r.get("match_rationale") or "")
+                or "style partition" in (r.get("match_rationale") or "")
+                or "style pad" in (r.get("match_rationale") or ""))),
+]
+
+_FALLBACK = ("low_confidence", "Below the confidence threshold",
+             "No single cause. The extractor or the matcher was not confident "
+             "enough to let this number stand without a human.")
+
+
+def classify_review(row: dict) -> tuple[str, str, str]:
+    """Which decision this cell belongs to. First match wins, order matters."""
+    for key, title, why, test in REVIEW_CAUSES:
+        try:
+            if test(row):
+                return key, title, why
+        except Exception:                                    # noqa: BLE001
+            continue
+    return _FALLBACK
+
+
+def open_reviews(conn) -> list[dict]:
+    """Every open review item, with the context needed to explain it."""
+    return [dict(r) for r in conn.execute(
+        "SELECT r.*, n.missing_fact, n.unresolved_reason, q.match_rationale, "
+        "q.vendor_label, l.description, v.name AS vendor_name "
+        "FROM review_item r "
+        "LEFT JOIN normalised_line n ON n.vendor_id=r.vendor_id AND n.line_no=r.line_no "
+        "LEFT JOIN vendor_quote_line q ON q.vendor_id=r.vendor_id AND q.line_no=r.line_no "
+        "LEFT JOIN rfx_line l ON l.line_no=r.line_no "
+        "LEFT JOIN vendor v ON v.vendor_id=r.vendor_id "
+        "WHERE r.status='open' ORDER BY r.confidence ASC").fetchall()]
+
+
+def group_reviews(conn) -> list[dict]:
+    """The queue as decisions rather than as cells, worst first."""
+    groups: dict[str, dict] = {}
+    for r in open_reviews(conn):
+        key, title, why = classify_review(r)
+        g = groups.setdefault(key, {"key": key, "title": title, "why": why,
+                                    "items": [], "vendors": []})
+        g["items"].append(r)
+        name = r.get("vendor_name") or r["vendor_id"]
+        if name not in g["vendors"]:
+            g["vendors"].append(name)
+    out = []
+    for g in groups.values():
+        confs = [float(i["confidence"]) for i in g["items"]]
+        out.append({**g, "count": len(g["items"]),
+                    "confidence_min": round(min(confs), 2),
+                    "confidence_max": round(max(confs), 2)})
+    # Worst first: the group with the least confident cell needs a human most.
+    out.sort(key=lambda g: (g["confidence_min"], -g["count"]))
+    return out

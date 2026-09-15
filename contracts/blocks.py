@@ -89,10 +89,31 @@ class ReviewCard(BaseModel):
     reason: str | None = None
 
 
+class ReviewGroup(BaseModel):
+    """Cells that are uncertain for the SAME reason.
+
+    A queue of 28 cells is not 28 decisions. It is three or four decisions about
+    a conversion, a convention or a vendor's vocabulary, each of which happens to
+    touch several cells. Presented one cell at a time, a buyer reads the first
+    two and rubber-stamps the rest — which is the failure this queue exists to
+    prevent, arriving by a different route.
+    """
+
+    key: str
+    title: str
+    why: str
+    count: int
+    vendors: list[str]
+    confidence_min: float
+    confidence_max: float
+    cards: list[ReviewCard]
+
+
 class ReviewBlock(BaseModel):
     type: Literal["review"] = "review"
     title: str
     cards: list[ReviewCard]
+    groups: list[ReviewGroup] = Field(default_factory=list)
     remaining: int = 0
 
 

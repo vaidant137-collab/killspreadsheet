@@ -34,6 +34,15 @@ today. **The moat isn't the parser; it's the reconciliation graph it builds.**
   "where are you unsure" — because unsureness is a column. Free-form SQL is an
   escape hatch, not the path: a model writing SQL rarely errors, it returns a
   number wrong in a way nothing on screen can show.
+- **The review queue is three decisions, not twenty-eight cells.** Twenty-eight
+  cells sit below the 0.82 threshold, and a queue that long gets rubber-stamped
+  — but they are uncertain for three reasons: a rate card in inches against a
+  schedule in millimetres, an incumbent who wrote *"rest same as last year"*
+  instead of a price, and vendors whose word for the item is not the buyer's.
+  Accepting a cause is one judgement about one convention. Correcting stays per
+  cell, because "every one of these rates is the same wrong number" never is.
+  Shortening the queue by raising the threshold would have shortened it by
+  hiding errors.
 - **The screen leads with the decision, not the table.** Cheapest, fastest,
   single-vendor, each with cost and lead time. Here ₹1,106 buys 14 days — cost
   lives in the grid, lead time in the questionnaire, and nobody joins them by
@@ -126,8 +135,7 @@ and building it buys a checkbox rather than an argument. Voice authoring, becaus
 speech mangles "FEFCO 0201" and "180 GSM BF22" — the exact vocabulary that proves
 category knowledge.
 
-**Known weaknesses.** The 29-item queue is too long; a queue nobody reads gets
-rubber-stamped. And those figures measure everything *downstream of the read* —
+**Known weaknesses.** Those figures measure everything *downstream of the read* —
 matching, normalisation, the gate — against cells I deliberately made hard. Model
 extraction accuracy on documents I did not generate is the number I do not have:
 five real in-domain documents are wired in to get it, and I have not labelled them

@@ -103,8 +103,16 @@ number.
 
 > **"Where are you unsure?"**
 
-Twenty-nine cells at threshold 0.82. Open one review card and say why the queue
-being *too long* is the honest failure: a queue nobody reads gets rubber-stamped.
+Twenty-eight cells at threshold 0.82 — and **three decisions**. Say the sentence
+while the groups are on screen: *a queue of twenty-eight gets rubber-stamped, so
+the queue is grouped by why each cell is uncertain.* One vendor's rate card is in
+inches. One incumbent wrote "rest same as last year" instead of a price. Some
+vendors call a pad a partition. Accepting a cause is one judgement about one
+convention; correcting is still per cell, because "every one of these rates is
+the same wrong number" is never true.
+
+Then click **Show the cells** on one group — they are all still there, nothing
+was hidden to make the number look better.
 
 Then use it — click **Correct…**, change the value, save. The number moves on the
 grid and its confidence goes to 1.0, because a correction re-runs the eight

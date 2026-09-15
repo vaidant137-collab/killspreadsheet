@@ -313,17 +313,22 @@ def doc_preview(doc_id: str, locator: str = "") -> dict:
 
 @app.get("/api/reviews")
 def reviews(limit: int = 30) -> dict:
+    """The queue as DECISIONS, not as cells.
+
+    Twenty-eight cells at threshold 0.82 is the known weakness of this build,
+    and shortening it by raising the threshold would shorten it by hiding
+    errors. But twenty-eight cells are not twenty-eight decisions: they are
+    three — an inch-to-millimetre conversion, an incumbent who wrote "rest same
+    as last year", and vendors whose word for a thing is not the buyer's word.
+    Three a buyer can actually hold. Twenty-eight they accept in a block, which
+    is the failure the queue exists to prevent, arriving by a different route.
+    """
     conn = db()
-    rows = [dict(r) for r in conn.execute(
-        "SELECT r.*, n.missing_fact, n.unresolved_reason, q.match_rationale, "
-        "q.vendor_label, l.description FROM review_item r "
-        "LEFT JOIN normalised_line n ON n.vendor_id=r.vendor_id AND n.line_no=r.line_no "
-        "LEFT JOIN vendor_quote_line q ON q.vendor_id=r.vendor_id AND q.line_no=r.line_no "
-        "LEFT JOIN rfx_line l ON l.line_no=r.line_no "
-        "WHERE r.status='open' ORDER BY r.confidence ASC LIMIT ?", (limit,)).fetchall()]
+    groups = repo.group_reviews(conn)
     total = conn.execute(
         "SELECT COUNT(*) c FROM review_item WHERE status='open'").fetchone()["c"]
-    return {"open": total, "items": rows, "threshold": REVIEW_THRESHOLD}
+    return {"open": total, "groups": groups, "threshold": REVIEW_THRESHOLD,
+            "items": [i for g in groups for i in g["items"]][:limit]}
 
 
 class Decision(BaseModel):
@@ -345,6 +350,35 @@ def decide(review_id: int, d: Decision) -> dict:
     left = conn.execute(
         "SELECT COUNT(*) c FROM review_item WHERE status='open'").fetchone()["c"]
     return {"ok": True, "open": left}
+
+
+class BulkDecision(BaseModel):
+    review_ids: list[int]
+    reviewer: str = "buyer"
+
+
+@app.post("/api/reviews/accept")
+def accept_many(d: BulkDecision) -> dict:
+    """Accept a whole cause at once.
+
+    Deliberately accept-only. Accepting a group says "this convention is right",
+    which is one judgement about one thing and is exactly what the grouping is
+    for. Correcting a group would say "every one of these rates is the same
+    wrong number", which is never true — corrections stay per cell.
+    """
+    conn = db()
+    ids = [int(i) for i in d.review_ids][:200]
+    if not ids:
+        return {"ok": False, "open": conn.execute(
+            "SELECT COUNT(*) c FROM review_item WHERE status='open'").fetchone()["c"]}
+    q = ",".join("?" * len(ids))
+    conn.execute(f"UPDATE review_item SET status='accepted', reviewer=?, "
+                 f"reviewed_at=datetime('now') WHERE id IN ({q}) AND status='open'",
+                 (d.reviewer, *ids))
+    conn.commit()
+    left = conn.execute(
+        "SELECT COUNT(*) c FROM review_item WHERE status='open'").fetchone()["c"]
+    return {"ok": True, "accepted": len(ids), "open": left}
 
 
 def _apply_correction(conn, review_id: int, value: str) -> None:

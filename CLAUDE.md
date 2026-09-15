@@ -143,9 +143,18 @@ build nobody is watching, a stuck analyst costs a buyer staring at "thinking".
 `llm/test_seam.py` asserts every provider accepts the ceiling, which is how two
 of them were caught swallowing it.
 
-**Known weak:** the review queue is too long at 29; freight in the pinned
-comparison assumes each vendor wins everything they quoted (the allocator
-re-derives it per split).
+**The review queue is grouped by CAUSE, and that is a product decision.**
+Twenty-eight cells at threshold 0.82 is too many for anyone to read, and a queue
+nobody reads gets rubber-stamped — but twenty-eight cells are three decisions:
+an inch-to-millimetre conversion, an incumbent who wrote "rest same as last
+year", and vendors whose word for a thing is not the buyer's. `store.repo`
+classifies deterministically from the matcher's own rationale (a grouping that
+was itself a guess would need a queue of its own). Accepting a group is one
+judgement about one convention; correcting stays per cell, because "every one of
+these rates is the same wrong number" is never true.
+
+**Known weak:** freight in the pinned comparison assumes each vendor wins
+everything they quoted (the allocator re-derives it per split).
 
 ## Context worth keeping
 

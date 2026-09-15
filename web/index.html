@@ -84,6 +84,22 @@ nav.tabs button.on{color:var(--ink);border-bottom-color:var(--accent)}
   color:var(--ink);border:1px solid var(--rule);border-radius:4px;padding:5px 8px}
 .pcount{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--dim)}
 .pfoot{display:flex;gap:8px;margin-top:12px}
+.rgroup{border:1px solid var(--rule);border-left:2px solid var(--derived);
+  border-radius:6px;padding:12px 13px 10px;margin:0 0 9px;background:var(--surface)}
+.rgroup.done{opacity:.5;border-left-color:var(--ok)}
+.rgroup .top{display:flex;align-items:baseline;gap:9px;margin-bottom:5px}
+.rgroup .top b{font-weight:500;font-size:13px;flex:1}
+.rgroup .n,.rgroup .conf{font-family:"IBM Plex Mono",monospace;font-size:10px;
+  color:var(--dim);white-space:nowrap}
+.rgroup .why{font-size:12px;line-height:1.5;color:var(--ink-soft);max-width:62ch}
+.rgroup .who2{font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--ink-faint);
+  margin-top:5px}
+.rfoot{display:flex;gap:8px;margin-top:10px;align-items:center}
+.rfoot .go,.rfoot .other{font:inherit;font-size:11px;cursor:pointer;border-radius:4px;
+  padding:5px 11px;border:1px solid var(--rule);background:none;color:var(--ink-soft)}
+.rfoot .go{background:var(--accent);border-color:var(--accent);color:#fff}
+.rfoot button:disabled{cursor:default;opacity:.6}
+.rcells{margin-top:9px;padding-top:9px;border-top:1px solid var(--rule-soft)}
 .fixrow{display:flex;gap:6px;margin-top:8px;align-items:center}
 .fixrow input{font:inherit;font-size:12px;flex:1;min-width:0;padding:5px 8px;
   border:1px solid var(--accent);border-radius:4px;background:var(--surface);
@@ -1150,7 +1166,53 @@ function renderChart(b){
 function renderReviews(b){
   const d = el('div','block');
   d.appendChild(el('div','who', esc(b.title)));
-  b.cards.forEach(c => {
+
+  /* Twenty-eight cells, three reasons. A buyer can hold three decisions; they
+     cannot hold twenty-eight, so they accept all twenty-eight — which is the
+     failure this queue exists to prevent, arriving by another door. The cells
+     are still all here, one click away, and correcting is still per cell:
+     accepting a group says "this convention is right", which is one judgement
+     about one thing. "Every one of these rates is the same wrong number" never
+     is, so there is no bulk correct. */
+  (b.groups || []).forEach(g => {
+    const box = el('div','rgroup');
+    box.innerHTML =
+      `<div class="top"><b>${esc(g.title)}</b>` +
+      `<span class="n">${g.count} cell${g.count===1?'':'s'}</span>` +
+      `<span class="conf">${(g.confidence_min*100).toFixed(0)}–${(g.confidence_max*100).toFixed(0)}%</span></div>` +
+      `<div class="why">${esc(g.why)}</div>` +
+      `<div class="who2">${g.vendors.map(esc).join(' · ')}</div>`;
+    const foot = el('div','rfoot');
+    const all = el('button','go', `Accept all ${g.count}`);
+    all.onclick = async () => {
+      all.disabled = true; all.textContent = 'accepting…';
+      const r = await (await fetch('/api/reviews/accept', {method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({review_ids: g.cards.map(c => c.review_id)})})).json();
+      box.classList.add('done');
+      foot.replaceChildren(el('div','status',
+        `${g.count} accepted on one judgement — recorded against each cell.`));
+      const chip = $('#chipReview');
+      if (r.open){ chip.textContent = r.open + ' need review'; } else { chip.hidden = true; }
+    };
+    const open = el('button','other', 'Show the cells');
+    let shown = false;
+    const list = el('div','rcells'); list.hidden = true;
+    g.cards.forEach(c => list.appendChild(reviewCard(c)));
+    open.onclick = () => { shown = !shown; list.hidden = !shown;
+      open.textContent = shown ? 'Hide the cells' : 'Show the cells'; };
+    foot.appendChild(all); foot.appendChild(open);
+    box.appendChild(foot); box.appendChild(list);
+    d.appendChild(box);
+  });
+
+  b.cards.forEach(c => d.appendChild(reviewCard(c)));
+  if (b.remaining) d.appendChild(el('div','status', `${b.remaining} more in the queue.`));
+  return d;
+}
+
+function reviewCard(c){
+  {
     const card = el('div','card');
     card.innerHTML = `<div class="top"><b>${esc(c.vendor_id)}</b>
       <span class="mono" style="font-size:11px;color:var(--ink-faint)">line ${c.line_no ?? '—'} · ${esc(c.field)}</span>
@@ -1183,10 +1245,8 @@ function renderReviews(b){
     ev.onclick = () => openEvidence(c.evidence_id);
     card.appendChild(accept); card.appendChild(fix);
     if (c.evidence_id) card.appendChild(ev);
-    d.appendChild(card);
-  });
-  if (b.remaining) d.appendChild(el('div','status', `${b.remaining} more in the queue.`));
-  return d;
+    return card;
+  }
 }
 
 async function decide(id, action, value, card){
@@ -1217,14 +1277,18 @@ function renderAssumptions(b){
 }
 
 async function showReviews(){
-  const r = await (await fetch('/api/reviews?limit=8')).json();
+  const r = await (await fetch('/api/reviews')).json();
   const t = turn('Review queue');
-  t.appendChild(renderReviews({title: `${r.open} cells below the ${r.threshold} threshold`,
-    cards: r.items.map(i => ({review_id:i.id, vendor_id:i.vendor_id, line_no:i.line_no,
-      field:i.field, proposed_value:i.proposed_value, confidence:i.confidence,
-      evidence_id:i.evidence_id,
-      reason: i.missing_fact || i.match_rationale || i.unresolved_reason})),
-    remaining: Math.max(0, r.open - r.items.length)}));
+  const card = i => ({review_id:i.id, vendor_id:i.vendor_id, line_no:i.line_no,
+    field:i.field, proposed_value:i.proposed_value, confidence:i.confidence,
+    evidence_id:i.evidence_id,
+    reason: i.missing_fact || i.match_rationale || i.unresolved_reason});
+  t.appendChild(renderReviews({
+    title: `${r.open} cells below the ${r.threshold} threshold — `
+         + `${(r.groups||[]).length} decision${(r.groups||[]).length===1?'':'s'}`,
+    groups: (r.groups || []).map(g => ({...g, cards: g.items.map(card)})),
+    cards: []}));
+  $('#chat').scrollTop = 1e9;
 }
 
 async function showAssumptions(){

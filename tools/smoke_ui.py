@@ -243,11 +243,29 @@ async def run(port: int, c: Checks) -> None:
         # the trust layer: a human verdict is an input, not a comment
         if await pg.locator("#chipReview").count() and not await pg.locator("#chipReview").is_hidden():
             await pg.click("#chipReview")
-            await pg.wait_for_timeout(700)
+            await pg.wait_for_timeout(1000)
+
+            # The queue is DECISIONS, not cells: twenty-eight of the latter,
+            # three of the former. The length of this queue is the known
+            # weakness of the build, and grouping is the fix that does not work
+            # by hiding errors.
+            c.at_least(await pg.locator("#chat .rgroup").count(), 2,
+                       "the review queue groups its cells by cause")
+            in_groups = await pg.evaluate(
+                "() => [...document.querySelectorAll('#chat .rgroup .n')]"
+                ".reduce((a, e) => a + parseInt(e.textContent), 0)")
+            c.at_least(in_groups, 10, "every open cell sits inside a group")
+            c.is_(await pg.locator("#chat .rgroup .rcells").first.is_hidden(),
+                  "the cells start folded behind the decision")
+            await pg.locator("#chat .rgroup .rfoot button",
+                             has_text="Show the cells").first.click()
+            await pg.wait_for_timeout(500)
+            c.is_(not await pg.locator("#chat .rgroup .rcells").first.is_hidden(),
+                  "and open on request")
             # Scope to the review card itself. `#chat .card` also matches the
             # three option cards, and asserting against the wrong one passes or
             # fails for reasons that have nothing to do with corrections.
-            card = pg.locator("#chat .card", has=pg.locator(
+            card = pg.locator("#chat .rgroup .rcells .card", has=pg.locator(
                 "button:text-is('Correct…')")).first
             await card.locator("button", has_text="Correct").click()
             await pg.wait_for_timeout(300)
@@ -259,6 +277,17 @@ async def run(port: int, c: Checks) -> None:
             c.is_("corrected" in await card.inner_text(),
                   "a correction is accepted and re-normalised",
                   (await card.inner_text()).replace("\n", " / ")[-70:])
+
+            # Accepting a whole cause is one judgement about one thing, and it
+            # has to actually clear those cells rather than just grey a card.
+            before = int((await pg.locator("#chipReview").inner_text()).split()[0])
+            g2 = pg.locator("#chat .rgroup").nth(1)
+            n2 = int((await g2.locator(".n").inner_text()).split()[0])
+            await g2.locator(".rfoot button", has_text="Accept all").click()
+            await pg.wait_for_timeout(1400)
+            after = await pg.evaluate(
+                "fetch('/api/reviews').then(r => r.json()).then(j => j.open)")
+            c.eq(after, before - n2, "accepting a cause clears exactly its cells")
 
         await b.close()
 

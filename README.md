@@ -251,10 +251,14 @@ escape rate    0%      every error was caught by the confidence gate
 calibration    accuracy spans 33 points across confidence buckets
 comparability  0 of 139 cells were comparable exactly as quoted
 unresolved     7 cells refused rather than estimated
-review queue   29 cells at threshold 0.82
+review queue   28 cells at threshold 0.82, grouped into 3 decisions
 ```
 
-Deployed at a public URL. Extraction is **recorded during the build**, not run
-per request, so cold starts stay fast and no visitor is billed a model call for
-OCR — and the header names the model that did the reading. If the build has no
-key, it falls back to the fixture path, deletes the recordings, and says so.
+Deployed at a public URL. Extraction is **recorded once and replayed**, not run
+per request and no longer run during the build either: cold starts stay fast, no
+visitor is billed a model call for OCR, and the header names the model that did
+the reading and when. Recording inside the build sounded tidier and cost ten
+minutes a deploy, hit the build's time ceiling every time and shipped the
+fixture anyway — four deploys running, with the header honestly saying so and
+nobody reading it. With no recording committed the site works and says plainly
+that no model has read these documents.
