@@ -310,6 +310,27 @@ async def run(port: int, c: Checks) -> None:
         await pg.wait_for_timeout(1200)
         c.at_least(await pg.locator("#panelOptions .card").count(), 3,
                    "the options tab rebuilds them from the store")
+        # Two questions a table sorted by line number cannot answer: which lines
+        # are the money, and which lines anyone competed for.
+        await pg.click('#tabs button[data-tab="spend"]')
+        await pg.wait_for_timeout(2200)
+        c.eq(await pg.locator("#panelSpend .fig").count(), 2,
+             "spend concentration and price spread both render")
+        c.at_least(await pg.locator("#panelSpend .fig .bar").count(), 40,
+                   "a bar per line in each")
+        c.at_least(await pg.locator("#panelSpend .fig .bar.tail").count(), 1,
+                   "the tail is de-emphasised rather than recoloured")
+        await pg.locator("#panelSpend .fig svg g rect[fill='transparent']").first.hover()
+        await pg.wait_for_timeout(400)
+        c.is_(not await pg.locator("#tip").is_hidden(),
+              "every bar has a hover layer")
+        c.is_("%" in await pg.locator("#tip").inner_text(),
+              "and it names the line, the spend and the share")
+        await pg.locator("#panelSpend .fig .foot button").first.click()
+        await pg.wait_for_timeout(400)
+        c.at_least(await pg.locator("#panelSpend .fig table.sheet tbody tr").count(), 20,
+                   "and a table view exists for anyone the chart does not serve")
+
         await pg.click('#tabs button[data-tab="items"]')
         await pg.wait_for_timeout(400)
         c.eq(await pg.locator("#panelItems table.pick tbody tr").count(), 30,

@@ -138,6 +138,23 @@ Then click into the evidence for three cells, in this order:
    empty and name the missing fact. Say the sentence: *it is not zero, and it is
    not a no-quote.*
 
+## 5b · Where the money is (45s)
+
+Open **Where the money is**. Two questions the grid cannot answer, because a
+table sorted by line number hides both.
+
+- **Thirteen of thirty lines carry 80% of the spend, and one layer-pad line is
+  28% of it.** Thirty lines look like thirty equal decisions. A week of
+  negotiation spread evenly across them is a week spent mostly on the tail.
+- **Line 19 spreads 128% between the best and worst price.** That is the closest
+  thing an RFx has to a measure of how contested a line was — a wide spread is
+  where a second round pays, a narrow one is the market price and arguing with
+  it wastes the call.
+
+Click a bar; it finds that line in the comparison. Say the honest bit: this is
+arithmetic over stored cells, no model, and the table view underneath it is the
+same numbers for anyone the chart does not serve.
+
 ## 6 · The question the VP actually asks (60s)
 
 > **"Cheapest per line among vendors who cleared the questionnaire — and what

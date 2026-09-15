@@ -25,7 +25,7 @@ from analyst.author import AUTHOR_SYSTEM, AUTHOR_TOOL_SPECS, AuthorTools
 from analyst.loop import Analyst
 from analyst.tools import build_comparison
 from config import DATA, DB_PATH, REVIEW_THRESHOLD, ROOT
-from contracts.rfx import RfxDraft
+from contracts.rfx import RfxDraft, uom_label
 from store import repo
 
 app = FastAPI(title="Kill the Quote Spreadsheet")
@@ -911,6 +911,66 @@ def options() -> dict:
         gt = pipeline.apply_draft(gt, draft)
     return {"cards": build_options(gt, normalise_all(gt)),
             "authored": draft.issued}
+
+
+@app.get("/api/spend")
+def spend() -> dict:
+    """Where the money is, and where the competition is.
+
+    Two questions the grid cannot answer, because a table sorted by line number
+    hides both. Thirty lines look like thirty equal decisions; they are not —
+    one layer-pad line is a quarter of the award, and a buyer with a week has
+    to know which five lines are worth a phone call.
+
+    And a line only rewards negotiation if somebody else wanted it. The spread
+    between the best and worst price on a line is the closest thing in an RFx
+    to a measure of how contested it was.
+
+    Both are arithmetic over stored cells. No model, and no ranking the buyer
+    cannot reproduce from the table.
+    """
+    _require_issued("spend analysis")
+    conn = db()
+    rows = [dict(r) for r in conn.execute(
+        "SELECT l.line_no, l.code, l.description, l.annual_qty, l.uom,"
+        "       MIN(n.landed_inr) AS best, MAX(n.landed_inr) AS worst,"
+        "       COUNT(n.landed_inr) AS priced "
+        "FROM rfx_line l LEFT JOIN normalised_line n"
+        "  ON n.line_no = l.line_no AND n.landed_inr IS NOT NULL "
+        "GROUP BY l.line_no ORDER BY l.line_no").fetchall()]
+    out = []
+    for r in rows:
+        best = r["best"]
+        spend_inr = (best or 0) * r["annual_qty"]
+        spread = (((r["worst"] - best) / best * 100.0)
+                  if best and r["worst"] and r["priced"] > 1 else None)
+        out.append({
+            "line_no": r["line_no"], "code": r["code"],
+            "description": r["description"], "uom": uom_label(r["uom"]),
+            "annual_qty": r["annual_qty"], "best_inr": best,
+            "worst_inr": r["worst"], "priced_by": r["priced"],
+            "annual_inr": round(spend_inr, 2),
+            "spread_pct": round(spread, 1) if spread is not None else None})
+    total = sum(x["annual_inr"] for x in out) or 1.0
+    for x in out:
+        x["share_pct"] = round(x["annual_inr"] / total * 100.0, 2)
+
+    # How few lines carry most of the money. The buyer's week is finite and this
+    # is the number that decides where it goes.
+    ranked = sorted(out, key=lambda x: -x["annual_inr"])
+    run, head = 0.0, 0
+    for x in ranked:
+        run += x["annual_inr"]
+        head += 1
+        if run / total >= 0.8:
+            break
+    widest = max((x for x in out if x["spread_pct"] is not None),
+                 key=lambda x: x["spread_pct"], default=None)
+    return {"lines": out, "total_inr": round(total, 2),
+            "lines_for_80pct": head,
+            "widest_spread": widest,
+            "note": "Annual spend uses the cheapest landed rate on each line; "
+                    "the spread is best against worst among vendors who priced it."}
 
 
 @app.get("/api/memo")

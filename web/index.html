@@ -242,6 +242,7 @@ main{flex:1;display:grid;grid-template-columns:minmax(0,1fr);min-height:0}
 .legend .b{background:var(--accent);border:0;width:2px;height:12px}
 .legend .r{background:var(--rank);border:0;width:14px;height:2px;opacity:.75}
 .legend .sep{width:1px;height:12px;background:var(--rule)}
+#pinned.tall{max-height:78vh}
 #pinned.folded{max-height:none}
 #pinned.folded .panel,#pinned.folded #tableWrap,#pinned.folded #foot{display:none}
 #pinned .bar .fold{font:inherit;font-size:13px;line-height:1;cursor:pointer;
@@ -268,6 +269,35 @@ table.round td.n{font-size:11.5px;color:var(--dim)}
 .block.mail .mailfull{max-height:none}
 .block.mail .verify{margin-top:10px;padding-top:9px;border-top:1px solid var(--rule-soft);
   font-size:12px;color:var(--ink-soft);line-height:1.5}
+.fig{margin:0 0 22px}
+.fig h3{font-size:13px;font-weight:500;margin:0 0 2px}
+.fig .sub{font-size:11.5px;color:var(--dim);margin:0 0 11px;line-height:1.5;max-width:64ch}
+.fig svg{display:block;width:100%;height:auto;overflow:visible}
+.fig .bar{fill:var(--accent)}
+.fig .bar.tail{fill:var(--rule)}
+.fig .bar:hover{fill:var(--rank)}
+.fig .lbl{font-family:"IBM Plex Mono",monospace;font-size:9px;fill:var(--ink-faint)}
+.fig .val{font-family:"IBM Plex Mono",monospace;font-size:9.5px;fill:var(--ink-soft)}
+.fig .axis{stroke:var(--rule-soft);stroke-width:1}
+.fig .foot{display:flex;gap:8px;margin-top:8px;align-items:center}
+.fig .foot button{font:inherit;font-size:11px;cursor:pointer;border-radius:4px;
+  padding:4px 10px;border:1px solid var(--rule);background:none;color:var(--ink-soft)}
+.fig .key{font-size:11px;color:var(--dim);display:flex;gap:14px;align-items:center}
+.fig .key i{width:10px;height:10px;display:inline-block;margin-right:5px;vertical-align:-1px}
+.fig .key .a{background:var(--accent)} .fig .key .t{background:var(--rule)}
+#tip{position:fixed;pointer-events:none;z-index:60;background:var(--ink);color:var(--paper);
+  font-size:11.5px;line-height:1.45;padding:7px 9px;border-radius:5px;max-width:280px;
+  box-shadow:0 6px 20px rgba(0,0,0,.25)}
+#tip[hidden]{display:none}
+#tip b{font-weight:600}
+#tip .m{font-family:"IBM Plex Mono",monospace;font-size:10.5px;opacity:.85;display:block;margin-top:2px}
+table.sheet{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px}
+table.sheet th{text-align:left;font-family:"IBM Plex Mono",monospace;font-size:9.5px;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--dim);padding:0 10px 5px 0;
+  border-bottom:1px solid var(--rule)}
+table.sheet td{padding:5px 10px 5px 0;border-bottom:1px solid var(--rule-soft)}
+table.sheet td.num,table.sheet th.num{text-align:right;
+  font-family:"IBM Plex Mono",monospace;font-size:11px}
 #tableWrap{overflow:auto;min-height:0}
 #tableWrap td.num small{display:block;font-size:9.5px;color:var(--ink-faint);
   font-family:"IBM Plex Mono",monospace;letter-spacing:.02em;margin-top:1px}
@@ -405,6 +435,7 @@ svg.chart text{font-family:"IBM Plex Mono",monospace;font-size:9px;fill:var(--in
         <nav class="tabs" id="tabs">
           <button data-tab="main" class="on" id="tabMain">RFx draft</button>
           <button data-tab="options" id="tabOptions" hidden>Options</button>
+          <button data-tab="spend" id="tabSpend" hidden>Where the money is</button>
           <button data-tab="round" id="tabRound" hidden>Round</button>
           <button data-tab="items">Item master</button>
           <button data-tab="vendors">Vendors</button>
@@ -429,6 +460,7 @@ svg.chart text{font-family:"IBM Plex Mono",monospace;font-size:9px;fill:var(--in
       <div id="panelItems" class="panel" hidden></div>
       <div id="panelVendors" class="panel" hidden></div>
       <div id="panelRound" class="panel" hidden></div>
+      <div id="panelSpend" class="panel" hidden></div>
       <div id="foot"></div>
     </section>
 
@@ -444,6 +476,7 @@ svg.chart text{font-family:"IBM Plex Mono",monospace;font-size:9px;fill:var(--in
   </div>
 </main>
 
+<div id="tip" hidden></div>
 <div id="scrim"></div>
 <aside id="drawer" aria-hidden="true">
   <div class="dh"><h3 id="dTitle">Evidence</h3><button id="dClose" aria-label="Close">×</button></div>
@@ -522,6 +555,7 @@ async function enterComparison(){
   const r = STATE.rfx, c = STATE.counts;
   $('#tabMain').textContent = 'Comparison';
   $('#tabOptions').hidden = false;
+  $('#tabSpend').hidden = false;
   $('#chipAsm').hidden = false;
   $('#q').placeholder = 'Ask about the comparison…';
   $('#meta').innerHTML = `<span>${esc(r.rfx_id)}</span>
@@ -567,13 +601,22 @@ function openTab(name){
   $('#panelItems').hidden   = name !== 'items';
   $('#panelVendors').hidden = name !== 'vendors';
   $('#panelRound').hidden   = name !== 'round';
+  $('#panelSpend').hidden   = name !== 'spend';
   // The legend explains cell states in the comparison grid. On any other tab it
   // is labelling something that is not on screen.
   $('#legend').style.visibility = (name === 'main' && !drafting) ? '' : 'hidden';
+  // A panel remembers where it was scrolled to, which means opening a tab can
+  // land you halfway down a chart you have never seen.
+  ['#panelDraft','#panelOptions','#panelItems','#panelVendors','#panelRound',
+   '#panelSpend','#tableWrap'].forEach(sel => { const e = $(sel); if (e) e.scrollTop = 0; });
+  // Thirty bars twice over needs more than half a screen, and this is the one
+  // tab where the artifact IS the whole answer.
+  $('#pinned').classList.toggle('tall', name === 'spend');
   if (name === 'items')   renderItems();
   if (name === 'vendors') renderVendors();
   if (name === 'options') renderOptionsPanel();
   if (name === 'round')   renderRound(ROUND);
+  if (name === 'spend')   renderSpend();
 }
 
 /* The draft is read back from the server, never tracked here. Two copies of the
@@ -677,6 +720,181 @@ function renderDraftPanel(){
   $('#pinSub').textContent = nLines
     ? `${nLines} line${nLines === 1 ? '' : 's'} · ${inv.length} vendor${inv.length === 1 ? '' : 's'}`
     : 'nothing scheduled yet';
+}
+
+/* ---------------- where the money is ----------------
+
+   Two questions the grid cannot answer, because a table sorted by line number
+   hides both of them. Thirty lines look like thirty equal decisions: they are
+   not. One layer-pad line is 28% of the award, thirteen lines carry 80% of it,
+   and a buyer with a week needs to know which five are worth a phone call.
+
+   And a line only rewards negotiation if somebody else wanted it. The spread
+   between the best and the worst price on a line is the closest thing an RFx
+   has to a measure of how contested it was.
+
+   Both are horizontal bars because the categories are long and there are
+   thirty. One hue carries "this is the subject", the tail goes grey: the form
+   is emphasis, not identity, and nothing here needs a second colour. Length
+   carries the magnitude, which is what a bar is for. */
+
+const SPEND = {data: null, table: {money: false, spread: false}};
+
+function tipShow(e, html){
+  const t = $('#tip'); t.innerHTML = html; t.hidden = false;
+  const r = t.getBoundingClientRect();
+  let x = e.clientX + 14, y = e.clientY + 14;
+  if (x + r.width > innerWidth - 8) x = e.clientX - r.width - 14;
+  if (y + r.height > innerHeight - 8) y = e.clientY - r.height - 14;
+  t.style.left = x + 'px'; t.style.top = y + 'px';
+}
+const tipHide = () => { $('#tip').hidden = true; };
+document.addEventListener('scroll', tipHide, true);
+
+/* One figure: a sorted horizontal bar chart with a hover layer and a table. */
+function figure(o){
+  const fig = el('div','fig');
+  fig.innerHTML = `<h3>${esc(o.title)}</h3><div class="sub">${o.sub}</div>`;
+
+  const rows = o.rows, n = rows.length;
+  const H = 13, GAP = 2, LW = 34, RW = 84;      // row height, spacer, gutters
+  const W = 760, plot = W - LW - RW;
+  const max = Math.max(...rows.map(r => r.v)) || 1;
+  const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('viewBox', `0 0 ${W} ${n * (H + GAP) + 6}`);
+  svg.setAttribute('role','img');
+  svg.setAttribute('aria-label', o.title + '. ' + o.alt);
+
+  rows.forEach((r, i) => {
+    const y = i * (H + GAP);
+    const w = Math.max(1.5, (r.v / max) * plot);
+    const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+    g.innerHTML =
+      `<text class="lbl" x="${LW - 6}" y="${y + H - 4}" text-anchor="end">L${r.line_no}</text>` +
+      `<rect class="bar${r.tail ? ' tail' : ''}" x="${LW}" y="${y}" width="${w}" ` +
+      `height="${H - 2}" rx="4" ry="4"></rect>` +
+      (i < o.label_top ? `<text class="val" x="${LW + w + 6}" y="${y + H - 4}">${esc(r.label)}</text>` : '');
+    // A hit target the width of the row, not the width of the bar.
+    const hit = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    hit.setAttribute('x', 0); hit.setAttribute('y', y);
+    hit.setAttribute('width', W); hit.setAttribute('height', H + GAP);
+    hit.setAttribute('fill','transparent');
+    hit.onmousemove = ev => tipShow(ev, r.tip);
+    hit.onmouseleave = tipHide;
+    hit.onclick = () => { tipHide(); openTab('main'); flashLine(r.line_no); };
+    g.appendChild(hit);
+    svg.appendChild(g);
+  });
+  fig.appendChild(svg);
+
+  const foot = el('div','foot');
+  const key = el('div','key',
+    `<span><i class="a"></i>${esc(o.key_a)}</span><span><i class="t"></i>${esc(o.key_t)}</span>`);
+  const toggle = el('button','','Show as a table');
+  const holder = el('div');
+  toggle.onclick = () => {
+    SPEND.table[o.key] = !SPEND.table[o.key];
+    toggle.textContent = SPEND.table[o.key] ? 'Show as a chart' : 'Show as a table';
+    svg.hidden = SPEND.table[o.key];
+    holder.replaceChildren(SPEND.table[o.key] ? o.table() : document.createComment(''));
+  };
+  foot.appendChild(key); foot.appendChild(toggle);
+  fig.appendChild(foot); fig.appendChild(holder);
+  return fig;
+}
+
+function flashLine(line_no){
+  const rows = [...document.querySelectorAll('#tableWrap table tbody tr')];
+  const tr = rows.find(r => r.children[0] && r.children[0].textContent.trim() === String(line_no));
+  if (!tr) return;
+  tr.scrollIntoView({block:'center'});
+  tr.style.transition = 'background .18s'; tr.style.background = 'var(--accent-soft)';
+  setTimeout(() => { tr.style.background = ''; }, 1400);
+}
+
+async function renderSpend(){
+  const p = $('#panelSpend');
+  if (!SPEND.data){
+    p.replaceChildren(el('div','empty','Working out where the money is…'));
+    try { SPEND.data = await (await fetch('/api/spend')).json(); }
+    catch (e){ p.replaceChildren(el('div','empty','Not available yet.')); return; }
+  }
+  const d = SPEND.data;
+  const money = [...d.lines].sort((a,b) => b.annual_inr - a.annual_inr);
+  const head = d.lines_for_80pct;
+
+  const moneyFig = figure({
+    key: 'money',
+    title: 'Where the money is',
+    sub: `Annual spend per line at the cheapest landed rate. `
+       + `<b>${head} of ${d.lines.length} lines carry 80% of the ${inr0(d.total_inr)}</b>`
+       + ` — the rest is a long tail, and a week of negotiation spent evenly across`
+       + ` thirty lines is a week spent mostly on the tail.`,
+    alt: `${head} lines account for 80 percent of annual spend`,
+    key_a: `the ${head} that make up 80%`, key_t: 'the tail',
+    label_top: 6,
+    rows: money.map((x, i) => ({
+      line_no: x.line_no, v: x.annual_inr, tail: i >= head,
+      label: `${x.share_pct.toFixed(1)}%`,
+      tip: `<b>Line ${x.line_no} — ${esc(x.description.slice(0,58))}</b>`
+         + `<span class="m">${inr0(x.annual_inr)} a year · ${x.share_pct.toFixed(1)}% of spend</span>`
+         + `<span class="m">${Number(x.annual_qty).toLocaleString('en-IN')} ${esc(x.uom)}`
+         + ` at ${x.best_inr != null ? inr(x.best_inr) : '—'} each</span>`
+         + `<span class="m">priced by ${x.priced_by} of 5 vendors</span>`})),
+    table: () => sheet(money.slice(0, 30), [
+      ['Line', x => x.line_no, true], ['Item', x => x.description.slice(0,52), false],
+      ['Annual ₹', x => inr0(x.annual_inr), true],
+      ['Share', x => x.share_pct.toFixed(1) + '%', true]]),
+  });
+
+  const spread = d.lines.filter(x => x.spread_pct != null)
+                        .sort((a,b) => b.spread_pct - a.spread_pct);
+  const w = d.widest_spread;
+  const spreadFig = figure({
+    key: 'spread',
+    title: 'Where the competition is',
+    sub: `The gap between the best and the worst landed price on each line, among`
+       + ` the vendors who priced it. <b>Line ${w ? w.line_no : '—'} spreads`
+       + ` ${w ? w.spread_pct : 0}%</b>, which is the closest thing an RFx has to a`
+       + ` measure of how contested a line was. A wide spread is where a second`
+       + ` round pays; a narrow one is the market price and arguing with it wastes`
+       + ` the call.`,
+    alt: `price spread per line, widest ${w ? w.spread_pct : 0} percent`,
+    key_a: 'spread above 25%', key_t: 'below',
+    label_top: 6,
+    rows: spread.map(x => ({
+      line_no: x.line_no, v: x.spread_pct, tail: x.spread_pct < 25,
+      label: x.spread_pct.toFixed(0) + '%',
+      tip: `<b>Line ${x.line_no} — ${esc(x.description.slice(0,58))}</b>`
+         + `<span class="m">best ${inr(x.best_inr)} · worst ${inr(x.worst_inr)} per ${esc(x.uom)}</span>`
+         + `<span class="m">${x.spread_pct.toFixed(1)}% apart, across ${x.priced_by} vendors</span>`
+         + `<span class="m">${inr0(x.annual_inr)} a year at the best rate</span>`})),
+    table: () => sheet(spread, [
+      ['Line', x => x.line_no, true], ['Item', x => x.description.slice(0,52), false],
+      ['Best ₹', x => inr(x.best_inr), true], ['Worst ₹', x => inr(x.worst_inr), true],
+      ['Spread', x => x.spread_pct.toFixed(1) + '%', true]]),
+  });
+
+  p.replaceChildren(moneyFig, spreadFig);
+  p.appendChild(el('div','roundnote', esc(d.note)
+    + ' Click any bar to find that line in the comparison.'));
+  // The reset in openTab fired before this content existed.
+  p.scrollTop = 0;
+}
+
+function sheet(rows, cols){
+  const t = el('table','sheet');
+  t.innerHTML = '<thead><tr>' + cols.map(c =>
+    `<th${c[2] ? ' class="num"' : ''}>${esc(c[0])}</th>`).join('') + '</tr></thead>';
+  const tb = document.createElement('tbody');
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = cols.map(c =>
+      `<td${c[2] ? ' class="num"' : ''}>${esc(c[1](r))}</td>`).join('');
+    tb.appendChild(tr);
+  });
+  t.appendChild(tb);
+  return t;
 }
 
 /* ---------------- the round ----------------
