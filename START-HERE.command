@@ -7,20 +7,41 @@ echo "  Kill the Quote Spreadsheet"
 echo "  ─────────────────────────────────────────────"
 echo ""
 
-# --- find a python -------------------------------------------------------
+# --- find a python that actually works -----------------------------------
+# Newest is NOT the right criterion. Homebrew Pythons frequently ship with no
+# pip and no working ensurepip, and a newer Python that cannot install
+# anything is worse than an older one that can. So: prefer the newest that
+# HAS pip, and only then fall back to bootstrapping one.
+CANDIDATES="python3.13 python3.12 python3.11 python3.10 python3.9 python3"
 PY=""
-for c in python3.13 python3.12 python3.11 python3.10 python3; do
-  command -v "$c" >/dev/null 2>&1 && { PY="$c"; break; }
+for c in $CANDIDATES; do
+  command -v "$c" >/dev/null 2>&1 || continue
+  if "$c" -m pip --version >/dev/null 2>&1; then PY="$c"; break; fi
 done
+
 if [ -z "$PY" ]; then
-  echo "  Python 3 isn't installed."
-  echo "  A window should offer to install Developer Tools. Click Install,"
-  echo "  wait for it to finish, then double-click this file again."
+  echo "  None of your Pythons has pip. Installing it..."
+  curl -sS https://bootstrap.pypa.io/get-pip.py -o /tmp/ks_get_pip.py 2>/dev/null
+  for c in $CANDIDATES; do
+    command -v "$c" >/dev/null 2>&1 || continue
+    "$c" /tmp/ks_get_pip.py --user -q >/dev/null 2>&1
+    "$c" -m pip --version >/dev/null 2>&1 && { PY="$c"; echo "        done"; break; }
+  done
+fi
+
+if [ -z "$PY" ]; then
+  echo "  Could not find a usable Python."
+  echo ""
+  echo "  Quickest fix - paste this into Terminal and press Enter:"
+  echo "      brew install python@3.12"
+  echo "  then double-click this file again."
+  echo ""
   xcode-select --install 2>/dev/null
-  echo ""; read -n 1 -s -r -p "  Press any key to close."; exit 1
+  read -n 1 -s -r -p "  Press any key to close."; exit 1
 fi
 PYVER=$("$PY" -c 'import sys; print("%d.%d" % sys.version_info[:2])')
-echo "  Using Python $PYVER"
+echo "  Using Python $PYVER  ($PY)"
+[ "$PYVER" = "3.9" ] && echo "  (3.9 is fine - a compatibility package is installed below.)"
 echo ""
 
 # --- API key -------------------------------------------------------------
