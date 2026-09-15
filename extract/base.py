@@ -55,12 +55,28 @@ class Extractor(Protocol):
     def extract(self, doc: SourceDoc) -> RawSubmission: ...
 
 
-def get_extractor(kind: str):
+def get_extractor(kind: str, mode: str | None = None):
+    """fixture -> replay known-good output, no key needed
+       replay  -> return a RECORDED real run, verbatim
+       model   -> call the model now
+       record  -> call the model now AND save what it returned"""
     from config import EXTRACTOR
-    if EXTRACTOR == "fixture":
+    mode = mode or EXTRACTOR
+
+    if mode == "fixture":
         from extract.fixture import FixtureExtractor
         return FixtureExtractor()
+    if mode == "replay":
+        from extract.recorded import ReplayExtractor
+        return ReplayExtractor()
+
     from extract import docx_x, email_x, image_x, pdf_x, xlsx_x
-    return {"xlsx": xlsx_x.XlsxExtractor, "pdf": pdf_x.PdfExtractor,
-            "docx": docx_x.DocxExtractor, "image": image_x.ImageExtractor,
-            "email": email_x.EmailExtractor}[kind]()
+    inner = {"xlsx": xlsx_x.XlsxExtractor, "pdf": pdf_x.PdfExtractor,
+             "docx": docx_x.DocxExtractor, "image": image_x.ImageExtractor,
+             "email": email_x.EmailExtractor}[kind]()
+    if mode == "record":
+        from extract.recorded import RecordingExtractor
+        from llm.providers import get_client
+        c = get_client("extract")
+        return RecordingExtractor(inner, model_name=f"{c.name}:{c.model}")
+    return inner

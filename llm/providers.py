@@ -55,11 +55,36 @@ class AnthropicClient:
 class OpenAIClient:
     name = "openai"
     supports_vision = True
+    BASE: str | None = None
+    KEY_ENV = "OPENAI_API_KEY"
 
     def __init__(self, model: str = "gpt-4.1"):
         from openai import OpenAI
-        self._c = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+        kw = {"api_key": os.environ[self.KEY_ENV]}
+        if self.BASE:
+            kw["base_url"] = self.BASE
+        self._c = OpenAI(**kw)
         self.model = model
+
+
+class GeminiClient(OpenAIClient):
+    """Gemini through its OpenAI-compatible endpoint.
+
+    Not a new client -- the same code with a different base URL. Structured
+    outputs, function calling and image input all work over this path, which is
+    the whole reason the model provider is a seam: adding a third provider cost
+    four lines.
+
+    Free tier covers the Flash and Flash-Lite models including image input, so
+    the entire pipeline can be developed and rehearsed at zero cost.
+    """
+
+    name = "gemini"
+    BASE = "https://generativelanguage.googleapis.com/v1beta/openai/"
+    KEY_ENV = "GEMINI_API_KEY"
+
+    def __init__(self, model: str = "gemini-3.5-flash"):
+        super().__init__(model=model)
 
     def structured(self, *, system, user, schema: type[T], images=None,
                    max_tokens: int = 8000) -> T:
@@ -79,20 +104,32 @@ class OpenAIClient:
         return schema.model_validate(json.loads(r.choices[0].message.content))
 
 
-def get_client():
-    """Pick a provider from whatever key is present. Raises only when a model
-    is actually needed — the dataset, normaliser, allocator and eval harness all
-    run without one."""
-    from config import LLM_PROVIDER
-    want = LLM_PROVIDER
-    has_a = bool(os.getenv("ANTHROPIC_API_KEY"))
-    has_o = bool(os.getenv("OPENAI_API_KEY"))
-    if want == "anthropic" or (want == "auto" and has_a):
-        return AnthropicClient()
-    if want == "openai" or (want == "auto" and has_o):
-        return OpenAIClient()
+def get_client(role: str = "extract"):
+    """Pick a provider for this role from whatever key is present.
+
+    Raises only when a model is actually needed — the dataset, normaliser,
+    allocator, eval harness and the whole UI run without one.
+    """
+    from config import LLM_PROVIDER, LLM_PROVIDER_ANALYST
+    want = (LLM_PROVIDER_ANALYST or LLM_PROVIDER) if role == "analyst" else LLM_PROVIDER
+
+    have = {"anthropic": bool(os.getenv("ANTHROPIC_API_KEY")),
+            "openai": bool(os.getenv("OPENAI_API_KEY")),
+            "gemini": bool(os.getenv("GEMINI_API_KEY"))}
+    cls = {"anthropic": AnthropicClient, "openai": OpenAIClient, "gemini": GeminiClient}
+
+    if want in cls:
+        if not have[want]:
+            raise RuntimeError(f"{want} selected for '{role}' but its API key is not set.")
+        return cls[want]()
+    # auto: cheapest capable provider first, so a spare key is never the
+    # expensive one by accident
+    for name in ("gemini", "anthropic", "openai"):
+        if have[name]:
+            return cls[name]()
     raise RuntimeError(
-        "No model API key found. Set ANTHROPIC_API_KEY or OPENAI_API_KEY in .env.\n"
+        "No model API key found. Set GEMINI_API_KEY, ANTHROPIC_API_KEY or "
+        "OPENAI_API_KEY in .env.\n"
         "Everything except extraction and the analyst runs without one:\n"
         "  python -m data.build_ground_truth\n"
         "  python -m tools.render_all\n"
@@ -146,3 +183,4 @@ def _openai_raw(self, *, system, messages, tools, max_tokens=4000):
 
 AnthropicClient.raw_turn = _anthropic_raw
 OpenAIClient.raw_turn = _openai_raw
+# GeminiClient subclasses OpenAIClient, so it inherits raw_turn unchanged.

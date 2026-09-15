@@ -67,7 +67,7 @@ class Analyst:
     def client(self):
         if self._client is None:
             from llm.providers import get_client
-            self._client = get_client()
+            self._client = get_client("analyst")
         return self._client
 
     def ask(self, question: str, history: list | None = None):

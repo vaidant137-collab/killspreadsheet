@@ -20,6 +20,9 @@ from normalize.engine import default_assumptions, normalise_line
 from store import repo
 
 
+FORMAT_TO_PATH = {"photo": "image"}
+
+
 def load_gt() -> GroundTruth:
     return GroundTruth.model_validate(
         json.loads((DATA / "ground_truth.json").read_text(encoding="utf-8")))
@@ -33,17 +36,24 @@ def _as_quote(e) -> VendorLineQuote:
         tooling_amortised=e.tooling_amortised, note=e.note)
 
 
-def run(*, fresh: bool = True, verbose: bool = True) -> dict:
+def run(*, fresh: bool = True, verbose: bool = True, mode: str | None = None) -> dict:
     gt = load_gt()
     lines = {l.line_no: l for l in gt.rfx.lines}
-    ex = get_extractor("fixture")
+    mode = mode or EXTRACTOR
 
     # 1. extract, then 2. match — separately, so a bad parse cannot propagate
     #    into the arithmetic and a bad match is scored on its own terms.
     extracted, injections = [], []
+    docs = {d["vendor_id"]: d for d in _doc_paths()}
     for sub in gt.submissions:
         vid = sub.vendor.vendor_id
-        raw = ex.extract(SourceDoc(doc_id=f"{vid}-quote", vendor_id=vid, path="",
+        # The vendor profile says how they replied; the extractor registry is
+        # keyed by the parsing path. "photo" and "image" are the same thing
+        # seen from the two ends.
+        ex = get_extractor(FORMAT_TO_PATH.get(sub.vendor.reply_format,
+                                              sub.vendor.reply_format), mode)
+        raw = ex.extract(SourceDoc(doc_id=f"{vid}-quote", vendor_id=vid,
+                                   path=docs.get(vid, {}).get("path", ""),
                                    kind=sub.vendor.reply_format, role="quote"))
         injections += [(vid, t) for t in raw.injection_attempts]
         extracted += [m for m in match_submission(raw, gt) if m.line_no is not None]
@@ -86,7 +96,7 @@ def run(*, fresh: bool = True, verbose: bool = True) -> dict:
 
     if verbose:
         unres = sum(1 for n in normalised if n.state.value == "unresolved")
-        print(f"\n  extractor        {EXTRACTOR}")
+        print(f"\n  extractor        {mode}")
         print(f"  cells extracted  {len(extracted)}")
         print(f"  normalised       {len(normalised)}  ({unres} unresolved)")
         print(f"  review queue     {queued}  (threshold {REVIEW_THRESHOLD})")
@@ -102,5 +112,26 @@ def run(*, fresh: bool = True, verbose: bool = True) -> dict:
             "queued": queued, "allocations": allocs, "conn": conn}
 
 
+def _doc_paths() -> list[dict]:
+    """Where each vendor's quotation actually lives, for the model-backed paths."""
+    gen = DATA / "generated"
+    want = {"xlsx": ".xlsx", "pdf": ".pdf", "docx": ".docx",
+            "photo": ".jpg", "email": ".eml"}
+    out = []
+    for sub in load_gt().submissions:
+        vid, ext = sub.vendor.vendor_id, want[sub.vendor.reply_format]
+        hit = next((p for p in sorted(gen.glob(f"{vid}*{ext}"))
+                    if "questionnaire" not in p.name), None)
+        if hit:
+            out.append({"vendor_id": vid, "path": str(hit.relative_to(DATA.parent))})
+    return out
+
+
 if __name__ == "__main__":
-    run()
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--extractor", choices=["fixture", "replay", "model", "record"],
+                    help="fixture: no key needed · replay: a recorded real run · "
+                         "model: call now · record: call now and save it")
+    a = ap.parse_args()
+    run(mode=a.extractor)

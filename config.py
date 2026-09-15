@@ -18,7 +18,20 @@ DATA = ROOT / "data"
 DB_PATH = ROOT / "killspreadsheet.db"
 
 # --- seams ------------------------------------------------------------------
-LLM_PROVIDER = os.getenv("LLM_PROVIDER", "auto")     # auto | anthropic | openai
+# Two roles, because they have different economics and different stakes.
+#
+# EXTRACTION is vision-heavy, runs once per document, and is schema-constrained
+# so a weaker model has little room to go wrong. It is also the expensive half:
+# ~26k input and ~15k output tokens per full pass, and output costs 4-5x input.
+#
+# The ANALYST is what the interviewer actually watches. It needs good tool
+# calling and readable prose, it is cheap per question (~17k in, ~1.2k out),
+# and a clumsy answer is visible in a way a clumsy parse is not.
+#
+# So they are separate settings. Run extraction on something cheap, spend on
+# the analyst.
+LLM_PROVIDER          = os.getenv("LLM_PROVIDER", "auto")   # auto|anthropic|openai|gemini
+LLM_PROVIDER_ANALYST  = os.getenv("LLM_PROVIDER_ANALYST", "")   # falls back to LLM_PROVIDER
 ALLOCATOR    = os.getenv("ALLOCATOR", "subsets")     # naive | subsets | milp
 ANALYST      = os.getenv("ANALYST", "toolloop")      # toolloop | langgraph
 # "fixture" replays known-good extraction output in place of the model, so the
