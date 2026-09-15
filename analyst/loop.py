@@ -90,8 +90,14 @@ class Analyst:
             messages.append({"role": "assistant", "content": reply["content"]})
 
             if not reply["tool_calls"]:
-                if reply["text"]:
-                    yield "block", TextBlock(text=reply["text"])
+                # An empty completion with no tool calls used to fall straight
+                # through this branch and end the turn in silence, which reads
+                # on screen as the analyst ignoring the question. Say what
+                # happened instead.
+                yield "block", TextBlock(
+                    text=reply["text"] or
+                    "The model returned an empty response. Ask again, or "
+                    "narrow the question — nothing was written to the store.")
                 return
 
             results = []

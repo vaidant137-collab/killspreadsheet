@@ -199,6 +199,25 @@ def _openai_raw(self, *, system, messages, tools, max_tokens=4000):
             for r in m["content"]:
                 msgs.append({"role": "tool", "tool_call_id": r["id"],
                              "content": r["content"]})
+        elif m["role"] == "assistant" and hasattr(m["content"], "tool_calls"):
+            # The loop hands back `reply["content"]` verbatim, which on this
+            # path is the provider's own ChatCompletionMessage. Passing it
+            # through as `content` buries tool_calls one level down, so the
+            # assistant turn goes up with NO tool_calls field and the following
+            # role:"tool" message references an id that, as far as the API can
+            # see, was never issued. The observed failure is not an error: the
+            # model returns an empty completion, the loop sees no text and no
+            # tool calls, and the turn ends having said nothing. Re-send the
+            # assistant turn in the shape the API documents.
+            c = m["content"]
+            turn = {"role": "assistant", "content": c.content or ""}
+            if c.tool_calls:
+                turn["tool_calls"] = [
+                    {"id": tc.id, "type": "function",
+                     "function": {"name": tc.function.name,
+                                  "arguments": tc.function.arguments}}
+                    for tc in c.tool_calls]
+            msgs.append(turn)
         else:
             msgs.append({"role": m["role"], "content": m["content"]})
     spec = [{"type": "function", "function": {
