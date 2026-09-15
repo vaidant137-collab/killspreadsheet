@@ -22,7 +22,12 @@ if [ -z "$PY" ]; then
   read -n 1 -s -r -p "  Press any key to close."
   exit 1
 fi
-echo "  Using $($PY --version 2>&1)"
+PYVER=$("$PY" -c 'import sys; print("%d.%d" % sys.version_info[:2])')
+echo "  Using Python $PYVER"
+if [ "$PYVER" = "3.9" ]; then
+  echo "  (3.9 is what macOS ships. It works - a compatibility package is"
+  echo "   installed below to handle the newer type syntax.)"
+fi
 echo ""
 
 # --- API key -------------------------------------------------------------
@@ -66,11 +71,24 @@ echo ""
 
 echo "  [2/5] Installing what it needs (a minute or two the first time)..."
 "$VPY" -m pip install --quiet --upgrade pip 2>&1 | tail -2
-if ! "$VPY" -m pip install --quiet -r requirements.txt 2>&1 | tail -5; then
+"$VPY" -m pip install --quiet -r requirements.txt 2>&1 | tail -5
+# On Python 3.9 pydantic cannot evaluate `X | None` annotations without this.
+if [ "$PYVER" = "3.9" ]; then
+  "$VPY" -m pip install --quiet eval_type_backport 2>&1 | tail -2
+fi
+
+# Check it actually works before going further, so a failure says WHY here
+# rather than as a wall of traceback three steps later.
+if ! "$VPY" -c "from api.app import app" 2>/tmp/ks_import_err; then
   echo ""
-  echo "  Install had trouble. Trying the essentials only..."
-  "$VPY" -m pip install --quiet pydantic fastapi uvicorn python-dotenv openpyxl \
-      pypdf python-docx Pillow numpy reportlab openai anthropic 2>&1 | tail -3
+  echo "  Something is still missing. The important line is:"
+  echo ""
+  tail -3 /tmp/ks_import_err | sed 's/^/    /'
+  echo ""
+  echo "  Copy that into the Claude chat and I will fix it."
+  echo ""
+  read -n 1 -s -r -p "  Press any key to close."
+  exit 1
 fi
 echo "        done"
 echo ""
