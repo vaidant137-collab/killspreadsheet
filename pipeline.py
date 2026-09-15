@@ -88,18 +88,34 @@ def run(*, fresh: bool = True, verbose: bool = True, mode: str | None = None,
 
     # 1. extract, then 2. match — separately, so a bad parse cannot propagate
     #    into the arithmetic and a bad match is scored on its own terms.
-    extracted, injections = [], []
+    extracted, injections, degraded = [], [], []
     docs = {d["vendor_id"]: d for d in _doc_paths(gt)}
     for sub in gt.submissions:
         vid = sub.vendor.vendor_id
         # The vendor profile says how they replied; the extractor registry is
         # keyed by the parsing path. "photo" and "image" are the same thing
         # seen from the two ends.
-        ex = get_extractor(FORMAT_TO_PATH.get(sub.vendor.reply_format,
-                                              sub.vendor.reply_format), mode)
-        raw = ex.extract(SourceDoc(doc_id=f"{vid}-quote", vendor_id=vid,
-                                   path=docs.get(vid, {}).get("path", ""),
-                                   kind=sub.vendor.reply_format, role="quote"))
+        path = FORMAT_TO_PATH.get(sub.vendor.reply_format, sub.vendor.reply_format)
+        doc = SourceDoc(doc_id=f"{vid}-quote", vendor_id=vid,
+                        path=docs.get(vid, {}).get("path", ""),
+                        kind=sub.vendor.reply_format, role="quote")
+        try:
+            raw = get_extractor(path, mode).extract(doc)
+        except Exception as e:                                # noqa: BLE001
+            # One document must not cost the other four. A model that loses its
+            # shape on the photograph should not throw away four good parses and
+            # send the whole build back to the fixture path — which is exactly
+            # what happened on the first real deploy.
+            #
+            # The fallback is per document and it is RECORDED as a fallback, so
+            # provenance reports "4 of 5 read by a model" rather than implying
+            # five. A partial real run described accurately beats a complete one
+            # described loosely.
+            if mode in ("model", "record"):
+                degraded.append((vid, f"{type(e).__name__}: {e}"))
+                raw = get_extractor(path, "fixture").extract(doc)
+            else:
+                raise
         injections += [(vid, t) for t in raw.injection_attempts]
         extracted += [m for m in match_submission(raw, gt) if m.line_no is not None]
 
@@ -139,9 +155,16 @@ def run(*, fresh: bool = True, verbose: bool = True, mode: str | None = None,
     allocs = allocate(gt, normalised)
     feasible = [a for a in allocs if a.feasible]
 
+    if degraded:
+        print("\n  documents that fell back to the fixture path:")
+        for vid, why in degraded:
+            print(f"    {vid:10s} {why[:110]}")
+
     if verbose:
         unres = sum(1 for n in normalised if n.state.value == "unresolved")
-        print(f"\n  extractor        {mode}")
+        print(f"\n  extractor        {mode}"
+              + (f"  ({len(gt.submissions) - len(degraded)}/{len(gt.submissions)} "
+                 f"read by the model)" if degraded else ""))
         print(f"  cells extracted  {len(extracted)}")
         print(f"  normalised       {len(normalised)}  ({unres} unresolved)")
         print(f"  review queue     {queued}  (threshold {REVIEW_THRESHOLD})")
@@ -154,7 +177,8 @@ def run(*, fresh: bool = True, verbose: bool = True, mode: str | None = None,
         print(f"  database         {DB_PATH.name}\n")
 
     return {"extracted": len(extracted), "normalised": len(normalised),
-            "queued": queued, "allocations": allocs, "conn": conn}
+            "queued": queued, "allocations": allocs, "conn": conn,
+            "degraded": degraded}
 
 
 def _doc_paths(gt: GroundTruth | None = None) -> list[dict]:

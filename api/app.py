@@ -165,11 +165,27 @@ def _provenance() -> dict:
                           "an API key set, or run `python -m pipeline "
                           "--extractor record`, to have a model do the reading."}
     models = sorted({r["model"] for r in runs})
-    return {"mode": "recorded",
-            "label": f"extraction by {', '.join(models)}",
-            "detail": f"{len(runs)} documents parsed by a real model run, "
-                      f"recorded {min(r['recorded_at'] for r in runs)} and "
-                      f"replayed verbatim. Re-recorded on every deploy.",
+    # How many documents the model actually read, out of how many arrived. A
+    # per-document fallback means this can legitimately be 4 of 5, and saying
+    # "extraction by GLM-4.6V" while one document came from the fixture path
+    # would be the same lie the whole provenance chip exists to prevent.
+    try:
+        total = len(json.loads(
+            (DATA / "ground_truth.json").read_text(encoding="utf-8"))["submissions"])
+    except Exception:                                        # noqa: BLE001
+        total = len(runs)
+    partial = len(runs) < total
+    return {"mode": "partial" if partial else "recorded",
+            "label": (f"extraction by {', '.join(models)}"
+                      + (f" — {len(runs)} of {total} documents" if partial else "")),
+            "detail": (f"{len(runs)} of {total} documents parsed by a real model "
+                       f"run, recorded {min(r['recorded_at'] for r in runs)} and "
+                       f"replayed verbatim. "
+                       + (f"The other {total - len(runs)} fell back to the fixture "
+                          f"path because the model's output did not validate — "
+                          f"named here rather than averaged away. "
+                          if partial else "")
+                       + "Re-recorded on every deploy."),
             "runs": runs}
 
 

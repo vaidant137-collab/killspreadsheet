@@ -16,7 +16,7 @@ because nothing was mis-read.
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class SourceDoc(BaseModel):
@@ -75,6 +75,26 @@ class RawSubmission(BaseModel):
     # information the buyer wants — not something to silently drop.
     injection_attempts: list[str] = Field(default_factory=list)
     extraction_notes: list[str] = Field(default_factory=list)
+
+    # A model handed one note as a bare string rather than a list of one, and a
+    # whole extraction run died on a pydantic list_type error. That is the model
+    # being loosely right, not wrong — the content was correct and the container
+    # was not — and the boundary should absorb it rather than discard five
+    # documents' worth of real work.
+    #
+    # Note what this does NOT do: it never invents, splits, or reinterprets a
+    # value. A string becomes a one-item list and nothing else changes, so the
+    # guarantee that the system never invents a number it will compare on is
+    # untouched. Everything past this point still validates strictly.
+    @field_validator("document_terms", "injection_attempts", "extraction_notes",
+                     mode="before")
+    @classmethod
+    def _one_string_is_a_list_of_one(cls, v):
+        if v is None:
+            return []
+        if isinstance(v, str):
+            return [v] if v.strip() else []
+        return v
 
 
 class LineMatch(BaseModel):

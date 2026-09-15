@@ -323,7 +323,7 @@ async function boot(){
   if (prov){
     const b = $('#chipProv'); b.hidden = false;
     b.textContent = prov.label;
-    b.className = 'chip' + (prov.mode === 'fixture' ? ' warn' : '');
+    b.className = 'chip' + (prov.mode === 'recorded' ? '' : ' warn');
     b.title = prov.detail;
     b.onclick = () => showProvenance(prov);
   }
