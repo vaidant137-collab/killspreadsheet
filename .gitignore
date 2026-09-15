@@ -11,3 +11,8 @@ data/wild/*
 !data/wild/MANIFEST.md
 !data/wild/labels.json
 data/sessions/
+
+# The recording itself: made by tools/record_walkthrough.py, not committed.
+# The script and the beat sheet are; 11 MB of video is not.
+data/walkthrough/*.mp4
+data/walkthrough/*.webm

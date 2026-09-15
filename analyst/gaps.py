@@ -30,8 +30,17 @@ _PLAIN = {"unit_weight_g": "finished weight per piece",
 
 
 def _plain(fact: str) -> str:
-    """Say it the way a buyer would write it to a supplier."""
-    return _PLAIN.get(fact, fact.replace("_", " "))
+    """Say it the way a buyer would write it to a supplier.
+
+    Without its own article: the ask is composed as "the <this> for N lines",
+    and the missing facts the normaliser names carry their own ("a prior rate
+    for line 11"), which came out on screen as "the a prior rate for 2 lines".
+    """
+    out = _PLAIN.get(fact, fact.replace("_", " "))
+    for article in ("the ", "a ", "an "):
+        if out.lower().startswith(article):
+            return out[len(article):]
+    return out
 
 
 def gaps_for(gt: GroundTruth, rows: list[NormalisedLine]) -> list[dict]:

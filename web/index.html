@@ -1257,6 +1257,15 @@ async function enterResults(o){
            'Where is the money?']);
 }
 
+/* Lower-case the first letter to run a reason into a sentence — unless the
+   sentence starts on an acronym, because "not iso 9001 certified" reads as a
+   machine that does not know what it just said. */
+const soften = s => {
+  const t = String(s || ''), first = t.split(' ')[0] || '';
+  return (first.length > 1 && first === first.toUpperCase())
+    ? t : t.charAt(0).toLowerCase() + t.slice(1);
+};
+
 /* What every vendor did to make their quote incomparable. "0 of 134 cells were
    comparable as quoted" is true and reads as a boast nobody can check; this
    verifies itself against five documents that are one click away. */
@@ -1284,7 +1293,7 @@ function narrate(){
     at all</b> and are shown as gaps, never as zero — there is a mail below that
     asks for what is missing.</p>` +
     (dq.length ? '<p>' + dq.map(v => `<b>${esc(v.name.split(' ')[0])}</b> did not clear
-      the questionnaire — ${esc((v.disqualified_because[0] || '').toLowerCase())}.`)
+      the questionnaire — ${esc(soften(v.disqualified_because[0]))}.`)
       .join(' ') + '</p>' : ''));
 }
 

@@ -254,7 +254,12 @@ def _compose_mail(d: RfxDraft) -> dict:
     cat = _catalogue()
     names = {v["vendor_id"]: v["name"] for v in cat["vendors"]}
     qs = {q["q_no"]: q["question"] for q in cat["questions"]}
-    lines = [l for l in cat["lines"] if l["line_no"] in set(d.line_nos or [])]
+    # Count what is actually on the schedule, which includes anything the buyer
+    # added this year. The attachment line said "30 lines" over a 31-line
+    # schedule, which is the kind of off-by-one a supplier notices before you do.
+    chosen = set(d.line_nos or [])
+    lines = ([l for l in cat["lines"] if l["line_no"] in chosen]
+             + [x for x in (d.extra_lines or []) if x.get("line_no") in chosen])
     gates = [n for n in (d.gating_q_nos or []) if n in qs]
     dflt = cat["defaults"]
 
@@ -1241,6 +1246,12 @@ def _snapshot(conn) -> dict:
             "qualified": q, "open_reviews": r}
 
 
+def _upfirst(s: str) -> str:
+    """Start a sentence without flattening what follows. `str.capitalize()`
+    lower-cases the rest, which turns an INR/USD rate into an Inr/usd one."""
+    return (s[:1].upper() + s[1:]) if s else s
+
+
 def _inr(n: float) -> str:
     """Rupees, grouped the way every other number on this screen is.
 
@@ -1312,7 +1323,7 @@ def summary() -> dict:
         suggestions.append({
             "do": f"Write back to {askable[0]['vendor'].split()[0]} before you "
                   f"decide anything.",
-            "because": f"{askable[0]['asks'][0]['what'].capitalize()} — "
+            "because": f"{_upfirst(askable[0]['asks'][0]['what'])} — "
                        f"{askable[0]['units_at_stake']:,} units of the schedule "
                        f"hang on it."})
     if unresolved:
