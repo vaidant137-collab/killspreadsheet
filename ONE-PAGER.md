@@ -74,6 +74,17 @@ today. **The moat isn't the parser; it's the reconciliation graph it builds.**
   static HTML on screen and stops. The reply had arrived and the browser simply
   could not draw it. Nothing in the Python suite could see any of this: it is all
   downstream of the API, which was answering correctly throughout.
+- **The co-pilot asked for payment terms four times in one reply.** It called
+  the picker tool, got back a cheerful acknowledgement, and had no reason to
+  stop — so it asked again, until it ran out of steps. The prompt said one
+  decision at a time; a prompt is a request. Now the loop ends the turn the
+  moment a block that *asks the buyer something* reaches the screen, and the
+  tool refuses a second question in the same turn. Nothing the model says after
+  a question can matter until it is answered.
+- **The answer to the flagship question was three cards and not one word.** The
+  model had put its explanation in the same turn as its final tool call, where
+  the loop treats text as thinking and shows it as a status that disappears.
+  Correct for narration, and it threw away the answer.
 - **The live site 500'd on the half of the product nobody had reached.** Issuing
   an RFx re-runs the pipeline, the deploy sets `EXTRACTOR=replay`, and a build
   whose recording had failed shipped with nothing to replay — so the extractor

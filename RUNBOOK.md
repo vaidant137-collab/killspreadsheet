@@ -138,10 +138,15 @@ in a way nothing on screen can show.
 
 > **"Which vendor is most reliable?"**
 
-It should decline and name what it would need: delivery history, quality escapes
-over time, OTIF. An RFx contains none of it. This is the most important twenty
-seconds in the recording — a clean refusal is what makes the other answers worth
-trusting.
+It declines in a block of its own — the gap in one line, then the three or four
+facts it would need. An RFx contains none of them. This is the most important
+twenty seconds in the recording: a clean refusal is what makes the other answers
+worth trusting.
+
+Worth one sentence: refusing is a **tool call**, not a prose apology. Written as
+prose it came out as 130 words that listed the missing facts twice and ended by
+offering to do something else instead. Refusal is an answer, so it gets the same
+treatment as one.
 
 ## 8 · The artifact that leaves the tool (40s)
 

@@ -19,7 +19,7 @@ from typing import Any
 
 from contracts.blocks import (
     AssumptionBlock, AssumptionRow, Cell, ChartBlock, Column, EvidenceBlock,
-    QueryBlock, ReviewBlock, ReviewCard, Series, TableBlock,
+    QueryBlock, RefusalBlock, ReviewBlock, ReviewCard, Series, TableBlock,
 )
 from store import repo
 
@@ -166,6 +166,28 @@ TOOL_SPECS = [
             "or correct them. Use this when asked where the system is unsure."),
         "input_schema": {"type": "object", "properties": {
             "limit": {"type": "integer"}}, "required": []},
+    },
+    {
+        "name": "refuse",
+        "description": (
+            "The data cannot answer this question. Say so and name what you would "
+            "need. Use this INSTEAD of writing an apology in prose: it renders as "
+            "its own block with the missing facts listed, and a refusal that names "
+            "the gap is what makes every other answer worth trusting.\n\n"
+            "Reach for it whenever the question asks about something an RFx does "
+            "not contain — reliability, delivery history, OTIF, quality over time, "
+            "financial standing, anything about how a vendor has BEHAVED rather "
+            "than what they quoted."),
+        "input_schema": {"type": "object", "properties": {
+            "reason": {"type": "string", "description":
+                       "One or two sentences. What this dataset does not contain. "
+                       "No apology, no hedging, no offer to do something else."},
+            "would_need": {"type": "array", "items": {"type": "string"},
+                           "description":
+                           "Three to five items, each a fact or dataset you would "
+                           "need. Short noun phrases, not sentences, and each one "
+                           "named once."}},
+            "required": ["reason", "would_need"]},
     },
     {
         "name": "show_assumptions",
@@ -381,6 +403,21 @@ class Tools:
                                 editable=bool(r["editable"])) for r in rows],
             note="Change any of these and every derived number recomputes.")
         return {"count": len(rows)}, [b]
+
+    def refuse(self, reason: str, would_need: list[str] | None = None
+               ) -> tuple[dict, list]:
+        """A refusal is an answer, and it deserves the same treatment as one.
+
+        Written in prose it comes out as an apology with the missing facts
+        listed twice and an offer to do something else instead — which is what
+        the live site produced when asked which vendor was most reliable. As a
+        block it is four lines and unmistakable.
+        """
+        b = RefusalBlock(question="", reason=reason.strip(),
+                         would_need=[w.strip() for w in (would_need or []) if w.strip()])
+        return ({"refused": True,
+                 "note": "On screen. Do not restate it or offer alternatives."},
+                [b])
 
     def dispatch(self, name: str, args: dict):
         fn = getattr(self, name, None)
