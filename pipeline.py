@@ -36,15 +36,60 @@ def _as_quote(e) -> VendorLineQuote:
         tooling_amortised=e.tooling_amortised, note=e.note)
 
 
-def run(*, fresh: bool = True, verbose: bool = True, mode: str | None = None) -> dict:
+def apply_draft(gt: GroundTruth, draft) -> GroundTruth:
+    """Fold the buyer's authored RFx into the ground truth before anything runs.
+
+    This is what stops RFx authoring being theatre. The buyer's four real
+    decisions land here, and everything downstream — normalisation, the gate,
+    the allocator, the review queue — re-derives from them. Nothing is cached
+    across an issue, because payment terms alone re-price all 139 cells.
+    """
+    gt = gt.model_copy(deep=True)
+    if draft.line_nos:
+        keep = set(draft.line_nos)
+        gt.rfx.lines = [l for l in gt.rfx.lines if l.line_no in keep]
+        for sub in gt.submissions:
+            sub.line_quotes = [q for q in sub.line_quotes if q.line_no in keep]
+    if draft.vendor_ids:
+        want = set(draft.vendor_ids)
+        gt.submissions = [s for s in gt.submissions if s.vendor.vendor_id in want]
+    if draft.question_nos:
+        keep_q = set(draft.question_nos)
+        gt.rfx.questionnaire = [q for q in gt.rfx.questionnaire if q.q_no in keep_q]
+        for sub in gt.submissions:
+            sub.questionnaire = [a for a in sub.questionnaire if a.q_no in keep_q]
+    # Gating is buyer policy. An empty gate list means the buyer chose to gate on
+    # nothing, which is a real choice and not a missing value — so it is applied
+    # as stated rather than defaulted back to the template.
+    if draft.question_nos:
+        gates = set(draft.gating_q_nos)
+        for q in gt.rfx.questionnaire:
+            q.gating = q.q_no in gates
+    if draft.payment_terms_days is not None:
+        gt.rfx.required_payment_terms = f"{draft.payment_terms_days} days from GRN"
+    if draft.cost_of_capital_pct is not None:
+        gt.rfx.cost_of_capital_pct = float(draft.cost_of_capital_pct)
+    if draft.required_incoterm:
+        gt.rfx.required_incoterm = draft.required_incoterm
+    if draft.delivery_point:
+        gt.rfx.delivery_point = draft.delivery_point
+    if draft.buyer_org:
+        gt.rfx.buyer_org = draft.buyer_org
+    return gt
+
+
+def run(*, fresh: bool = True, verbose: bool = True, mode: str | None = None,
+        draft=None) -> dict:
     gt = load_gt()
+    if draft is not None:
+        gt = apply_draft(gt, draft)
     lines = {l.line_no: l for l in gt.rfx.lines}
     mode = mode or EXTRACTOR
 
     # 1. extract, then 2. match — separately, so a bad parse cannot propagate
     #    into the arithmetic and a bad match is scored on its own terms.
     extracted, injections = [], []
-    docs = {d["vendor_id"]: d for d in _doc_paths()}
+    docs = {d["vendor_id"]: d for d in _doc_paths(gt)}
     for sub in gt.submissions:
         vid = sub.vendor.vendor_id
         # The vendor profile says how they replied; the extractor registry is
@@ -112,13 +157,13 @@ def run(*, fresh: bool = True, verbose: bool = True, mode: str | None = None) ->
             "queued": queued, "allocations": allocs, "conn": conn}
 
 
-def _doc_paths() -> list[dict]:
+def _doc_paths(gt: GroundTruth | None = None) -> list[dict]:
     """Where each vendor's quotation actually lives, for the model-backed paths."""
     gen = DATA / "generated"
     want = {"xlsx": ".xlsx", "pdf": ".pdf", "docx": ".docx",
             "photo": ".jpg", "email": ".eml"}
     out = []
-    for sub in load_gt().submissions:
+    for sub in (gt or load_gt()).submissions:
         vid, ext = sub.vendor.vendor_id, want[sub.vendor.reply_format]
         hit = next((p for p in sorted(gen.glob(f"{vid}*{ext}"))
                     if "questionnaire" not in p.name), None)

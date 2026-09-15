@@ -140,9 +140,56 @@ class RefusalBlock(BaseModel):
     would_need: list[str] = Field(default_factory=list)
 
 
+class DraftField(BaseModel):
+    label: str
+    value: str
+    changes: str | None = None      # what this decision moves downstream
+
+
+class RfxDraftBlock(BaseModel):
+    """The RFx as it stands mid-conversation.
+
+    Re-rendered after every decision rather than described in prose, because a
+    buyer agreeing to terms they cannot see is how the wrong RFx goes out. Each
+    field carries what it CHANGES, so the buyer can tell a cosmetic choice from
+    one that re-prices the whole schedule.
+    """
+
+    type: Literal["rfx_draft"] = "rfx_draft"
+    title: str = "RFx — draft"
+    fields: list[DraftField] = Field(default_factory=list)
+    lines_included: int = 0
+    lines_available: int = 0
+    questions_included: int = 0
+    gating: list[str] = Field(default_factory=list)
+    vendors: list[str] = Field(default_factory=list)
+    missing: list[str] = Field(default_factory=list)
+    ready: bool = False
+
+
+class MailDraftBlock(BaseModel):
+    """The covering mail, drafted for approval and not sent until approved.
+
+    The send is stubbed and says so on its face. That is the one stub the brief
+    permits, and the honest thing is to label it rather than let a viewer
+    assume mail left the building.
+    """
+
+    type: Literal["mail_draft"] = "mail_draft"
+    to: list[str] = Field(default_factory=list)
+    subject: str = ""
+    body: str = ""
+    attachments: list[str] = Field(default_factory=list)
+    stub_note: str = ("Approving this does not send mail. The SMTP path is "
+                      "stubbed; the five vendor replies are documents that "
+                      "already exist, and the RFx you just authored decides "
+                      "which lines, terms and gates they are read against.")
+
+
 # typing.Union rather than `X | Y`, because this is a RUNTIME expression, not
 # an annotation. `from __future__ import annotations` defers annotations to
 # strings but does nothing for an assignment like this one, and `|` between
 # classes is only valid from Python 3.10. macOS still ships 3.9.
 Block = Union[TextBlock, TableBlock, ChartBlock, EvidenceBlock, ReviewBlock,
-              AssumptionBlock, QueryBlock, RefusalBlock]
+              AssumptionBlock, QueryBlock, RefusalBlock, RfxDraftBlock,
+              MailDraftBlock]

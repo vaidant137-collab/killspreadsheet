@@ -58,8 +58,17 @@ and short. Lead with the answer, then the caveat that changes it."""
 
 
 class Analyst:
-    def __init__(self, conn: sqlite3.Connection, client=None):
-        self.tools = Tools(conn)
+    """The loop. Which TOOLS and which SYSTEM prompt it runs with is injected,
+    because the RFx co-pilot (analyst/author.py) is the same loop with a
+    different job. One loop, two agents, one `Block` contract to the screen —
+    which is the whole argument for blocks being a contract in the first place.
+    """
+
+    def __init__(self, conn: sqlite3.Connection, client=None, *,
+                 tools=None, specs=None, system: str | None = None):
+        self.tools = tools if tools is not None else Tools(conn)
+        self.specs = specs if specs is not None else TOOL_SPECS
+        self.system = system or SYSTEM
         self.conn = conn
         self._client = client
 
@@ -86,7 +95,7 @@ class Analyst:
 
         messages = list(history or []) + [{"role": "user", "content": question}]
         for _ in range(MAX_STEPS):
-            reply = client.raw_turn(system=SYSTEM, messages=messages, tools=TOOL_SPECS)
+            reply = client.raw_turn(system=self.system, messages=messages, tools=self.specs)
             messages.append({"role": "assistant", "content": reply["content"]})
 
             if not reply["tool_calls"]:

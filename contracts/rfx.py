@@ -131,3 +131,62 @@ class PriorContractLine(BaseModel):
     line_no: int
     rate_inr: float
     uom: Uom
+
+
+class RfxDraft(BaseModel):
+    """The RFx while the buyer is still talking it into existence.
+
+    Every field here is a decision the buyer makes in conversation, and every
+    one of them changes the comparison that comes back. That is the point. If
+    authoring were cosmetic — a nice conversation that produced the same table
+    whatever you said — it would be theatre, and the brief is explicit that the
+    AI loops must be real.
+
+    What actually moves downstream:
+      payment_terms_days  every landed cost is NPV-adjusted to these terms, so
+                          moving 45 -> 30 re-prices all 139 cells
+      line_nos            the schedule that goes out, and therefore the table,
+                          the totals and which splits are feasible
+      vendor_ids          who is invited, and so who can win
+      gating_q_nos        which questionnaire answers disqualify. Un-gate the
+                          quality-escape question and a disqualified vendor
+                          comes back into contention
+
+    What is stubbed, and stated as stubbed on screen: the mail does not leave
+    the building. The brief allows exactly this ("fake the SMTP server if you
+    like") and nothing else here is faked.
+    """
+
+    buyer_org: str | None = None
+    category: str | None = None
+    delivery_point: str | None = None
+    required_incoterm: str | None = None
+    payment_terms_days: int | None = None
+    cost_of_capital_pct: float | None = None
+    response_due: str | None = None
+
+    line_nos: list[int] = Field(default_factory=list)
+    question_nos: list[int] = Field(default_factory=list)
+    gating_q_nos: list[int] = Field(default_factory=list)
+    vendor_ids: list[str] = Field(default_factory=list)
+
+    mail_subject: str | None = None
+    mail_body: str | None = None
+    issued: bool = False
+
+    def missing(self) -> list[str]:
+        """What still has to be decided before this can go to vendors.
+
+        Named rather than defaulted: silently filling in payment terms is how a
+        buyer ends up with quotes they cannot compare and no idea why.
+        """
+        gaps = []
+        if not self.line_nos:
+            gaps.append("a line schedule")
+        if not self.vendor_ids:
+            gaps.append("a vendor list")
+        if self.payment_terms_days is None:
+            gaps.append("payment terms")
+        if not self.question_nos:
+            gaps.append("a questionnaire")
+        return gaps

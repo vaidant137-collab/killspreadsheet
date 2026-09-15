@@ -43,42 +43,53 @@ TODAY = date(2026, 9, 10)
 def qualify(gt: GroundTruth) -> dict[str, VendorTotals]:
     """Who cleared the quality questionnaire.
 
-    The gate is deliberately shallow and deliberately visible: ISO 9001 valid,
-    and no more than two quality escapes in 24 months. It is a buyer policy, not
-    a property of the software, and the buyer changes it in the conversation.
+    The rules are deliberately shallow and deliberately visible: ISO 9001 valid,
+    and no more than two quality escapes in 24 months. WHETHER EACH ONE BITES is
+    the buyer's call, taken when they authored the RFx and marked a question
+    gating. It is a buyer policy, not a property of the software, which is why it
+    is read off the RFx rather than hard-coded here.
 
     The one piece of real work here: an ISO answer is checked against the
     attached certificate. Nova answered "Yes" in good faith; the certificate
     they attached expired in March. Nobody lied — the renewal is late at the
     plant — and only reading the attachment catches it.
     """
+    # Which questions are ALLOWED to disqualify is the buyer's decision, made
+    # when they authored the RFx. The rules below are the software's; whether
+    # each one bites is theirs. A buyer who un-gates the quality-escape question
+    # gets their lowest bidder back, and should be able to see that happen.
+    gated = {q.q_no for q in gt.rfx.questionnaire if q.gating}
+
     out: dict[str, VendorTotals] = {}
     for sub in gt.submissions:
         reasons: list[str] = []
         ans = {a.q_no: a for a in sub.questionnaire}
 
-        iso = ans.get(1)
-        claims_iso = iso and ("yes" in iso.answer.lower() or "iso 9001" in iso.answer.lower())
-        if not claims_iso:
-            reasons.append("Not ISO 9001 certified")
-        for att in sub.attachments:
-            if att.kind == "iso9001" and att.valid_until:
-                if date.fromisoformat(att.valid_until) < TODAY:
-                    reasons.append(
-                        f"ISO 9001 certificate expired {att.valid_until}, contradicting "
-                        f"their 'Yes' at question 1")
+        if 1 in gated:
+            iso = ans.get(1)
+            claims_iso = iso and ("yes" in iso.answer.lower()
+                                  or "iso 9001" in iso.answer.lower())
+            if not claims_iso:
+                reasons.append("Not ISO 9001 certified")
+            for att in sub.attachments:
+                if att.kind == "iso9001" and att.valid_until:
+                    if date.fromisoformat(att.valid_until) < TODAY:
+                        reasons.append(
+                            f"ISO 9001 certificate expired {att.valid_until}, contradicting "
+                            f"their 'Yes' at question 1")
 
-        try:
-            # "1 (minor - print registration, Aug 2025)" is one escape, not 12,025.
-            # Take the FIRST integer, not every digit in the sentence.
-            m = re.match(r"\s*(\d+)", ans[7].answer)
-            if not m:
-                raise ValueError(ans[7].answer)
-            escapes = int(m.group(1))
-            if escapes > 2:
-                reasons.append(f"{escapes} quality escapes in 24 months (limit 2)")
-        except Exception:
-            reasons.append("Quality escape history not stated")
+        if 7 in gated:
+            try:
+                # "1 (minor - print registration, Aug 2025)" is one escape, not
+                # 12,025. Take the FIRST integer, not every digit in the sentence.
+                m = re.match(r"\s*(\d+)", ans[7].answer)
+                if not m:
+                    raise ValueError(ans[7].answer)
+                escapes = int(m.group(1))
+                if escapes > 2:
+                    reasons.append(f"{escapes} quality escapes in 24 months (limit 2)")
+            except Exception:
+                reasons.append("Quality escape history not stated")
 
         out[sub.vendor.vendor_id] = VendorTotals(
             vendor_id=sub.vendor.vendor_id,

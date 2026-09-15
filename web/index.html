@@ -29,6 +29,25 @@ body{margin:0;background:var(--paper);color:var(--ink);
   -webkit-font-smoothing:antialiased;display:flex;flex-direction:column}
 .mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
 
+.block.draft,.block.mail{border:1px solid var(--rule);border-radius:6px;padding:14px 16px;
+  background:var(--surface)}
+.block.draft .h,.block.mail .h{font-family:"IBM Plex Mono",monospace;font-size:9.5px;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:10px}
+table.draft{width:100%;border-collapse:collapse;font-size:12.5px}
+table.draft th{text-align:left;vertical-align:top;white-space:nowrap;width:150px;
+  font-weight:400;color:var(--dim);padding:5px 14px 5px 0;
+  border-bottom:1px solid var(--rule)}
+table.draft td{padding:5px 0;border-bottom:1px solid var(--rule)}
+table.draft .chg{font-size:11px;color:var(--dim);margin-top:2px;font-style:italic}
+.block.draft .gaps{margin-top:11px;font-size:11.5px;color:var(--warn,#c9a227)}
+.block.draft .ok{margin-top:11px;font-size:11.5px;color:var(--good,#5a9)}
+.mailbody{white-space:pre-wrap;font-family:"Public Sans",system-ui,sans-serif;
+  font-size:12.5px;line-height:1.55;margin:12px 0 10px;padding:12px 14px;
+  background:var(--bg);border-left:2px solid var(--rule);border-radius:0 4px 4px 0}
+.block.mail .attach{font-size:11px;color:var(--dim);margin-bottom:10px}
+.block.mail .stub{font-size:11px;color:var(--dim);border-top:1px solid var(--rule);
+  padding-top:9px;font-style:italic}
+
 table.prov{width:100%;border-collapse:collapse;margin-top:10px;font-size:11px}
 table.prov th{text-align:left;font-family:"IBM Plex Mono",monospace;font-size:9.5px;
   letter-spacing:.06em;text-transform:uppercase;color:var(--dim);
@@ -223,24 +242,11 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const inr = n => '₹' + Number(n).toLocaleString('en-IN', {maximumFractionDigits:2});
 
-let STATE = null;
+let STATE = null, CATALOGUE = null;
 
 /* ---------------- boot ---------------- */
 async function boot(){
   STATE = await (await fetch('/api/state')).json();
-  const r = STATE.rfx, c = STATE.counts;
-  $('#meta').innerHTML = `
-    <span>${esc(r.rfx_id)}</span>
-    <span>Buyer <b>${esc(r.buyer_org)}</b></span>
-    <span>Lines <b>${STATE.comparison.rows.length}</b></span>
-    <span>Vendors <b>${STATE.vendors.length}</b></span>
-    <span>Terms <b>${esc(r.required_payment_terms)}</b></span>
-    <span>Unresolved <b>${c.unresolved}</b></span>`;
-  if (STATE.open_reviews){
-    const b = $('#chipReview'); b.hidden = false;
-    b.textContent = STATE.open_reviews + ' need review';
-    b.onclick = showReviews;
-  }
   // Say where the numbers came from before anyone asks. A viewer who assumes a
   // model read these documents when a fixture did has been misled by omission.
   const prov = STATE.provenance;
@@ -252,8 +258,61 @@ async function boot(){
     b.onclick = () => showProvenance(prov);
   }
   $('#chipAsm').onclick = showAssumptions;
+  if (STATE.phase === 'draft') enterDraft(); else await enterComparison();
+}
+
+/* The product has two halves and the screen has two states. Before an RFx
+   exists there is nothing to pin, so the canvas is empty and the conversation
+   is the whole surface — which is the honest shape of that half of the job. */
+async function enterDraft(){
+  const cat = await (await fetch('/api/catalogue')).json();
+  CATALOGUE = cat;
+  $('#pinned').hidden = true;
+  $('#chipAsm').hidden = true;
+  $('#meta').innerHTML = `<span>No RFx yet</span>
+    <span>Item master <b>${cat.lines.length}</b> lines</span>
+    <span>Approved vendors <b>${cat.vendors.length}</b></span>`;
+  const t = turn('Co-pilot');
+  t.appendChild(el('div','block', `<p>Nothing has gone out yet. Tell me what you
+    need to buy and I'll draft the RFx — line schedule, questionnaire, terms — and
+    write the covering mail for you to approve.</p>
+    <p>Your item master has <b>${cat.lines.length}</b> lines and there are
+    <b>${cat.vendors.length}</b> approved vendors on file. Four decisions will
+    decide the answer: which lines go out, your payment terms, who is invited,
+    and which questionnaire answers are allowed to disqualify.</p>`));
+  suggest([
+    'Draft an RFx for corrugated packaging — all 30 lines, 45-day terms',
+    'I only need the 3-ply boxes this quarter. Who should I invite?',
+    'What should I gate on, and what would that cost me?',
+    'Show me the item master']);
+}
+
+async function enterComparison(){
+  STATE = await (await fetch('/api/state')).json();
+  const r = STATE.rfx, c = STATE.counts;
+  $('#pinned').hidden = false;
+  $('#chipAsm').hidden = false;
+  $('#meta').innerHTML = `
+    <span>${esc(r.rfx_id)}</span>
+    <span>Buyer <b>${esc(r.buyer_org)}</b></span>
+    <span>Lines <b>${STATE.comparison.rows.length}</b></span>
+    <span>Vendors <b>${STATE.vendors.length}</b></span>
+    <span>Terms <b>${esc(r.required_payment_terms)}</b></span>
+    <span>Unresolved <b>${c.unresolved}</b></span>`;
+  const b = $('#chipReview');
+  if (STATE.open_reviews){
+    b.hidden = false; b.textContent = STATE.open_reviews + ' need review';
+    b.onclick = showReviews;
+  } else { b.hidden = true; }
   renderTable(STATE.comparison);
   greet();
+}
+
+function suggest(list){
+  const s = $('#suggest'); s.replaceChildren();
+  list.forEach(x => {
+    const b = el('button', '', esc(x.length > 46 ? x.slice(0,44) + '…' : x));
+    b.title = x; b.onclick = () => ask(x); s.appendChild(b); });
 }
 
 /* ---------------- the pinned artifact ---------------- */
@@ -306,14 +365,12 @@ function greet(){
     (dq.length ? '<p>' + dq.map(v => `<b>${esc(v.name.split(' ')[0])}</b> did not clear the
       questionnaire — ${esc((v.disqualified_because[0] || '').toLowerCase())}.`).join(' ')
       + '</p>' : '')));
-  const s = $('#suggest');
-  ['Where are you unsure?',
-   'Cheapest per line among vendors who cleared the questionnaire — and what does that cost versus single-sourcing?',
-   'Which vendors’ certifications are actually valid?',
-   'If I take that split, does anyone fall below their minimum order?',
-   'Which vendor is most reliable?'].forEach(x => {
-    const b = el('button', '', esc(x.length > 46 ? x.slice(0,44) + '…' : x));
-    b.title = x; b.onclick = () => ask(x); s.appendChild(b); });
+  suggest([
+    'Where are you unsure?',
+    'Cheapest per line among vendors who cleared the questionnaire — and what does that cost versus single-sourcing?',
+    'Which vendors’ certifications are actually valid?',
+    'If I take that split, does anyone fall below their minimum order?',
+    'Which vendor is most reliable?']);
 }
 
 async function ask(q){
@@ -333,6 +390,7 @@ async function ask(q){
       const m = JSON.parse(p.slice(6));
       if (m.kind === 'done'){ status.remove(); break; }
       if (m.kind === 'status'){ status.textContent = m.payload; continue; }
+      if (m.kind === 'issued'){ await enterComparison(); continue; }
       status.remove(); t.appendChild(renderBlock(m.payload));
       $('#chat').scrollTop = 1e9;
     }
@@ -356,6 +414,8 @@ function renderBlock(b){
     d.appendChild(btn); if (b.snippet) d.appendChild(el('div','status', esc(b.snippet)));
     return d;
   }
+  if (b.type === 'rfx_draft') return renderDraft(b);
+  if (b.type === 'mail_draft') return renderMail(b);
   if (b.type === 'review') return renderReviews(b);
   if (b.type === 'assumptions') return renderAssumptions(b);
   if (b.type === 'refusal'){
@@ -370,6 +430,39 @@ function renderBlock(b){
 
 const mdish = s => '<p>' + esc(s).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')
   .replace(/\n\n/g,'</p><p>').replace(/\n/g,'<br>') + '</p>';
+
+function renderDraft(b){
+  const d = el('div','block draft');
+  const rows = b.fields.map(f =>
+    `<tr><th>${esc(f.label)}</th><td>${esc(f.value)}` +
+    (f.changes ? `<div class="chg">${esc(f.changes)}</div>` : '') + `</td></tr>`).join('');
+  d.innerHTML = `<div class="h">${esc(b.title)}</div>
+    <table class="draft">${rows}
+      <tr><th>Schedule</th><td>${b.lines_included} of ${b.lines_available} item-master lines</td></tr>
+      <tr><th>Questionnaire</th><td>${b.questions_included} questions` +
+      (b.gating.length
+        ? `<div class="chg">Disqualifying: ${b.gating.map(esc).join(' · ')}</div>`
+        : `<div class="chg">Nothing gated — price decides alone</div>`) + `</td></tr>
+      <tr><th>Invited</th><td>${b.vendors.length ? b.vendors.map(esc).join(', ') : '—'}</td></tr>
+    </table>` +
+    (b.missing.length
+      ? `<div class="gaps">Still to decide: ${b.missing.map(esc).join(' · ')}</div>`
+      : `<div class="ok">Ready to issue</div>`);
+  return d;
+}
+
+function renderMail(b){
+  const d = el('div','block mail');
+  d.innerHTML = `<div class="h">Covering mail — for your approval</div>
+    <table class="draft">
+      <tr><th>To</th><td>${b.to.map(esc).join(', ')}</td></tr>
+      <tr><th>Subject</th><td>${esc(b.subject)}</td></tr>
+    </table>
+    <pre class="mailbody">${esc(b.body)}</pre>
+    <div class="attach">${b.attachments.map(a=>'📎 '+esc(a)).join('  ')}</div>
+    <div class="stub">${esc(b.stub_note)}</div>`;
+  return d;
+}
 
 function renderQuery(b){
   const d = el('details','qry');

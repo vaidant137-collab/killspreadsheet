@@ -20,9 +20,11 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from pydantic import BaseModel
 
+from analyst.author import AUTHOR_SYSTEM, AUTHOR_TOOL_SPECS, AuthorTools
 from analyst.loop import Analyst
 from analyst.tools import build_comparison
-from config import DB_PATH, REVIEW_THRESHOLD, ROOT
+from config import DATA, DB_PATH, REVIEW_THRESHOLD, ROOT
+from contracts.rfx import RfxDraft
 from store import repo
 
 app = FastAPI(title="Kill the Quote Spreadsheet")
@@ -42,6 +44,55 @@ def _within_budget() -> tuple[bool, int]:
     now = time.time()
     _asks[:] = [t for t in _asks if now - t < 3600]
     return len(_asks) < MAX_PER_HOUR, MAX_PER_HOUR - len(_asks)
+
+
+# --- the two halves of the product -----------------------------------------
+# "draft": no RFx exists yet; the co-pilot has authoring tools and the screen is
+# an empty chat. "comparison": responses are in and the analyst takes over.
+#
+# One process-wide session, like the rate limiter above, because this is a demo
+# on a single free instance. A real deployment keys this per buyer; the shape of
+# the code does not change, only where the dict lives.
+SESSION = {"phase": "draft", "draft": RfxDraft()}
+
+
+def _catalogue() -> dict:
+    """What the buyer has to choose FROM. Read from the item master, never
+    invented — a co-pilot that proposes a line item the buyer does not stock has
+    wasted the tender."""
+    gt = json.loads((DATA / "ground_truth.json").read_text(encoding="utf-8"))
+    return {
+        "lines": [{"line_no": l["line_no"], "code": l["code"],
+                   "description": l["description"], "style": l["style"],
+                   "ply": l.get("ply"), "annual_qty": l["annual_qty"],
+                   "uom": l["uom"], "food_contact": l.get("food_contact", False),
+                   "requires_tooling": l.get("requires_tooling", False)}
+                  for l in gt["rfx"]["lines"]],
+        "questions": [{"q_no": q["q_no"], "question": q["question"],
+                       "answer_type": q["answer_type"]}
+                      for q in gt["rfx"]["questionnaire"]],
+        "vendors": [{"vendor_id": s_["vendor"]["vendor_id"], "name": s_["vendor"]["name"],
+                     "city": s_["vendor"].get("city"),
+                     "incumbent": s_["vendor"].get("is_incumbent", False)}
+                    for s_ in gt["submissions"]],
+        "defaults": {"buyer_org": gt["rfx"]["buyer_org"],
+                     "category": gt["rfx"]["category"],
+                     "delivery_point": gt["rfx"]["delivery_point"],
+                     "required_incoterm": gt["rfx"]["required_incoterm"],
+                     "response_due": gt["rfx"]["response_due"]},
+    }
+
+
+def _issue(draft: RfxDraft) -> None:
+    """Run the whole pipeline against the RFx the buyer just authored.
+
+    Lives here rather than in analyst/author.py because this module is a
+    composition root and that one is a leaf. A leaf importing `pipeline` would
+    quietly invert the dependency the whole architecture rests on.
+    """
+    import pipeline
+    pipeline.run(fresh=True, verbose=False, draft=draft)
+    SESSION["phase"] = "comparison"
 
 
 def db():
@@ -93,7 +144,7 @@ def state() -> dict:
     return {"rfx": rfx, "vendors": vendors, "counts": counts,
             "open_reviews": open_reviews, "threshold": REVIEW_THRESHOLD,
             "contradictions": contradictions, "injections": injections,
-            "provenance": _provenance(),
+            "provenance": _provenance(), "phase": SESSION["phase"],
             "comparison": json.loads(blocks[0].model_dump_json())}
 
 
@@ -233,16 +284,59 @@ def ask(a: Ask):
         return StreamingResponse(refuse(), media_type="text/event-stream")
     _asks.append(time.time())
 
-    analyst = Analyst(conn)
+    # Which agent answers depends on whether an RFx exists yet. Same loop, same
+    # Block contract to the screen; different tools and a different brief.
+    drafting = SESSION["phase"] == "draft"
+    if drafting:
+        tools = AuthorTools(SESSION["draft"], _catalogue())
+        agent = Analyst(conn, tools=tools, specs=AUTHOR_TOOL_SPECS,
+                        system=AUTHOR_SYSTEM)
+    else:
+        agent = Analyst(conn)
 
     def stream():
-        for kind, payload in analyst.ask(a.question):
+        issued = False
+        for kind, payload in agent.ask(a.question):
             body = (payload if isinstance(payload, str)
                     else json.loads(payload.model_dump_json()))
             yield f"data: {json.dumps({'kind': kind, 'payload': body})}\n\n"
+            if drafting and SESSION["draft"].issued and not issued:
+                issued = True
+        if issued:
+            # The vendors "reply". Extraction, matching, normalisation and
+            # allocation all run now, against the RFx the buyer just wrote.
+            yield ("data: " + json.dumps({"kind": "status",
+                                          "payload": "reading five responses…"}) + "\n\n")
+            try:
+                _issue(SESSION["draft"])
+                yield "data: " + json.dumps({"kind": "issued"}) + "\n\n"
+            except Exception as e:                            # noqa: BLE001
+                SESSION["draft"].issued = False
+                body = {"type": "refusal", "question": a.question,
+                        "reason": f"The RFx went out but reading the responses "
+                                  f"failed: {type(e).__name__}: {e}",
+                        "would_need": ["The draft is intact — try issuing again."]}
+                yield "data: " + json.dumps({"kind": "block", "payload": body}) + "\n\n"
         yield "data: {\"kind\": \"done\"}\n\n"
 
     return StreamingResponse(stream(), media_type="text/event-stream")
+
+
+@app.post("/api/reset")
+def reset() -> dict:
+    """Back to an empty chat and a blank RFx, so the flow can be demonstrated
+    twice without a redeploy."""
+    SESSION["phase"] = "draft"
+    SESSION["draft"] = RfxDraft()
+    return {"ok": True, "phase": "draft"}
+
+
+@app.get("/api/catalogue")
+def catalogue() -> dict:
+    """The item master, questionnaire and approved vendor list. Served so the
+    empty state can show the buyer what there is to choose from rather than
+    making them guess at a blank box."""
+    return _catalogue()
 
 
 @app.get("/api/memo")
