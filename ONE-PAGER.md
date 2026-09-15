@@ -8,35 +8,44 @@ Every extraction problem here is a **structuring problem declined nine days
 earlier**. Of 139 vendor-line cells, **zero were comparable exactly as quoted** —
 every one needed an assumption before it could sit beside another.
 
-The obvious fix, force structure upstream, is what every e-sourcing suite has
-tried and lost with: a tier-3 converter with a printed rate card does not log
-into a buyer's portal, and the buyer needs them more than they need the RFx.
-Parsing chaos is the correct **wedge** — and the wrong destination. Every parse
-should also emit a one-click structured reply link back to that vendor,
-pre-filled with what we just read: *"this is what we understood, correct it
-here."* Lower effort than replying by email, so the next RFx returns structured
-without anyone adopting anything. Extraction stops being a cost centre and
-becomes an onboarding ramp — and it builds the asset nobody has: vendor-confirmed
-unit bases, box weights and line mappings, the exact bridge facts my system has
-to refuse for want of today. **The moat isn't the parser; it's the reconciliation
-graph the parser builds.**
+Forcing structure upstream is what every e-sourcing suite has tried and lost
+with: a tier-3 converter with a printed rate card does not log into a buyer's
+portal, and the buyer needs them more than they need the RFx. Parsing chaos is
+the right **wedge** and the wrong destination. Every parse should also emit a
+one-click reply link back to that vendor, pre-filled with what we just read —
+*"this is what we understood, correct it here."* Less effort than replying by
+email, so the next RFx returns structured without anyone adopting anything, and
+it accrues the asset nobody has: vendor-confirmed unit bases, box weights and
+line mappings — the exact bridge facts my system has to refuse for want of
+today. **The moat isn't the parser; it's the reconciliation graph it builds.**
 
 ## Decisions
 
 - **The conversation is the product.** A grid with a chat panel is a better
-  spreadsheet. But the brief wants *one* comparison, and a chat stream is a
-  transcript of stale copies — so it renders once, **pinned**, and each turn
-  mutates it in place. Any cell opens its source in a drawer.
-- **Extraction writes to a relational store; the analyst writes SQL against it.**
-  Deterministic arithmetic, an auditable query on screen, provenance as a foreign
-  key, and an honest "where are you unsure" — because unsureness is a column.
+  spreadsheet; a chat stream is a transcript of stale copies. So the comparison
+  renders once, **pinned**, and each turn mutates it in place. Any cell opens its
+  source in a drawer — the workbook, the mail, the photograph — never a download.
+- **The buyer authors the RFx, and it is not theatre.** Scope, terms, gates — in
+  conversation, then a mail they approve. Every choice runs downstream: 45-day
+  terms to 30 re-prices all 139 cells; un-gating ISO returns a vendor disqualified
+  by an expired certificate to contention. Only the send is stubbed, and it says so.
+- **Extraction writes to a relational store; the analyst queries it with typed
+  tools.** Deterministic arithmetic, provenance as a foreign key, and an honest
+  "where are you unsure" — because unsureness is a column. Free-form SQL is an
+  escape hatch, not the path: a model writing SQL rarely errors, it returns a
+  number wrong in a way nothing on screen can show.
+- **The screen leads with the decision, not the table.** Cheapest, fastest,
+  single-vendor, each with cost and lead time. Here ₹1,106 buys 14 days — cost
+  lives in the grid, lead time in the questionnaire, and nobody joins them by
+  hand. Ending at the table is why the spreadsheet survives.
 - **Normalisation contains zero AI.** Eight ordered steps to landed cost. The
   moment a model does the arithmetic, nothing on screen is auditable.
 - **The system never invents a number it will compare on.** Seven cells are empty
   because the incumbent priced *board* per kg and six lines are new this year, so
   no weight exists. It names the missing fact instead of estimating one.
 - **Extraction and matching are separate, with separate confidence scores.** The
-  dangerous failure is a *perfect* extraction on the wrong line.
+  dangerous failure is a *perfect* extraction on the wrong line. Extraction runs
+  for real at build time and the UI says which model read which document.
 - **No agent framework; 25 splits is a `for` loop, not a solver.** Every seam is a
   Pydantic contract, so swapping either costs one file.
 
@@ -50,6 +59,12 @@ graph the parser builds.**
   silent half is the expensive half.
 - **My eval harness was flattering the system**, scoring what the matcher emitted
   rather than the gold set, so a line matched to nothing scored as correct.
+- **The flagship interaction returned a non-answer, silently.** Asked which single
+  vendor was cheapest, the analyst ran its query, got rows back, said "I will
+  calculate the total" — and stopped. A malformed tool-call round-trip drew an
+  empty completion, and the loop ended having said nothing. No error, no failing
+  test: the only way to find it was to ask something the suggestion chips had not
+  pre-baked.
 
 ## Where it stands
 
@@ -65,14 +80,16 @@ refusals.
 
 ## Deliberately left out
 
-The structured reply-back link (the argument above). A true optimiser — 25 items
-is not a solver problem. Negotiation round two, where the next rupee is. Collusion
-detection, should-cost modelling, ERP integration, auth. Voice authoring: speech
-mangles "FEFCO 0201" and "180 GSM BF22", the exact vocabulary that proves category
-knowledge.
+The reply-back link above. A true optimiser — 25 items is not a solver problem.
+Negotiation round two, where the next rupee is. Collusion detection, should-cost
+modelling, ERP integration, auth. A real mail path: the brief permits the stub,
+and building it buys a checkbox rather than an argument. Voice authoring, because
+speech mangles "FEFCO 0201" and "180 GSM BF22" — the exact vocabulary that proves
+category knowledge.
 
 **Known weaknesses.** The 29-item queue is too long; a queue nobody reads gets
-rubber-stamped. The 97% is measured against documents I generated — five real
-in-domain documents are wired in to answer the question my own dataset structurally
-cannot, and I have not labelled them yet. I'd rather say that than quote the 97% as
-though it settled the matter.
+rubber-stamped. And those figures measure everything *downstream of the read* —
+matching, normalisation, the gate — against cells I deliberately made hard. Model
+extraction accuracy on documents I did not generate is the number I do not have:
+five real in-domain documents are wired in to get it, and I have not labelled them
+yet. I'd rather say that than quote 97% as though it settled the matter.

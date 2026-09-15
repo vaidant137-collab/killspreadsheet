@@ -15,9 +15,12 @@ pip install -r requirements.txt
 ./run.sh                                       # everything, then serves :8000
 ```
 
-**No API key is needed for most of it.** `EXTRACTOR=fixture` (the default)
-replays known-good extraction output, so the store, matcher, normaliser,
-allocator, review queue, evidence drawer and UI all run without one.
+**No API key is needed for most of it.** `EXTRACTOR=fixture` replays known-good
+extraction output, so the store, matcher, normaliser, allocator, review queue,
+evidence drawer and UI all run without one. **The deploy does not use it:**
+`build.sh` records a real model run at build time and the site replays that, with
+the model name and timestamp in the header. Without a key the build falls back to
+fixture, deletes the recordings, and the header says so.
 
 | command | what it does |
 |---|---|
@@ -46,7 +49,10 @@ lines.
 arithmetic, nothing on screen is auditable.
 
 **The analyst never does arithmetic.** Every number in every answer came from a
-tool call. `run_sql` is read-only at the tool boundary, not by convention.
+tool call. Typed tools (`vendor_totals`, `cheapest_per_line`, `best_split`,
+`show_options`) come first and compute in Python; `run_sql` is the escape hatch,
+read-only at the tool boundary rather than by convention. A model writing SQL
+rarely errors — it returns a number wrong in a way nothing on screen can show.
 
 **Extraction never sees the buyer's template.** It reads into the vendor's own
 schema; matching is a separate step with its own confidence score. Hand a model
@@ -68,13 +74,13 @@ llm/         base protocol + anthropic / openai / gemini / openrouter
 extract/     xlsx · pdf · docx · image · email, plus fixture and record/replay
 match/       vendor label → buyer line, unit-aware, global assignment
 normalize/   pure python, no model
-allocate/    25-subset enumeration + questionnaire gate
-analyst/     tools.py · loop.py · memo.py
+allocate/    25-subset enumeration · buyer-set gate · the three options
+analyst/     tools.py · loop.py · memo.py · author.py (the RFx co-pilot)
 store/       schema.sql · repo.py
 eval/        harness.py — field/unit/match accuracy, escape rate, calibration
 api/         FastAPI + SSE
 web/         index.html — chat, pinned comparison, evidence drawer
-tools/       document renderers, cost estimator, wild-set fetcher
+tools/       document renderers, inline previews, cost estimator, wild set
 data/        ground_truth.json · generated/ · attachments/ · SOURCES.md
 ```
 
@@ -88,9 +94,12 @@ unresolved     7 cells refused rather than estimated
 review queue   29 at threshold 0.82
 ```
 
-**Not built:** RFx authoring mode (block G — same chat, different tools, ~1h).
-The wild set in `tools/fetch_wild_set.py` is fetched but unlabelled, so the 97%
-is measured only against documents this repo generated.
+**Built since:** RFx authoring (`analyst/author.py` — same loop, different tools
+and prompt), the decision layer (`allocate.subsets.options`), inline source
+previews (`tools/doc_preview.py`), and real recorded extraction at build time.
+
+**Not built:** the wild set in `tools/fetch_wild_set.py` is fetched but
+unlabelled, so the 97% is measured only against documents this repo generated.
 
 **Known weak:** the review queue is too long at 29; freight in the pinned
 comparison assumes each vendor wins everything they quoted (the allocator
