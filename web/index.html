@@ -525,6 +525,19 @@ function renderBlock(b){
     d.innerHTML = `<div class="h">Not answerable from this data</div>
       <div>${esc(b.reason)}</div>` +
       (b.would_need?.length ? `<ul>${b.would_need.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>` : '');
+    // If the co-pilot cannot run, the visitor is stranded on an empty chat with
+    // no way to reach the half of this build that needs no model at all. Offer
+    // the door rather than leaving them at a blank box.
+    if (STATE && STATE.phase === 'draft'){
+      const b2 = el('button','chip','Issue the template RFx instead');
+      b2.onclick = async () => {
+        b2.disabled = true; b2.textContent = 'reading five responses…';
+        await fetch('/api/issue_default', {method:'POST'});
+        STATE.phase = 'comparison';
+        await enterComparison();
+      };
+      d.appendChild(b2);
+    }
     return d;
   }
   return el('div','block status', esc(JSON.stringify(b).slice(0,200)));

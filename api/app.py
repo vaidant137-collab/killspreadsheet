@@ -345,6 +345,38 @@ def ask(a: Ask):
     return StreamingResponse(stream(), media_type="text/event-stream")
 
 
+@app.post("/api/issue_default")
+def issue_default() -> dict:
+    """Issue the template RFx, unauthored.
+
+    Demo insurance. Opening on an empty chat is the honest shape of the product,
+    but it makes the FIRST thing a visitor sees depend on a live model call. If
+    the key is missing, the budget is spent or the provider is down, a reviewer
+    would otherwise get a blank box and no way past it — and lose the half of the
+    build that does not need a model at all.
+
+    This is not a hidden happy path: it issues the item master as written, and
+    the header still reports which extractor produced the numbers.
+    """
+    cat = _catalogue()
+    d = RfxDraft(
+        buyer_org=cat["defaults"]["buyer_org"], category=cat["defaults"]["category"],
+        delivery_point=cat["defaults"]["delivery_point"],
+        required_incoterm=cat["defaults"]["required_incoterm"],
+        response_due=cat["defaults"]["response_due"],
+        payment_terms_days=45,
+        line_nos=[l["line_no"] for l in cat["lines"]],
+        question_nos=[q["q_no"] for q in cat["questions"]],
+        gating_q_nos=[1, 7],
+        vendor_ids=[v["vendor_id"] for v in cat["vendors"]],
+        mail_subject="RFX-2026-CORR-011 — annual corrugated requirement FY27",
+        mail_body="(template RFx, issued without authoring)")
+    SESSION["draft"] = d
+    d.issued = True
+    _issue(d)
+    return {"ok": True, "phase": SESSION["phase"]}
+
+
 @app.post("/api/reset")
 def reset() -> dict:
     """Back to an empty chat and a blank RFx, so the flow can be demonstrated
