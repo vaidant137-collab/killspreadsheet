@@ -24,6 +24,20 @@ services:
         sync: false
       - key: OPENROUTER_ANALYST_MODEL
         value: anthropic/claude-sonnet-5
+      # Extraction was defaulting to a free vision model that could not finish
+      # five documents inside the build's 420-second ceiling, so every deploy
+      # fell back to the fixture path and the header said so. Naming a fast
+      # vision model here is what makes the honest chip say "extraction by a
+      # model" instead. Two models, one provider, set independently -- which is
+      # the argument config.py makes, now being used for its actual purpose.
+      - key: OPENROUTER_EXTRACT_MODEL
+        value: anthropic/claude-sonnet-5
+      # A ceiling, not a target. Measured, the five documents are ~15,500
+      # output tokens, which is four or five minutes of generation; ten gives
+      # room for one document to need a schema repair without costing the
+      # deploy its provenance. About twenty cents a deploy at these rates.
+      - key: EXTRACT_BUDGET_S
+        value: "600"
       # A public URL with a paid key behind it needs a ceiling. See api/app.py.
       - key: MAX_QUESTIONS_PER_HOUR
         value: "60"

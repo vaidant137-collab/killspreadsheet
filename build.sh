@@ -25,16 +25,46 @@ pip install -r requirements.txt
 [ -f data/ground_truth.json ] || python -m data.build_ground_truth
 [ -f data/generated/ganesh_rate_card_photo.jpg ] || python -m tools.render_all
 
+# Is there a real recorded run committed in the repo? It matters below: a
+# recording made last week by a real model is a far better thing to fall back to
+# than the fixture, and the chip reports it honestly either way because every
+# recording carries the model name and the timestamp of the run.
+HAD_RECORDING=0
+if [ -d data/extraction_runs ] && [ -n "$(ls -A data/extraction_runs 2>/dev/null)" ]; then
+  HAD_RECORDING=1
+fi
+
 if [ -n "$OPENROUTER_API_KEY$ANTHROPIC_API_KEY$GEMINI_API_KEY$OPENAI_API_KEY" ]; then
   echo "--- extraction: recording a real model run ---"
-  # A ceiling on the whole recording, not just per call. Belt and braces: if
+  # A ceiling on the whole recording, not just on each call. Belt and braces: if
   # anything below the client timeout still wedges, the build falls back and
   # ships rather than hanging and shipping nothing.
-  if timeout "${EXTRACT_BUDGET_S:-420}" python -m pipeline --extractor record; then
+  set +e
+  timeout "${EXTRACT_BUDGET_S:-420}" python -m pipeline --extractor record
+  rc=$?
+  set -e
+  if [ "$rc" -eq 0 ]; then
     echo "--- recorded; the deploy will replay this run ---"
     exit 0
   fi
-  echo "--- real extraction failed or timed out. Falling back, and saying so. ---"
+  # Say WHICH failure. A build that falls back for an unstated reason is a
+  # mystery next deploy, and this one already cost an evening: 124 is the
+  # ceiling, anything else is the run itself.
+  if [ "$rc" -eq 124 ]; then
+    echo "--- the record run hit the ${EXTRACT_BUDGET_S:-420}s ceiling. Either the"
+    echo "--- extract model is slow or a call is retrying. Set"
+    echo "--- OPENROUTER_EXTRACT_MODEL to something faster, or raise EXTRACT_BUDGET_S."
+  else
+    echo "--- the record run failed with exit $rc. ---"
+  fi
+  if [ "$HAD_RECORDING" -eq 1 ]; then
+    echo "--- falling back to the real run committed in the repo ---"
+    git checkout -- data/extraction_runs data/extraction_latest.json 2>/dev/null || true
+    git clean -fdq data/extraction_runs 2>/dev/null || true
+    python -m pipeline --extractor replay
+    exit 0
+  fi
+  echo "--- no committed recording to fall back to. Fixture, and saying so. ---"
   rm -rf data/extraction_runs data/extraction_latest.json
 fi
 
