@@ -1,114 +1,134 @@
-# Tonight's runbook
+# The walkthrough
 
-## 1 · Make extraction real (10 minutes, ~8 cents or free)
+Eight minutes. The brief asks for "a recorded walkthrough of the analyst
+conversation — you choose the questions worth asking," so the choosing is part of
+what is being marked. Every question below exists to show something that would
+not be visible otherwise.
 
-```bash
-cp .env.example .env          # paste GEMINI_API_KEY
-pip install -r requirements.txt
-python -m data.build_ground_truth
-python -m tools.render_all
-python -m pipeline --extractor record     # ← the one real run. Saves what came back.
-python -m eval.harness                    # ← your real scorecard. Screenshot it.
+Record the screen with audio. Do not rehearse the answers — if something breaks,
+leave it in and say what you would do about it. A demo where nothing ever goes
+wrong is a demo nobody believes.
+
+---
+
+## 0 · Before you hit record (30 seconds)
+
+- Open the URL and let the free instance wake up. First load after an idle period
+  takes about a minute; that wait on camera is dead air.
+- Check the header chip says **"extraction by …"** and names a model. If it says
+  *"fixture path — no model read these documents"*, the build had no key. Set
+  `OPENROUTER_API_KEY` in Render and redeploy before recording — the brief's one
+  hard rule is not faking extraction, and the chip is telling you it was faked.
+- Reload once so you are on an empty chat.
+
+---
+
+## 1 · The empty box (40s)
+
+Start on the empty chat and say what it is: no RFx exists yet, and the first half
+of this product is the part that happens before any vendor has replied.
+
+> **"I need to put our annual corrugated packaging out to tender. Thirty-odd
+> lines, and I want it back inside two weeks."**
+
+Let the co-pilot propose. It will call `list_catalogue` before suggesting line
+items — point that out: it is reading the item master rather than inventing
+products the buyer does not stock.
+
+## 2 · The decision that decides the answer (60s)
+
+> **"What should I gate on, and what would that cost me?"**
+
+This is the question worth asking. Gating is buyer policy, not software
+behaviour, and the co-pilot should say what each gate costs. Then:
+
+> **"Gate on ISO and on quality escapes. 45-day terms."**
+
+Say the line out loud while it renders: *every rate that comes back is
+NPV-adjusted to these terms, so the terms I just set decide who looks cheapest.*
+
+## 3 · Issue it (40s)
+
+> **"Draft the mail and send it."**
+
+Read the stub note on screen rather than glossing it: approving does not send
+mail, the SMTP path is stubbed, and the five replies are documents that already
+exist. Say it plainly. Then watch the responses land.
+
+## 4 · The decision, before the table (50s)
+
+The three cards render first. Point at the gap:
+
+```
+Cheapest   ₹113,012,220   35 days
+Fastest    ₹113,013,326   21 days
 ```
 
-If extraction throws, **do not debug it under time pressure.** Fall back to
-`python -m pipeline --extractor fixture`, say on the call that the recorded run is
-in the repo, and move on. The demo is identical either way.
+**₹1,106 buys you fourteen days.** Cost lives in the grid, lead time lives in the
+questionnaire, and no spreadsheet joins them — that is the whole argument in one
+number.
 
-Then serve it:
+## 5 · The ugly edges (2 min) — the part they are actually marking
 
-```bash
-python -m uvicorn api.app:app --port 8000
-```
+> **"Where are you unsure?"**
 
-Set `LLM_PROVIDER_ANALYST=anthropic` in `.env` if you bought the $5 of Anthropic
-credit — the analyst is the half anyone watches.
+Twenty-nine cells at threshold 0.82. Open one review card and say why the queue
+being *too long* is the honest failure: a queue nobody reads gets rubber-stamped.
 
----
+Then click into the evidence for three cells, in this order:
 
-## 2 · The recording — eight minutes, one take, mistakes left in
+1. **Ganesh, any line** — the photographed rate card. Show the crop locator, the
+   shadow band, and that extraction confidence and match confidence are separate
+   numbers. The dangerous failure is a perfect read on the wrong line.
+2. **Shakti, any line** — the workbook opens inline, both sheets, and the header
+   says *"Rate Working · 3 hidden rows"*. Superseded lines get hidden, not
+   deleted. The rate is a formula and stays a formula on screen.
+3. **Apex, a line with a gap** — four lines of email, priced per kilogram against
+   a buyer who buys pieces. Six lines have no weight on file, so those cells are
+   empty and name the missing fact. Say the sentence: *it is not zero, and it is
+   not a no-quote.*
 
-A polished screencast of an AI product invites exactly the suspicion the brief
-warned about. One take.
+## 6 · The question the VP actually asks (60s)
 
-**Open on the number, not the tour.** Don't explain the architecture. Say:
+> **"Cheapest per line among vendors who cleared the questionnaire — and what
+> does that cost versus single-sourcing?"**
 
-> "Five vendors replied in five formats. Every rate here is landed cost per
-> buyer unit, on one basis. A hundred and thirty-nine cells — **zero** of them
-> were comparable exactly as quoted. That's the problem, and it's why the
-> spreadsheet takes three days."
+Expand the collapsed computation. It says `cheapest_per_line · 30 rows`, not a
+wall of SQL. Say why: the model picks a typed tool and Python does the
+arithmetic, because a model writing SQL rarely errors — it returns a number wrong
+in a way nothing on screen can show.
 
-### The questions, in this order
+## 7 · The refusal (40s)
 
-**1 · "Where are you unsure?"**
-Lead with this, not with the cheapest-vendor question. It's the answer to the
-brief's actual challenge, and every candidate will open with the VP's question.
-Shows the review queue and the seven refused cells.
+> **"Which vendor is most reliable?"**
 
-**2 · Click an unresolved cell in the Apex column.**
-> "Apex priced board by the kilogram. The buyer buys pieces. For twenty-four
-> lines we have a dispatch weight and can bridge it; for these six the line is
-> new this year and no weight exists. So the cell is empty. It could have
-> averaged a box weight and quietly ranked Apex fourth — that's the version of
-> this product I didn't build."
+It should decline and name what it would need: delivery history, quality escapes
+over time, OTIF. An RFx contains none of it. This is the most important twenty
+seconds in the recording — a clean refusal is what makes the other answers worth
+trusting.
 
-**3 · Click a Ganesh cell → the drawer.**
-The whole provenance chain in one panel: the vendor's own label in *inches*
-against a millimetre tender, the match rationale, the derivation, and the pen
-revision visible in the photograph at 74% extraction confidence.
+## 8 · The artifact that leaves the tool (40s)
 
-**4 · "Which vendors' certifications are actually valid?"**
-Nova's ISO 9001 "Yes" against a certificate that expired in March. Say the line:
-*"Nobody lied. The renewal is late at the plant. It's only ever caught by reading
-the attachment."*
+Click **Award memo**. What was awarded, on what basis, under which assumptions,
+which cells a human verified and who. Most tools in this space ship the table and
+leave the buyer to write this in Word, which is exactly why the spreadsheet
+survives.
 
-**5 · "Cheapest per line among vendors who cleared the questionnaire — and what
-does that cost versus single-sourcing?"**
-The VP's question. Then the caveat that changes it: twelve lines where Meridian
-is priced below their 50,000 slab, so the rate they quoted was never valid at
-that volume. And the ₹1,106 finding — the third vendor buys almost nothing on
-₹11.3 crore and costs a whole inbound lane.
+## 9 · Close on the honest bit (30s)
 
-**6 · "Which vendor is most reliable?"**
-A deliberate trap for your own system. It should refuse and name what it'd need —
-delivery history, quality escapes over time, OTIF. **Say out loud that you asked
-it on purpose.** A product declining to answer is stronger than any answer.
-
-**7 · "Draft the award recommendation."**
-Closes on the artifact that leaves the tool, including what the record does *not*
-establish.
-
-### Close on what testing found, not on the scorecard
-
-> "Three things I only found by running it. The questionnaire gate read
-> '1 (minor, Aug 2025)' as twelve thousand quality escapes and silently
-> disqualified the one vendor who passes everything — it failed toward exclusion,
-> which looks conservative and isn't. Inch rounding put two labels on one line and
-> left its neighbour silently unquoted. And my own eval harness was flattering the
-> system. None of those came from thinking harder about the design."
+Header chip, one more time: which model read which document, and when. Then say
+the thing the one-pager says — the scorecard measures everything downstream of
+the read, and extraction accuracy on documents you did not generate is the number
+you do not have yet.
 
 ---
 
-## 3 · Send
+## If it breaks
 
-- `ONE-PAGER.md` — the graded note. One page, as asked.
-- `NOTES-APPENDIX.md` — attach only if they want depth. Don't lead with it.
-- The repo (GitHub, private, add their reviewers). `data/SOURCES.md` is worth a
-  line in your email: it's where every convention in the dataset came from.
-- The recording.
-
-**In the email, name the weaknesses before they find them.** The 29-item queue is
-too long. The 97% is measured against documents you generated, and the real
-in-domain set is wired in but unlabelled. Saying it first is the difference
-between a known limit and a caught one.
-
----
-
-## If something breaks
-
-| Symptom | Do this |
-|---|---|
-| Extraction errors | `--extractor fixture`. Demo is identical. |
-| Analyst won't answer | Comparison, drawer, queue and assumptions all work with no key. Drive those. |
-| Rate limited mid-demo | `--extractor replay`. That's what recording was for. |
-| Anything else | Say what it should do, show the code, move on. They asked for a prototype. |
+- **Co-pilot will not answer** — the key is spent or the provider is down. Click
+  *"Issue the template RFx instead"* on the refusal, carry on from step 4, and
+  say what happened. Everything from step 4 on is served from the database and
+  needs no model.
+- **Blank page** — hard reload. The free instance sleeps after fifteen minutes.
+- **A number looks wrong** — open its evidence and find out on camera. That is a
+  better minute of video than anything you could have scripted.
