@@ -223,6 +223,29 @@ def doc(doc_id: str):
     return FileResponse(p)
 
 
+@app.get("/api/doc/{doc_id}/preview")
+def doc_preview(doc_id: str, locator: str = "") -> dict:
+    """The source document, rendered in place.
+
+    A download is where provenance goes to die: the buyer has to leave the
+    screen, find the file, open Excel, work out which sheet, and come back
+    having forgotten what they were checking. Serving structured content
+    instead keeps the whole loop inside one window.
+    """
+    from tools.doc_preview import preview
+    conn = db()
+    r = conn.execute("SELECT path FROM source_doc WHERE doc_id=?", (doc_id,)).fetchone()
+    if not r:
+        raise HTTPException(404, doc_id)
+    p_ = ROOT / r["path"]
+    if not p_.exists():
+        raise HTTPException(404, str(p_))
+    out = preview(p_, locator)
+    out["doc_id"] = doc_id
+    out["filename"] = p_.name
+    return out
+
+
 @app.get("/api/reviews")
 def reviews(limit: int = 30) -> dict:
     conn = db()

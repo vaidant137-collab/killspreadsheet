@@ -441,7 +441,12 @@ def build_comparison(conn, line_nos=None, vendor_ids=None, title=None):
         rows.append(row)
 
     unres = sum(1 for r in rows for k, c in r.items() if c.state == "unresolved")
-    foot = [f"Landed cost per buyer unit, pre-tax, adjusted to the RFx's 45-day terms. "
+    # Read the terms rather than hard-coding them: the buyer sets them when they
+    # author the RFx, and a footnote that says 45 days under a 30-day tender is
+    # worse than no footnote.
+    terms = conn.execute(
+        "SELECT required_payment_terms FROM rfx LIMIT 1").fetchone()["required_payment_terms"]
+    foot = [f"Landed cost per buyer unit, pre-tax, adjusted to the RFx's {terms}. "
             f"{unres} cells unresolved — shown as a gap, never as zero."]
     dq = [v["name"] for v in vends if not v["qualified"]]
     if dq:

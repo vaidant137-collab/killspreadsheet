@@ -73,6 +73,21 @@ table.draft .chg{font-size:11px;color:var(--dim);margin-top:2px;font-style:itali
 .block.mail .stub{font-size:11px;color:var(--dim);border-top:1px solid var(--rule);
   padding-top:9px;font-style:italic}
 
+.src details.sheet{margin-bottom:12px}
+.src details.sheet summary{font-family:"IBM Plex Mono",monospace;font-size:10px;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--dim);cursor:pointer;
+  padding:5px 0}
+table.grid{border-collapse:collapse;font-family:"IBM Plex Mono",monospace;
+  font-size:10.5px;width:100%;table-layout:fixed}
+table.grid td{border:1px solid var(--rule);padding:3px 5px;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;max-width:110px}
+table.grid td.hid{opacity:.45;font-style:italic}
+table.grid td.hit{background:var(--accent-soft);outline:1.5px solid var(--accent);
+  outline-offset:-1.5px}
+table.grid tr.hit td{background:var(--accent-soft)}
+.src h5{font-size:12px;margin:1em 0 .3em}
+.src p{font-size:12px;line-height:1.55;margin:.4em 0}
+
 table.prov{width:100%;border-collapse:collapse;margin-top:10px;font-size:11px}
 table.prov th{text-align:left;font-family:"IBM Plex Mono",monospace;font-size:9.5px;
   letter-spacing:.06em;text-transform:uppercase;color:var(--dim);
@@ -110,6 +125,9 @@ main{flex:1;display:grid;grid-template-columns:minmax(0,1fr);min-height:0}
   margin-right:5px;vertical-align:-1px}
 .legend .d{background:var(--derived-bg);border-color:var(--derived-line)}
 .legend .u{background:var(--risk-bg);border-color:var(--risk-line)}
+.legend .b{background:var(--accent);border:0;width:2px;height:12px}
+.legend .r{background:var(--rank);border:0;width:14px;height:2px;opacity:.75}
+.legend .sep{width:1px;height:12px;background:var(--rule)}
 #tableWrap{overflow:auto;min-height:0}
 table{border-collapse:separate;border-spacing:0;width:100%;font-size:12.5px}
 thead th{position:sticky;top:0;z-index:2;background:var(--surface-2);
@@ -125,6 +143,18 @@ td.s-derived{background:var(--derived-bg);box-shadow:inset 2px 0 0 var(--derived
 td.s-unresolved{background:var(--risk-bg);box-shadow:inset 2px 0 0 var(--risk-line);
   color:var(--risk);font-weight:600}
 td.s-extracted{background:transparent}
+
+/* Price rank. A 2px mark, not a wash: length is the magnitude channel and the
+   background stays reserved for cell state. #5B8DB8 clears 3:1 on the light
+   surface and #5E8CB4 clears 4.6:1 on the dark one. */
+:root{--rank:#5B8DB8}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--rank:#5E8CB4}}
+tbody td.num{position:relative}
+tbody td.num i.rank{position:absolute;left:6px;bottom:3px;height:2px;border-radius:1px;
+  background:var(--rank);opacity:.75;max-width:calc(100% - 12px);pointer-events:none}
+tbody td.best{font-weight:500}
+tbody td.best::before{content:"";position:absolute;left:0;top:4px;bottom:4px;width:2px;
+  background:var(--accent);border-radius:1px}
 td.item{max-width:340px;font-size:12px;line-height:1.35}
 td.item small{display:block;color:var(--ink-faint);font-family:"IBM Plex Mono",monospace;
   font-size:9.5px;letter-spacing:.03em}
@@ -234,6 +264,9 @@ svg.chart text{font-family:"IBM Plex Mono",monospace;font-size:9px;fill:var(--in
             <span><i class="e"></i>extracted</span>
             <span><i class="d"></i>derived</span>
             <span><i class="u"></i>unresolved</span>
+            <span class="sep"></span>
+            <span><i class="b"></i>cheapest on the line</span>
+            <span><i class="r"></i>how far above it</span>
           </div>
         </div>
       </div>
@@ -350,16 +383,41 @@ function renderTable(tb, flash){
     th.textContent = c.label; tr.appendChild(th); });
   thead.appendChild(tr); t.appendChild(thead);
   const tbody = el('tbody');
+  // Rank within the LINE, not the column: what a buyer scans for is who is
+  // cheapest on this item and by how much, and a whole-table ramp would just
+  // re-draw the fact that a 7-ply case costs more than a 3-ply box.
+  //
+  // Magnitude is carried by BAR LENGTH, not by a colour ramp, for two reasons.
+  // The cell background is already spoken for by extracted / derived /
+  // unresolved, and those states are the thing a buyer must never misread. And
+  // a green-to-red wash would quietly rank an unresolved gap as "best", which
+  // is the exact error this whole system exists to refuse.
+  const CAP = 0.30;                       // 30% above the best fills the bar
   tb.rows.forEach(row => {
     const r = el('tr'); if (flash) r.className = 'flash';
+    const nums = tb.columns.filter(c => c.numeric && c.key !== 'qty' && c.key !== 'line')
+      .map(c => (row[c.key] || {}))
+      .filter(x => typeof x.value === 'number' && x.state !== 'unresolved')
+      .map(x => x.value);
+    const best = nums.length ? Math.min(...nums) : null;
     tb.columns.forEach(c => {
       const cell = row[c.key] || {};
+      const priced = typeof cell.value === 'number' && cell.state !== 'unresolved'
+        && c.key !== 'qty' && c.key !== 'line';
+      const isBest = priced && best !== null && cell.value === best && nums.length > 1;
       const td = el('td', (c.numeric ? 'num ' : '') + (c.key === 'item' ? 'item ' : '') +
-        (cell.state && cell.state !== 'plain' ? 's-' + cell.state : ''));
+        (cell.state && cell.state !== 'plain' ? 's-' + cell.state + ' ' : '') +
+        (isBest ? 'best' : ''));
       if (c.key === 'item'){
         td.innerHTML = esc(cell.value) + (cell.note ? `<small>${esc(cell.note)}</small>` : '');
       } else {
         td.textContent = cell.value === null || cell.value === undefined ? '—' : cell.value;
+        if (priced && best && !isBest){
+          const over = (cell.value - best) / best;
+          const bar = el('i','rank'); bar.style.width = Math.min(over / CAP, 1) * 100 + '%';
+          bar.title = `+${(over * 100).toFixed(1)}% over the best price on this line`;
+          td.appendChild(bar);
+        }
         if (cell.note) td.title = cell.note;
         if (cell.evidence_id){ td.onclick = () => openEvidence(cell.evidence_id); }
         else if (cell.state === 'unresolved' && cell.note) td.onclick = () => explainGap(cell.note);
@@ -734,13 +792,75 @@ async function openEvidence(id){
     const f = el('iframe'); f.src = e.url + '#page=' +
       (/^p(\d+)/.exec(e.locator)?.[1] || 1); b.appendChild(f);
   } else {
-    const a = el('a','', 'Open ' + esc(e.doc_id));
-    a.href = e.url; a.target = '_blank'; a.style.color = 'var(--accent)';
-    b.appendChild(a);
+    // Everything else renders in place too. A download link here was the last
+    // point where checking a number meant leaving the screen.
+    const ph = el('div','status','reading ' + esc(e.doc_id) + '…');
+    b.appendChild(ph);
+    fetch('/api/doc/' + encodeURIComponent(e.doc_id) + '/preview?locator='
+          + encodeURIComponent(e.locator || ''))
+      .then(r => r.json())
+      .then(d => ph.replaceWith(renderSource(d)))
+      .catch(() => ph.textContent = 'Could not read ' + e.doc_id);
   }
   $('#drawer').classList.add('open'); $('#scrim').classList.add('on');
   $('#drawer').setAttribute('aria-hidden','false');
 }
+function renderSource(d){
+  const wrap = el('div','src');
+  if (d.kind === 'mail'){
+    wrap.innerHTML =
+      '<table class="draft">' + (d.headers||[]).map(([k,v]) =>
+        `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join('') + '</table>' +
+      `<pre class="mailbody">${esc(d.body || '')}</pre>` +
+      ((d.attachments||[]).length
+        ? `<div class="attach">${d.attachments.map(a=>'📎 '+esc(a)).join('  ')}</div>` : '');
+    return wrap;
+  }
+  if (d.kind === 'sheet'){
+    (d.sheets||[]).forEach(sh => {
+      const focused = sh.name === d.focus_sheet;
+      const det = el('details','sheet'); det.open = focused;
+      const hid = sh.hidden_rows && sh.hidden_rows.length
+        ? ` · ${sh.hidden_rows.length} hidden row${sh.hidden_rows.length>1?'s':''}` : '';
+      det.appendChild(el('summary','', esc(sh.name) + hid +
+        (focused ? ' · cited here' : '')));
+      const t = el('table','grid');
+      (sh.rows||[]).forEach(r => {
+        const tr = el('tr');
+        r.forEach(c => {
+          const td = el('td', (c.hidden ? 'hid ' : '') +
+            (c.ref === d.focus_cell && focused ? 'hit' : ''));
+          td.textContent = c.v; tr.appendChild(td);
+        });
+        t.appendChild(tr);
+      });
+      det.appendChild(t);
+      if (hid) det.appendChild(el('div','status',
+        'Hidden rows are shown greyed. Superseded lines get hidden rather than '
+        + 'deleted, which is why they are worth seeing.'));
+      wrap.appendChild(det);
+    });
+    return wrap;
+  }
+  if (d.kind === 'prose'){
+    wrap.innerHTML = (d.paragraphs||[]).map(x =>
+      x.type === 'h' ? `<h5>${esc(x.text)}</h5>` : `<p>${esc(x.text)}</p>`).join('');
+    (d.tables||[]).forEach(rows => {
+      const t = el('table','grid');
+      rows.forEach((r,i) => {
+        const tr = el('tr');
+        if (d.focus_row != null && i === d.focus_row) tr.className = 'hit';
+        r.forEach(c => { const td = el('td'); td.textContent = c; tr.appendChild(td); });
+        t.appendChild(tr);
+      });
+      wrap.appendChild(t);
+    });
+    return wrap;
+  }
+  wrap.appendChild(el('div','status', d.message || 'No preview for this file type.'));
+  return wrap;
+}
+
 function closeDrawer(){ $('#drawer').classList.remove('open');
   $('#scrim').classList.remove('on'); $('#drawer').setAttribute('aria-hidden','true'); }
 $('#dClose').onclick = closeDrawer; $('#scrim').onclick = closeDrawer;
