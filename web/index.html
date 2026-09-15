@@ -126,6 +126,9 @@ main{flex:1;display:grid;grid-template-columns:minmax(0,1fr);min-height:0}
 /* ---------- pinned comparison ---------- */
 #pinned{border-bottom:1px solid var(--rule);background:var(--surface);
   display:flex;flex-direction:column;min-height:0;max-height:48vh}
+/* An id selector with `display` outranks the UA's [hidden] rule, so el.hidden
+   silently does nothing here. Say it explicitly. */
+#pinned[hidden]{display:none}
 #pinned .bar{display:flex;align-items:baseline;gap:12px;padding:9px 20px 7px;flex:none}
 #pinned .bar h2{font-size:.86rem;font-weight:600;margin:0}
 #pinned .bar .sub{font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--ink-faint);
@@ -287,7 +290,7 @@ svg.chart text{font-family:"IBM Plex Mono",monospace;font-size:9px;fill:var(--in
 
     <div id="composer">
       <form id="f">
-        <input id="q" autocomplete="off" placeholder="Ask about the comparison…">
+        <input id="q" autocomplete="off" placeholder="Tell me what you need to buy…">
         <button type="submit">Ask</button>
       </form>
       <div class="suggest" id="suggest"></div>
@@ -336,6 +339,7 @@ async function enterDraft(){
   CATALOGUE = cat;
   $('#pinned').hidden = true;
   $('#chipAsm').hidden = true;
+  $('#q').placeholder = 'Tell me what you need to buy…';
   $('#meta').innerHTML = `<span>No RFx yet</span>
     <span>Item master <b>${cat.lines.length}</b> lines</span>
     <span>Approved vendors <b>${cat.vendors.length}</b></span>`;
@@ -359,6 +363,7 @@ async function enterComparison(){
   const r = STATE.rfx, c = STATE.counts;
   $('#pinned').hidden = false;
   $('#chipAsm').hidden = false;
+  $('#q').placeholder = 'Ask about the comparison…';
   $('#meta').innerHTML = `
     <span>${esc(r.rfx_id)}</span>
     <span>Buyer <b>${esc(r.buyer_org)}</b></span>
