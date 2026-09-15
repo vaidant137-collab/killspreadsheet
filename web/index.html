@@ -67,6 +67,7 @@ body{margin:0;background:var(--paper);color:var(--ink);
 
 .block.draft,.block.mail{border:1px solid var(--rule);border-radius:6px;padding:14px 16px;
   background:var(--surface)}
+.block.draft{border-left:2px solid var(--accent)}
 .block.draft .h,.block.mail .h{font-family:"IBM Plex Mono",monospace;font-size:9.5px;
   letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:10px}
 table.draft{width:100%;border-collapse:collapse;font-size:12.5px}
@@ -487,6 +488,8 @@ async function ask(q){
   const res = await fetch('/api/ask', {method:'POST',
     headers:{'Content-Type':'application/json'}, body: JSON.stringify({question:q})});
   const rd = res.body.getReader(); const dec = new TextDecoder(); let buf = '';
+  // A model narrating each tool call often repeats itself verbatim. Say it once.
+  let lastText = '';
   while (true){
     const {done, value} = await rd.read(); if (done) break;
     buf += dec.decode(value, {stream:true});
@@ -497,7 +500,22 @@ async function ask(q){
       if (m.kind === 'done'){ status.remove(); break; }
       if (m.kind === 'status'){ status.textContent = m.payload; continue; }
       if (m.kind === 'issued'){ await enterComparison(); continue; }
-      status.remove(); t.appendChild(renderBlock(m.payload));
+      status.remove();
+      const blk = m.payload;
+      if (blk.type === 'rfx_draft'){
+        // One draft, mutated in place. A co-pilot that sets four fields emits
+        // four blocks, and appending them stacks four near-identical cards —
+        // the same "transcript of stale copies" problem the pinned comparison
+        // exists to avoid. Same fix: render once, update, keep it last.
+        const prev = $('#chat').querySelector('.block.draft');
+        const next = renderBlock(blk);
+        if (prev) prev.replaceWith(next); else t.appendChild(next);
+        $('#chat').scrollTop = 1e9;
+        continue;
+      }
+      if (blk.type === 'text' && blk.text && blk.text.trim() === lastText) continue;
+      if (blk.type === 'text') lastText = (blk.text || '').trim();
+      t.appendChild(renderBlock(blk));
       $('#chat').scrollTop = 1e9;
     }
   }
