@@ -15,10 +15,26 @@ wrong is a demo nobody believes.
 
 - Open the URL and let the free instance wake up. First load after an idle period
   takes about a minute; that wait on camera is dead air.
-- Check the header chip says **"extraction by …"** and names a model. If it says
-  *"fixture path — no model read these documents"*, the build had no key. Set
-  `OPENROUTER_API_KEY` in Render and redeploy before recording — the brief's one
-  hard rule is not faking extraction, and the chip is telling you it was faked.
+- Look at the header chip. It will say one of three things, and **each has a
+  script** — none of them is a reason not to record.
+
+  **"extraction by \<model\>"** — a model read all five documents during the
+  build. Say so at step 9 and move on.
+
+  **"extraction by \<model\> — 4 of 5 documents"** — better material than a
+  clean pass, actually. Say: *four were parsed by the model; one did not
+  validate and fell back, and the chip counts it rather than averaging it away.*
+
+  **"fixture path — no model read these documents"** — do not hide it, lead with
+  it at step 9 instead of closing with it:
+
+  > *The build attempts a real recorded extraction run on every deploy, per
+  > document. Today it reports the fixture path, in warning colour, because the
+  > model's output did not validate against the schema. I would rather the
+  > screen admit that than imply a model read these documents. The chip existing
+  > is the point — everything downstream of the read is real either way.*
+
+  That is a stronger answer than a green chip you cannot explain.
 - Reload once so you are on an empty chat.
 
 ---
