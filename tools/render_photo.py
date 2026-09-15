@@ -21,6 +21,7 @@ background -> lighting gradient and shadow -> blur -> JPEG compression.
 from __future__ import annotations
 
 import random
+from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
@@ -32,19 +33,54 @@ from tools.labels import ganesh as label
 SEED = 4471
 CARD_W, CARD_H = 1500, 2050
 
+# Fonts by role, candidates in preference order. The original version hard-coded
+# five DejaVu paths, which is true of a Debian dev box and false of nearly every
+# host you would deploy to: Render's Python image ships none of them, and macOS
+# ships none of them either. A renderer for the DATASET taking the whole SERVICE
+# down at boot is the wrong failure — so resolve at call time and degrade.
+_FONT_DIRS = [
+    "/usr/share/fonts/truetype/dejavu",
+    "/usr/share/fonts/dejavu",
+    "/usr/share/fonts/truetype/liberation",
+    "/usr/share/fonts/liberation",
+    "/usr/share/fonts/truetype/freefont",
+    "/System/Library/Fonts/Supplemental",
+    "/Library/Fonts",
+]
 FONTS = {
-    "bold": "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-    "reg": "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-    "mono": "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
-    "monob": "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf",
-    "pen": "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Italic.ttf",
+    "bold":  ["DejaVuSans-Bold.ttf", "LiberationSans-Bold.ttf",
+              "FreeSansBold.ttf", "Arial Bold.ttf"],
+    "reg":   ["DejaVuSans.ttf", "LiberationSans-Regular.ttf",
+              "FreeSans.ttf", "Arial.ttf"],
+    "mono":  ["DejaVuSansMono.ttf", "LiberationMono-Regular.ttf",
+              "FreeMono.ttf", "Courier New.ttf"],
+    "monob": ["DejaVuSansMono-Bold.ttf", "LiberationMono-Bold.ttf",
+              "FreeMonoBold.ttf", "Courier New Bold.ttf"],
+    "pen":   ["DejaVuSerif-Italic.ttf", "LiberationSerif-Italic.ttf",
+              "FreeSerifItalic.ttf", "Georgia Italic.ttf"],
 }
 INK = (28, 28, 30)
 PEN = (24, 48, 132)          # blue ballpoint
 
 
-def f(name: str, size: int) -> ImageFont.FreeTypeFont:
-    return ImageFont.truetype(FONTS[name], size)
+@lru_cache(maxsize=None)
+def _font_path(name: str) -> str | None:
+    for base in _FONT_DIRS:
+        for candidate in FONTS[name]:
+            path = Path(base) / candidate
+            if path.exists():
+                return str(path)
+    return None
+
+
+def f(name: str, size: int):
+    path = _font_path(name)
+    if path is None:
+        # PIL's bundled bitmap font ignores `size`, so the card comes out
+        # legible but visibly wrong. That is a degraded DOCUMENT rather than a
+        # dead service — and the committed JPG is what the product reads anyway.
+        return ImageFont.load_default()
+    return ImageFont.truetype(path, size)
 
 
 def indian_group(n: int) -> str:
