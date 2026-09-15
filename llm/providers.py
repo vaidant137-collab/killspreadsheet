@@ -18,13 +18,26 @@ from pydantic import BaseModel
 T = TypeVar("T", bound=BaseModel)
 
 
+# A model call with no timeout can hang a build forever, and one did: a deploy
+# printed "recording a real model run" and then sat silent for thirteen minutes
+# with no error and no output, because the SDK default is ten minutes per
+# attempt and it retries. Extraction is five documents, each of which may make a
+# second repair call — so the worst case was over an hour of nothing.
+#
+# Ninety seconds is generous for one document and short enough that a stuck call
+# surfaces as a per-document fallback, which the pipeline already handles and
+# reports honestly, instead of as a hung deploy.
+CALL_TIMEOUT_S = float(os.getenv("LLM_TIMEOUT_S", "90"))
+
+
 class AnthropicClient:
     name = "anthropic"
     supports_vision = True
 
     def __init__(self, model: str = "claude-sonnet-5"):
         import anthropic
-        self._c = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+        self._c = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"],
+                                      timeout=CALL_TIMEOUT_S, max_retries=1)
         self.model = model
 
     def structured(self, *, system, user, schema: type[T], images=None,
@@ -60,7 +73,8 @@ class OpenAIClient:
 
     def __init__(self, model: str = "gpt-4.1"):
         from openai import OpenAI
-        kw = {"api_key": os.environ[self.KEY_ENV]}
+        kw = {"api_key": os.environ[self.KEY_ENV],
+              "timeout": CALL_TIMEOUT_S, "max_retries": 1}
         if self.BASE:
             kw["base_url"] = self.BASE
         self._c = OpenAI(**kw)

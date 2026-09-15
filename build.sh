@@ -27,11 +27,14 @@ pip install -r requirements.txt
 
 if [ -n "$OPENROUTER_API_KEY$ANTHROPIC_API_KEY$GEMINI_API_KEY$OPENAI_API_KEY" ]; then
   echo "--- extraction: recording a real model run ---"
-  if python -m pipeline --extractor record; then
+  # A ceiling on the whole recording, not just per call. Belt and braces: if
+  # anything below the client timeout still wedges, the build falls back and
+  # ships rather than hanging and shipping nothing.
+  if timeout "${EXTRACT_BUDGET_S:-420}" python -m pipeline --extractor record; then
     echo "--- recorded; the deploy will replay this run ---"
     exit 0
   fi
-  echo "--- real extraction failed. Falling back, and saying so. ---"
+  echo "--- real extraction failed or timed out. Falling back, and saying so. ---"
   rm -rf data/extraction_runs data/extraction_latest.json
 fi
 
