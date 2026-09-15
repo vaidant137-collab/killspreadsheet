@@ -12,7 +12,7 @@ There is no block type for "a figure the model asserted".
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Literal, Union
 
 from pydantic import BaseModel, Field
 
@@ -140,5 +140,9 @@ class RefusalBlock(BaseModel):
     would_need: list[str] = Field(default_factory=list)
 
 
-Block = (TextBlock | TableBlock | ChartBlock | EvidenceBlock | ReviewBlock
-         | AssumptionBlock | QueryBlock | RefusalBlock)
+# typing.Union rather than `X | Y`, because this is a RUNTIME expression, not
+# an annotation. `from __future__ import annotations` defers annotations to
+# strings but does nothing for an assignment like this one, and `|` between
+# classes is only valid from Python 3.10. macOS still ships 3.9.
+Block = Union[TextBlock, TableBlock, ChartBlock, EvidenceBlock, ReviewBlock,
+              AssumptionBlock, QueryBlock, RefusalBlock]

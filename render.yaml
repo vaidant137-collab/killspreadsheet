@@ -1,0 +1,26 @@
+# Render blueprint. Connect this repo at render.com and it reads this file --
+# no terminal, no CLI.
+services:
+  - type: web
+    name: killspreadsheet
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: bash start.sh
+    healthCheckPath: /healthz
+    envVars:
+      # Python 3.11 so none of the 3.9 union-syntax issues can recur on the host.
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      # fixture until a recorded run exists; flip to "replay" afterwards.
+      - key: EXTRACTOR
+        value: fixture
+      # Set in the Render dashboard, never in the repo. Without it the site
+      # still works -- only the live analyst chat needs it.
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_ANALYST_MODEL
+        value: anthropic/claude-sonnet-5
+      # A public URL with a paid key behind it needs a ceiling. See api/app.py.
+      - key: MAX_QUESTIONS_PER_HOUR
+        value: "60"

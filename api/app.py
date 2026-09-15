@@ -12,6 +12,8 @@ Run:  uvicorn api.app:app --reload --port 8000
 from __future__ import annotations
 
 import json
+import os
+import time
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -26,11 +28,35 @@ from store import repo
 app = FastAPI(title="Kill the Quote Spreadsheet")
 WEB = ROOT / "web"
 
+# --- a ceiling on the public demo ------------------------------------------
+# This runs on a public URL with a paid API key behind it. Without a cap, one
+# person holding down Enter drains the budget and the demo is dead for whoever
+# opens the link next. In-memory is enough: the free tier is a single instance,
+# and a counter that resets on redeploy is the right amount of machinery for a
+# demo. A real deployment would put this in the store with a per-viewer key.
+MAX_PER_HOUR = int(os.getenv("MAX_QUESTIONS_PER_HOUR", "60"))
+_asks: list[float] = []
+
+
+def _within_budget() -> tuple[bool, int]:
+    now = time.time()
+    _asks[:] = [t for t in _asks if now - t < 3600]
+    return len(_asks) < MAX_PER_HOUR, MAX_PER_HOUR - len(_asks)
+
 
 def db():
     if not DB_PATH.exists():
         raise HTTPException(503, "Database not built. Run `python -m pipeline` first.")
     return repo.connect(DB_PATH)
+
+
+@app.get("/healthz")
+def healthz() -> dict:
+    """Hosts poll this to decide the service is alive. Kept free of database
+    access so a half-built deploy reports honestly rather than 500-ing."""
+    ok, left = _within_budget()
+    return {"ok": True, "db": DB_PATH.exists(),
+            "questions_left_this_hour": left if ok else 0}
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -164,6 +190,23 @@ def ask(a: Ask):
     """Server-sent events. Blocks reach the UI as they are produced, so a
     multi-step answer shows its working rather than appearing all at once."""
     conn = db()
+    ok, left = _within_budget()
+    if not ok:
+        def refuse():
+            body = {"type": "refusal", "question": a.question,
+                    "reason": f"This public demo allows {MAX_PER_HOUR} analyst "
+                              f"questions an hour and that is spent. Everything "
+                              f"else on the page still works — the comparison, "
+                              f"the evidence drawer, the review queue and the "
+                              f"assumptions panel are served from the database, "
+                              f"not the model.",
+                    "would_need": ["Try again in a little while, or run it "
+                                   "locally with your own key."]}
+            yield f"data: {json.dumps({'kind': 'block', 'payload': body})}\n\n"
+            yield "data: {\"kind\": \"done\"}\n\n"
+        return StreamingResponse(refuse(), media_type="text/event-stream")
+    _asks.append(time.time())
+
     analyst = Analyst(conn)
 
     def stream():
