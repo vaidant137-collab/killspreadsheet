@@ -292,9 +292,78 @@ def decide(review_id: int, d: Decision) -> dict:
         conn.commit()
     else:
         repo.record_correction(conn, review_id, d.value or "", d.reviewer)
+        _apply_correction(conn, review_id, d.value or "")
     left = conn.execute(
         "SELECT COUNT(*) c FROM review_item WHERE status='open'").fetchone()["c"]
     return {"ok": True, "open": left}
+
+
+def _apply_correction(conn, review_id: int, value: str) -> None:
+    """Put a human's correction into the comparison, not just into the log.
+
+    Before this, `Correct…` wrote an audit row and the cell on screen did not
+    move. That is worse than having no review queue: it invites a buyer to fix a
+    number, shows them their fix had no effect, and keeps the wrong figure in
+    every total downstream. A review queue that does not change the answer is
+    theatre, and the whole trust argument rests on it not being.
+
+    The correction is a rate in the VENDOR's own terms, so it is re-normalised
+    through the same eight deterministic steps as every other cell rather than
+    written straight into landed cost. A human correcting "Rs 9.16 / set" has
+    not told us the landed cost; they have told us the rate, and the arithmetic
+    is still the machine's job.
+    """
+    import json as _json
+    import re as _re
+
+    from contracts.quote import GroundTruth, QuoteBasis, VendorLineQuote
+    from normalize.engine import normalise_line
+
+    row = conn.execute(
+        "SELECT vendor_id, line_no, field FROM review_item WHERE id=?",
+        (review_id,)).fetchone()
+    if not row or row["field"] != "rate":
+        return                       # only rate corrections re-price a cell
+    vid, ln = row["vendor_id"], row["line_no"]
+
+    m = _re.search(r"-?\d+(?:[.,]\d+)?", (value or "").replace(",", ""))
+    if not m:
+        return                       # not a number; the audit row still stands
+    rate = float(m.group(0))
+
+    gt = GroundTruth.model_validate(
+        _json.loads((DATA / "ground_truth.json").read_text(encoding="utf-8")))
+    line = next((l for l in gt.rfx.lines if l.line_no == ln), None)
+    sub = next((x for x in gt.submissions if x.vendor.vendor_id == vid), None)
+    if line is None or sub is None:
+        return
+
+    prior = next((q for q in sub.line_quotes if q.line_no == ln), None)
+    q = VendorLineQuote(
+        line_no=ln, rate=rate,
+        currency=prior.currency if prior else sub.vendor.currency,
+        basis=prior.basis if prior else QuoteBasis("per_piece"),
+        refers_to_prior_contract=False,
+        excludes_sub_component=prior.excludes_sub_component if prior else False,
+        tooling_inr=prior.tooling_inr if prior else None,
+        tooling_amortised=prior.tooling_amortised if prior else False,
+        note=f"human correction by review #{review_id}")
+    units = sum(l.annual_qty for l in gt.rfx.lines
+                for qq in sub.line_quotes if qq.line_no == l.line_no) or 1
+    n = normalise_line(q, line, sub.vendor, gt, units)
+
+    caveats = list(n.caveats) + [
+        f"Value corrected by a human reviewer and re-normalised through the "
+        f"same eight steps. Original extraction is retained in the review log."]
+    conn.execute(
+        "UPDATE normalised_line SET landed_inr=?, state=?, base_inr=?, "
+        "freight_inr=?, tooling_inr=?, discount_inr=?, npv_adjustment_inr=?, "
+        "caveats=?, unresolved_reason=NULL, missing_fact=NULL, "
+        "extraction_confidence=1.0, match_confidence=1.0 "
+        "WHERE vendor_id=? AND line_no=?",
+        (n.landed_inr, n.state.value, n.base_inr, n.freight_inr, n.tooling_inr,
+         n.discount_inr, n.npv_adjustment_inr, _json.dumps(caveats), vid, ln))
+    conn.commit()
 
 
 class Ask(BaseModel):
