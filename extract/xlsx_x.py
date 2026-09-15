@@ -27,12 +27,12 @@ from llm.base import fence
 
 
 class _Row(BaseModel):
-    sheet: str
-    row: int
-    vendor_label: str
+    sheet: str = ""
+    row: int = 0
+    vendor_label: str = ""
     rate: float | None
     currency: str = "INR"
-    basis: str
+    basis: str = "per_piece"
     unit_wording_seen: str | None = None
     dimensions_seen: str | None = None
     dimension_system: str = "mm"

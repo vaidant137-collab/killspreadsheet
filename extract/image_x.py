@@ -23,11 +23,11 @@ from extract.prompts import SYSTEM, USER
 
 
 class _Row(BaseModel):
-    row_index: int
-    vendor_label: str
+    row_index: int = 0
+    vendor_label: str = ""
     rate: float | None
     currency: str = "INR"
-    basis: str
+    basis: str = "per_piece"
     dimensions_seen: str | None = None
     dimension_system: str = "mm"
     # A printed rate struck through in pen is superseded, not wrong. Both

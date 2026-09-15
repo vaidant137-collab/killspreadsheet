@@ -27,18 +27,18 @@ from extract.prompts import SYSTEM, USER
 
 class _ClassRate(BaseModel):
     """A rate stated against a grade of material rather than against any item."""
-    applies_to: str             # "5-ply board"
+    applies_to: str = ""             # "5-ply board"
     rate: float
     currency: str = "INR"
-    basis: str                  # per_kg
-    quoted_text: str
+    basis: str = "per_piece"                  # per_kg
+    quoted_text: str = ""
 
 
 class _Pointer(BaseModel):
     """A reference to another document instead of a price."""
-    text: str                   # "rest same as last year"
-    refers_to: str              # "FY26 rate contract"
-    covers: str                 # what it appears to cover
+    text: str = ""                   # "rest same as last year"
+    refers_to: str = ""              # "FY26 rate contract"
+    covers: str = ""                 # what it appears to cover
 
 
 class _Out(BaseModel):

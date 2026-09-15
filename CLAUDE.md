@@ -59,6 +59,13 @@ tool call. Typed tools (`vendor_totals`, `cheapest_per_line`, `best_split`,
 read-only at the tool boundary rather than by convention. A model writing SQL
 rarely errors — it returns a number wrong in a way nothing on screen can show.
 
+**Extraction schemas are strict about numbers and lax about labels.** A model
+that omits a *rate* has given us nothing and that row must fail; a model that
+omits a *label* has given us a usable row with a thin description. Before this
+line was drawn, one missing label failed the whole submission — and a real
+deploy threw away four documents' worth of correct parsing because of one. The
+per-document fallback in `pipeline.run` is the second half of the same idea.
+
 **Extraction never sees the buyer's template.** It reads into the vendor's own
 schema; matching is a separate step with its own confidence score. Hand a model
 30 rows and 27 rows of data and it will invent three.

@@ -23,11 +23,11 @@ from llm.base import fence
 
 
 class _Row(BaseModel):
-    vendor_label: str
+    vendor_label: str = ""
     vendor_code: str | None = None
     rate: float | None
-    currency: str
-    basis: str
+    currency: str = "INR"
+    basis: str = "per_piece"
     unit_wording_seen: str | None = None
     dimension_system: str = "mm"
     confidence: float = 1.0
@@ -35,10 +35,10 @@ class _Row(BaseModel):
 
 
 class _Slab(BaseModel):
-    threshold_qty: int | None
-    uplift_stated: str          # verbatim: "12 to 15 per cent"
-    uplift_is_a_range: bool
-    applies_per: str            # "line item" | "total order" | "unclear"
+    threshold_qty: int | None = None
+    uplift_stated: str = ""          # verbatim: "12 to 15 per cent"
+    uplift_is_a_range: bool = False
+    applies_per: str = "unclear"            # "line item" | "total order" | "unclear"
 
 
 class _Out(BaseModel):
