@@ -1,5 +1,9 @@
 # core
 pydantic>=2.7
+# Lets pydantic evaluate `X | None` annotations on Python 3.9, which is what
+# macOS still ships. Every module already has `from __future__ import
+# annotations`, so this is the only piece missing on an older interpreter.
+eval_type_backport>=0.2; python_version < "3.10"
 fastapi>=0.111
 uvicorn[standard]>=0.30
 python-dotenv>=1.0
