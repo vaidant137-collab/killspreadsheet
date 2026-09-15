@@ -218,11 +218,21 @@ async def run(port: int, c: Checks) -> None:
         await pg.wait_for_timeout(500)
         d = (await pg.evaluate("fetch('/api/draft').then(r=>r.json())"))["draft"]
         c.eq(len(d["line_nos"]), 1, "a click writes to the draft, with no model call")
+        await pg.locator("#panelItems .pfoot button",
+                         has_text="Select all").click()
+        await pg.wait_for_timeout(700)
+        d = (await pg.evaluate("fetch('/api/draft').then(r=>r.json())"))["draft"]
+        c.eq(len(d["line_nos"]), 30, "and so does scheduling the whole category")
 
         await pg.click('#tabs button[data-tab="vendors"]')
         await pg.wait_for_timeout(300)
         c.eq(await pg.locator("#panelVendors .vcard").count(), 5,
              "five approved vendors")
+        await pg.locator("#panelVendors .pfoot button",
+                         has_text="Invite all").click()
+        await pg.wait_for_timeout(700)
+        d = (await pg.evaluate("fetch('/api/draft').then(r => r.json())"))["draft"]
+        c.eq(len(d["vendor_ids"]), 5, "inviting them all writes the vendor list")
 
         # ---- the co-pilot's turn, against a stubbed stream ------------------
         await pg.evaluate(STUB)
@@ -242,40 +252,57 @@ async def run(port: int, c: Checks) -> None:
         c.eq(d["payment_terms_days"], 30,
              "picking terms writes the field that re-prices 139 cells")
 
-        # ---- the approval gate ---------------------------------------------
-        # Rendered directly rather than waited for: what is being checked is
-        # that the button exists and that pressing it actually writes the
-        # approval the co-pilot is blocked on, not that a model chose to draft
-        # a mail on this particular run.
-        await pg.evaluate("""blk => {
-          const t = turn('Co-pilot'); t.appendChild(renderBlock(blk)); }""",
-          {"type": "mail_draft", "to": ["Apex Packwell"],
-           "subject": "RFX-2026-CORR-011", "body": "Dear supplier,",
-           "attachments": ["rfx_line_schedule.xlsx"],
-           "stub_note": "Approving this does not send mail."})
-        await pg.wait_for_timeout(300)
-        c.is_(await pg.locator("#chat .block.mail .stub").count() == 1,
-              "the covering mail says on its face that the send is stubbed")
+        # ---- the mail, and sending it --------------------------------------
+        # The buyer is about to write to five companies. What has to be in front
+        # of them is the text that goes out and the list it goes to — not a note
+        # saying a mail exists somewhere above.
+        await pg.wait_for_timeout(900)
+        mail = pg.locator("#chat .block.mail").last
+        c.eq(await pg.locator("#chat .block.mail").count(), 1,
+             "the covering mail appears once the RFx is complete")
+        body = await mail.locator(".mailbody").inner_text()
+        c.at_least(len(body), 400, "it is the whole mail, not a summary of it")
+        c.is_("disqualif" in body.lower(),
+              "and it tells the vendor which answers end their submission")
+        c.eq(await mail.locator(".stub").count(), 1,
+             "the card says on its face that the send is stubbed")
+        c.is_(await mail.locator(".verify").count() == 1,
+              "and asks the buyer to check the schedule and the vendor list")
+
         before = await pg.evaluate(
             "fetch('/api/draft').then(r => r.json()).then(j => j.draft.mail_approved)")
-        await pg.locator("#chat .block.mail .rfoot button",
-                         has_text="Approve").click()
-        await pg.wait_for_timeout(1200)
+        await mail.locator(".rfoot button", has_text="Send to").click()
+
+        # The round is the part a buyer lives in: mail out, replies landing one
+        # at a time. Every row here is real work on a real document.
+        rows, states = 0, set()
+        for _ in range(60):
+            await pg.wait_for_timeout(400)
+            rows = max(rows, await pg.locator("#panelRound table.round tbody tr").count())
+            for t in await pg.locator("#panelRound table.round td.s").all_inner_texts():
+                states.add(t.strip().lower())
+            if await pg.locator("#tableWrap table tbody tr").count():
+                break
         after = await pg.evaluate(
             "fetch('/api/draft').then(r => r.json()).then(j => j.draft.mail_approved)")
         c.is_(before is False and after is True,
-              "approving the mail is a button, and it writes the approval",
+              "sending is a button, and it writes the approval the server checks",
               f"{before} -> {after}")
+        c.at_least(rows, 5, "the round shows a row per vendor while it runs")
+        c.is_("quote read" in states,
+              "each reply reaches 'quote read' as its document is parsed",
+              str(sorted(states)))
+        r = await pg.evaluate("fetch('/api/round').then(r => r.json())")
+        c.eq(r.get("state"), "complete",
+             "the round finishes, and says so to anyone who opens the page")
 
         # ---- the comparison half -------------------------------------------
-        # The button the walkthrough falls back to when the model is down, and
-        # the same code path the co-pilot uses once the buyer approves the mail.
-        issued = httpx.post(f"{url}api/issue_default", timeout=180)
-        c.eq(issued.status_code, 200, "issuing the RFx runs the pipeline")
         await pg.goto(url, wait_until="networkidle")
         await pg.wait_for_timeout(900)
-        c.eq(await pg.locator("#tableWrap table tbody tr").count(), 30,
-             "the comparison grid renders all thirty lines")
+        scheduled = len((await pg.evaluate(
+            "fetch('/api/draft').then(r => r.json())"))["draft"]["line_nos"])
+        c.eq(await pg.locator("#tableWrap table tbody tr").count(), scheduled,
+             "the comparison covers exactly the lines the buyer scheduled")
         c.at_least(await pg.locator("#chat .options .card").count(), 3,
                    "the decision leads, before the table")
 

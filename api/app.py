@@ -13,6 +13,8 @@ from __future__ import annotations
 
 import json
 import os
+import queue
+import threading
 import time
 
 from fastapi import FastAPI, HTTPException
@@ -52,7 +54,8 @@ def _within_budget() -> tuple[bool, int]:
 # One process-wide session, like the rate limiter above, because this is a demo
 # on a single free instance. A real deployment keys this per buyer; the shape of
 # the code does not change, only where the dict lives.
-SESSION = {"phase": "draft", "draft": RfxDraft()}
+SESSION = {"phase": "draft", "draft": RfxDraft(),
+           "round": {"state": "idle", "vendors": []}}
 
 
 def _catalogue() -> dict:
@@ -151,6 +154,123 @@ def preview() -> dict:
     known_only = SESSION["phase"] == "draft"
     return {"gates": _gate_preview(known_only), "terms": _terms_preview(known_only),
             "known_before_quotes_only": known_only}
+
+
+# ---------------------------------------------------------------------------
+# The round
+# ---------------------------------------------------------------------------
+# A procurement round is not an instant. Mail goes out, replies arrive one at a
+# time in whatever format the vendor felt like, and the buyer's actual question
+# for most of the week is "where has this got to". A tool that shows a spinner
+# and then a finished table has skipped the part they live in.
+#
+# So the round has a state, it is stored, and anyone who opens the page mid-round
+# sees the same thing: who was written to, who has replied, what format it came
+# in, how many lines came out of it. Every one of those is true — the extraction
+# genuinely runs per document and genuinely takes time. The ONE fiction is the
+# send itself, which is stubbed and says so on its own card.
+
+def _blank_round(draft: RfxDraft) -> dict:
+    names = {v["vendor_id"]: v["name"] for v in _catalogue()["vendors"]}
+    return {
+        "state": "idle", "started_at": None, "finished_at": None,
+        "vendors": [{"vendor_id": v, "name": names.get(v, v),
+                     "state": "not invited", "format": None, "lines": None,
+                     "note": None} for v in (draft.vendor_ids or [])],
+    }
+
+
+def _round_step(vendor_id: str, **fields) -> None:
+    for v in SESSION["round"]["vendors"]:
+        if v["vendor_id"] == vendor_id:
+            v.update(fields)
+            return
+
+
+def _compose_mail(d: RfxDraft) -> dict:
+    """The covering mail, composed from the draft rather than written by a model.
+
+    The buyer is about to send this to five companies. What they must be able to
+    read, before they press anything, is the ACTUAL text — not a summary of the
+    RFx and a promise that a mail exists. So it is built deterministically from
+    the fields on the card: change the terms and this changes, with no model in
+    the loop to paraphrase it into something almost right.
+
+    The co-pilot can still rewrite it (draft_mail), and rewriting clears the
+    approval.
+    """
+    cat = _catalogue()
+    names = {v["vendor_id"]: v["name"] for v in cat["vendors"]}
+    qs = {q["q_no"]: q["question"] for q in cat["questions"]}
+    lines = [l for l in cat["lines"] if l["line_no"] in set(d.line_nos or [])]
+    gates = [n for n in (d.gating_q_nos or []) if n in qs]
+    dflt = cat["defaults"]
+
+    subject = d.mail_subject or (
+        f"{dflt.get('category', 'Category')} — annual requirement, "
+        f"request for quotation")
+
+    if d.mail_body:
+        body = d.mail_body
+    else:
+        gate_text = ("\n".join(f"    Q{n}. {qs[n]}" for n in gates)
+                     if gates else "    (none — price decides alone)")
+        body = f"""Dear Supplier,
+
+{dflt.get('buyer_org', 'We')} invite you to quote for our annual \
+{str(dflt.get('category', '')).lower()} requirement.
+
+  Schedule          {len(lines)} line items, attached
+  Delivery          {d.delivery_point or dflt.get('delivery_point', '')}
+  Incoterm          {d.required_incoterm or dflt.get('required_incoterm', '')}
+  Payment terms     {d.payment_terms_days} days from GRN
+  Responses due     {d.response_due or ''}
+
+Please quote a rate per line against the units stated in the schedule. Where \
+your rate is on a different basis — per kilogram, per hundred, per set — say \
+so plainly rather than converting it; we will normalise, and we would rather \
+normalise your number than guess at it.
+
+The attached questionnaire has {len(d.question_nos or [])} questions and all \
+of them must be answered. These are disqualifying — an unsatisfactory answer \
+ends the submission regardless of price:
+
+{gate_text}
+
+Quote validity of at least 60 days is preferred. If any part of the schedule \
+is outside what you make, leave it blank rather than substituting; a blank is \
+useful to us and a substitution is not.
+
+Regards,
+Procurement
+{dflt.get('buyer_org', '')}"""
+
+    return {
+        "to": [names.get(v, v) for v in (d.vendor_ids or [])],
+        "subject": subject,
+        "body": body,
+        "attachments": [f"rfx_line_schedule.xlsx ({len(lines)} lines)",
+                        f"quality_questionnaire.pdf "
+                        f"({len(d.question_nos or [])} questions, "
+                        f"{len(gates)} disqualifying)"],
+        "stub_note": "Sending is stubbed: no mail leaves the building. The five "
+                     "replies are documents that already exist in this repo, and "
+                     "reading them is the part that is real.",
+        "approved": bool(d.mail_approved),
+        "missing": d.missing(),
+    }
+
+
+@app.get("/api/mail")
+def mail() -> dict:
+    """Exactly what goes out, before anyone presses anything."""
+    return _compose_mail(SESSION["draft"])
+
+
+@app.get("/api/round")
+def round_state() -> dict:
+    """Where this round has got to. Readable at any moment, by anyone."""
+    return SESSION["round"]
 
 
 def _issue(draft: RfxDraft) -> None:
@@ -569,6 +689,113 @@ def ask(a: Ask):
     return StreamingResponse(stream(), media_type="text/event-stream")
 
 
+@app.post("/api/issue")
+def issue_round():
+    """Send the RFx and read what comes back, reporting as it goes.
+
+    A button rather than a sentence to the model, for the same reason the
+    pickers write their own field: sending a tender is not a thing to route
+    through a paraphrase. The co-pilot's job ended when the buyer approved the
+    mail.
+
+    The send is stubbed — that is the one stub the brief allows and the card
+    says so on its face. Everything after it is real work on real documents,
+    which is why it is worth watching.
+    """
+    d = SESSION["draft"]
+    gaps = d.missing()
+    if gaps:
+        raise HTTPException(409, f"Still missing {', '.join(gaps)}.")
+    if not d.mail_body:
+        # The buyer approved exactly what /api/mail showed them, and that text is
+        # composed from the draft rather than written by a model — so recomposing
+        # it here yields the same bytes. Storing it makes "what was sent" a
+        # recorded fact rather than something re-derived later from fields that
+        # may have moved on.
+        composed = _compose_mail(d)
+        d.mail_subject = d.mail_subject or composed["subject"]
+        d.mail_body = composed["body"]
+    if not d.mail_approved:
+        raise HTTPException(409, "The covering mail has not been approved.")
+
+    SESSION["round"] = _blank_round(d)
+    r = SESSION["round"]
+    r["state"] = "sending"
+    r["started_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+
+    def stream():
+        def ev(kind, payload):
+            return f"data: {json.dumps({'kind': kind, 'payload': payload})}\n\n"
+
+        for v in r["vendors"]:
+            v["state"] = "mail sent"
+            v["note"] = "stubbed — no mail left the building"
+        r["state"] = "awaiting replies"
+        yield ev("round", r)
+
+        d.issued = True
+        try:
+            import pipeline
+
+            # The pipeline runs on a thread and its progress comes back through
+            # a queue, so each vendor's row changes WHEN that document is read
+            # rather than all five flipping at the end. The difference matters:
+            # a progress display that is really a replay is a loading animation
+            # with a story attached, and this one is meant to be the true state
+            # of the round.
+            q: queue.Queue = queue.Queue()
+            done_marker = object()
+
+            def work():
+                try:
+                    pipeline.run(fresh=True, verbose=False, draft=d,
+                                 on_progress=q.put)
+                except Exception as exc:                      # noqa: BLE001
+                    q.put(exc)
+                finally:
+                    q.put(done_marker)
+
+            th = threading.Thread(target=work, daemon=True)
+            th.start()
+            failure = None
+            while True:
+                e = q.get()
+                if e is done_marker:
+                    break
+                if isinstance(e, Exception):
+                    failure = e
+                    continue
+                if e["state"] == "reading":
+                    _round_step(e["vendor_id"], state="reply received",
+                                format=e.get("format"),
+                                note=f"replied by {e.get('format')}")
+                else:
+                    note = f"{e.get('lines')} lines read"
+                    if e.get("degraded"):
+                        note += " \u00b7 fell back to the fixture path"
+                    if e.get("injection"):
+                        note += " \u00b7 instructions found in the document, logged"
+                    _round_step(e["vendor_id"], state="quote read",
+                                lines=e.get("lines"), note=note)
+                yield ev("round", r)
+            th.join(timeout=5)
+            if failure is not None:
+                raise failure
+            r["state"] = "complete"
+            r["finished_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+            SESSION["phase"] = "comparison"
+            yield ev("round", r)
+            yield ev("done", {"phase": "comparison"})
+        except Exception as exc:                              # noqa: BLE001
+            d.issued = False
+            r["state"] = "failed"
+            r["error"] = f"{type(exc).__name__}: {exc}"
+            yield ev("round", r)
+            yield ev("done", {"phase": "draft"})
+
+    return StreamingResponse(stream(), media_type="text/event-stream")
+
+
 @app.post("/api/issue_default")
 def issue_default() -> dict:
     """Issue the template RFx, unauthored.
@@ -597,6 +824,10 @@ def issue_default() -> dict:
         mail_body="(template RFx, issued without authoring)")
     SESSION["draft"] = d
     d.issued = True
+    SESSION["round"] = _blank_round(d)
+    for v in SESSION["round"]["vendors"]:
+        v.update(state="quote read", note="issued from the template, unauthored")
+    SESSION["round"]["state"] = "complete"
     _issue(d)
     return {"ok": True, "phase": SESSION["phase"]}
 
@@ -643,6 +874,7 @@ def reset() -> dict:
     twice without a redeploy."""
     SESSION["phase"] = "draft"
     SESSION["draft"] = RfxDraft()
+    SESSION["round"] = {"state": "idle", "vendors": []}
     return {"ok": True, "phase": "draft"}
 
 

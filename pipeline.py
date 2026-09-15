@@ -89,7 +89,15 @@ def _has_recordings() -> bool:
 
 
 def run(*, fresh: bool = True, verbose: bool = True, mode: str | None = None,
-        draft=None) -> dict:
+        draft=None, on_progress=None) -> dict:
+    """Extract, match, normalise, allocate, store.
+
+    `on_progress(event: dict)` is called as each vendor's reply is read. A
+    procurement round is asynchronous — mail goes out, replies come back one at
+    a time, and somebody wants to know where it has got to. The work here really
+    is per vendor and really does take time, so the screen can show the true
+    state of the round rather than a spinner with a story attached.
+    """
     gt = load_gt()
     if draft is not None:
         gt = apply_draft(gt, draft)
@@ -125,6 +133,12 @@ def run(*, fresh: bool = True, verbose: bool = True, mode: str | None = None,
         doc = SourceDoc(doc_id=f"{vid}-quote", vendor_id=vid,
                         path=docs.get(vid, {}).get("path", ""),
                         kind=sub.vendor.reply_format, role="quote")
+        if on_progress:
+            on_progress({"vendor_id": vid, "vendor": sub.vendor.name,
+                         "state": "reading",
+                         "format": sub.vendor.reply_format.value
+                         if hasattr(sub.vendor.reply_format, "value")
+                         else str(sub.vendor.reply_format)})
         try:
             raw = get_extractor(path, mode).extract(doc)
         except Exception as e:                                # noqa: BLE001
@@ -143,7 +157,13 @@ def run(*, fresh: bool = True, verbose: bool = True, mode: str | None = None,
             else:
                 raise
         injections += [(vid, t) for t in raw.injection_attempts]
-        extracted += [m for m in match_submission(raw, gt) if m.line_no is not None]
+        matched = [m for m in match_submission(raw, gt) if m.line_no is not None]
+        extracted += matched
+        if on_progress:
+            on_progress({"vendor_id": vid, "vendor": sub.vendor.name,
+                         "state": "read", "lines": len(matched),
+                         "injection": bool(raw.injection_attempts),
+                         "degraded": any(v == vid for v, _ in degraded)})
 
     # 3. normalise — deterministic, no model
     from allocate.subsets import allocate, qualify

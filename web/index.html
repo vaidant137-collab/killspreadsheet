@@ -242,6 +242,32 @@ main{flex:1;display:grid;grid-template-columns:minmax(0,1fr);min-height:0}
 .legend .b{background:var(--accent);border:0;width:2px;height:12px}
 .legend .r{background:var(--rank);border:0;width:14px;height:2px;opacity:.75}
 .legend .sep{width:1px;height:12px;background:var(--rule)}
+#pinned.folded{max-height:none}
+#pinned.folded .panel,#pinned.folded #tableWrap,#pinned.folded #foot{display:none}
+#pinned .bar .fold{font:inherit;font-size:13px;line-height:1;cursor:pointer;
+  background:none;border:1px solid var(--rule);border-radius:4px;color:var(--ink-faint);
+  padding:2px 7px;order:-1}
+#pinned .bar .fold:hover{color:var(--ink);border-color:var(--ink-faint)}
+#pinned.folded .bar .fold{transform:rotate(180deg)}
+
+table.round{width:100%;border-collapse:collapse;font-size:12.5px}
+table.round td{padding:7px 10px 7px 0;border-bottom:1px solid var(--rule-soft);
+  vertical-align:top}
+table.round td.v{font-weight:500;width:230px}
+table.round td.s{width:150px;font-family:"IBM Plex Mono",monospace;font-size:10.5px;
+  letter-spacing:.04em;text-transform:uppercase}
+table.round tr.done td.s{color:var(--ok)}
+table.round tr.wait td.s{color:var(--warn)}
+table.round td.n{font-size:11.5px;color:var(--dim)}
+.roundhead{display:flex;align-items:baseline;gap:10px;margin-bottom:11px}
+.roundhead b{font-weight:500;font-size:13px}
+.roundhead .st{font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--dim);
+  text-transform:uppercase;letter-spacing:.06em}
+.roundnote{margin-top:11px;font-size:11.5px;color:var(--dim);max-width:60ch;line-height:1.55}
+
+.block.mail .mailfull{max-height:none}
+.block.mail .verify{margin-top:10px;padding-top:9px;border-top:1px solid var(--rule-soft);
+  font-size:12px;color:var(--ink-soft);line-height:1.5}
 #tableWrap{overflow:auto;min-height:0}
 #tableWrap td.num small{display:block;font-size:9.5px;color:var(--ink-faint);
   font-family:"IBM Plex Mono",monospace;letter-spacing:.02em;margin-top:1px}
@@ -379,11 +405,14 @@ svg.chart text{font-family:"IBM Plex Mono",monospace;font-size:9px;fill:var(--in
         <nav class="tabs" id="tabs">
           <button data-tab="main" class="on" id="tabMain">RFx draft</button>
           <button data-tab="options" id="tabOptions" hidden>Options</button>
+          <button data-tab="round" id="tabRound" hidden>Round</button>
           <button data-tab="items">Item master</button>
           <button data-tab="vendors">Vendors</button>
         </nav>
         <span class="sub" id="pinSub"></span>
         <div class="right">
+          <button class="fold" id="fold" title="Collapse this panel"
+                  aria-label="Collapse this panel">⌃</button>
           <div class="legend" id="legend">
             <span><i class="e"></i>extracted</span>
             <span><i class="d"></i>derived</span>
@@ -399,6 +428,7 @@ svg.chart text{font-family:"IBM Plex Mono",monospace;font-size:9px;fill:var(--in
       <div id="panelOptions" class="panel" hidden></div>
       <div id="panelItems" class="panel" hidden></div>
       <div id="panelVendors" class="panel" hidden></div>
+      <div id="panelRound" class="panel" hidden></div>
       <div id="foot"></div>
     </section>
 
@@ -429,7 +459,7 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g, c =>
 const inr = n => '₹' + Number(n).toLocaleString('en-IN', {maximumFractionDigits:2});
 
 let STATE = null, CATALOGUE = null, DRAFT = null, LASTDRAFT = null,
-    ITEMCAT = 'corrugated';
+    ITEMCAT = 'corrugated', ROUND = null, ISSUE_OFFERED = false;
 
 /* ---------------- boot ---------------- */
 async function boot(){
@@ -446,6 +476,21 @@ async function boot(){
   $('#chipAsm').onclick = showAssumptions;
   $('#tabs').querySelectorAll('button').forEach(
     b => b.onclick = () => openTab(b.dataset.tab));
+  // The pinned artifact is the point of the screen and it is also the thing in
+  // the way of the conversation. Let it fold.
+  $('#fold').onclick = () => {
+    const on = $('#pinned').classList.toggle('folded');
+    $('#fold').title = on ? 'Show this panel' : 'Collapse this panel';
+  };
+  // A round that is already under way outlives the tab it was started in:
+  // anyone opening the page mid-round should see where it has got to.
+  try {
+    ROUND = await fetch('/api/round').then(r => r.json());
+    if (ROUND && ROUND.state && ROUND.state !== 'idle'){
+      $('#tabRound').hidden = false;
+      renderRound(ROUND);
+    }
+  } catch (e){ /* a round is a bonus; never block the page on it */ }
   if (STATE.phase === 'draft') enterDraft(); else await enterComparison();
 }
 
@@ -517,15 +562,18 @@ function openTab(name){
     b => b.classList.toggle('on', b.dataset.tab === name));
   $('#tableWrap').hidden    = !(name === 'main' && !drafting);
   $('#panelDraft').hidden   = !(name === 'main' && drafting);
+  if (!$('#pinned').classList.contains('folded')) $('#fold').hidden = false;
   $('#panelOptions').hidden = name !== 'options';
   $('#panelItems').hidden   = name !== 'items';
   $('#panelVendors').hidden = name !== 'vendors';
+  $('#panelRound').hidden   = name !== 'round';
   // The legend explains cell states in the comparison grid. On any other tab it
   // is labelling something that is not on screen.
   $('#legend').style.visibility = (name === 'main' && !drafting) ? '' : 'hidden';
   if (name === 'items')   renderItems();
   if (name === 'vendors') renderVendors();
   if (name === 'options') renderOptionsPanel();
+  if (name === 'round')   renderRound(ROUND);
 }
 
 /* The draft is read back from the server, never tracked here. Two copies of the
@@ -537,6 +585,10 @@ async function refreshDraft(){
   renderDraftPanel();
   if ($('#panelItems')   && !$('#panelItems').hidden)   renderItems();
   if ($('#panelVendors') && !$('#panelVendors').hidden) renderVendors();
+  // The moment the RFx is complete, the buyer's next act is sending it to five
+  // companies. What belongs in front of them then is the mail itself, not a
+  // note saying one exists.
+  if (j.phase === 'draft' && !DRAFT.missing.length && !DRAFT.issued) offerToIssue();
   return DRAFT;
 }
 
@@ -546,6 +598,11 @@ async function patchDraft(patch){
     body: JSON.stringify(patch)})).json();
   DRAFT = j.draft; DRAFT.missing = j.missing;
   renderDraftPanel();
+  // Both write paths have to notice completeness: the model sets a field and
+  // refreshDraft runs, a picker sets one and this does. Wiring it to only one
+  // of them means the mail appears or does not depending on which way the last
+  // decision happened to be made.
+  if (!DRAFT.missing.length && !DRAFT.issued && !DRAFT.mail_approved) offerToIssue();
   return DRAFT;
 }
 
@@ -605,7 +662,8 @@ function renderDraftPanel(){
      </table>` +
     ((d.missing || []).length
       ? `<div class="gaps">Still to decide: ${d.missing.map(esc).join(' · ')}</div>`
-      : `<div class="ok">Ready to issue — say "send it" and the five vendors reply</div>`);
+      : `<div class="ok">Ready to issue — the mail is in the conversation below,
+           in full, with the send button on it</div>`);
 
   const foot = el('div','pfoot');
   const toItems = el('button','other','Choose line items');
@@ -619,6 +677,95 @@ function renderDraftPanel(){
   $('#pinSub').textContent = nLines
     ? `${nLines} line${nLines === 1 ? '' : 's'} · ${inv.length} vendor${inv.length === 1 ? '' : 's'}`
     : 'nothing scheduled yet';
+}
+
+/* ---------------- the round ----------------
+
+   A procurement round is not an instant. Mail goes out, replies come back one
+   at a time in whatever format the vendor felt like, and for most of the week
+   the buyer's real question is "where has this got to". A spinner followed by a
+   finished table skips the part they actually live in.
+
+   Every line here is true. The extraction runs per document and takes real
+   time; the formats are the formats; the line counts are what came out. The one
+   fiction is the send, and it says so on its own row. */
+
+function renderRound(r){
+  const p = $('#panelRound');
+  if (!p) return;
+  if (!r || !r.vendors || !r.vendors.length){
+    p.replaceChildren(el('div','empty','No round has been issued yet.'));
+    return;
+  }
+  const head = el('div','roundhead');
+  const done = r.vendors.filter(v => v.state === 'quote read').length;
+  head.innerHTML = `<b>RFx round</b><span class="st">${esc(r.state)}</span>` +
+    `<span class="st">${done} of ${r.vendors.length} replies read</span>` +
+    (r.started_at ? `<span class="st">sent ${esc(r.started_at)}</span>` : '');
+  const t = el('table','round');
+  const tb = document.createElement('tbody');
+  r.vendors.forEach(v => {
+    const tr = document.createElement('tr');
+    tr.className = v.state === 'quote read' ? 'done'
+                 : (v.state === 'mail sent' || v.state === 'awaiting reply') ? 'wait' : '';
+    tr.innerHTML = `<td class="v">${esc(v.name)}</td>
+      <td class="s">${esc(v.state)}</td>
+      <td class="n">${esc(v.note || '')}</td>`;
+    tb.appendChild(tr);
+  });
+  t.appendChild(tb);
+  p.replaceChildren(head, t);
+  if (r.error) p.appendChild(el('div','roundnote', 'Failed: ' + esc(r.error)));
+  p.appendChild(el('div','roundnote',
+    'The send is stubbed \u2014 no mail left the building. Everything after it is '
+    + 'real work on real documents: five replies in five formats, read one at a '
+    + 'time, which is why this takes as long as it does.'));
+  $('#pinSub').textContent = `${done} of ${r.vendors.length} replies read`;
+}
+
+/* Offer the send as a card in the CHAT, with the mail in full.
+
+   "\u2191 RFx draft updated above" asked the buyer to go and look, and then to
+   take on trust that a mail existed. Before five companies hear from you, the
+   thing to read is the actual text going out and the actual list it is going
+   to. */
+async function offerToIssue(){
+  if (ISSUE_OFFERED) return;
+  ISSUE_OFFERED = true;
+  let m;
+  try { m = await (await fetch('/api/mail')).json(); }
+  catch (e){ ISSUE_OFFERED = false; return; }
+  const t = turn('Co-pilot');
+  t.appendChild(renderMail({...m, verify: true}));
+  $('#chat').scrollTop = 1e9;
+}
+
+async function sendRfx(card){
+  $('#tabRound').hidden = false;
+  ROUND = ROUND || {state:'sending', vendors:[]};
+  openTab('round');
+  const res = await fetch('/api/issue', {method:'POST'});
+  if (!res.ok){
+    const why = await res.text();
+    card && card.appendChild(el('div','status','Could not send: ' + esc(why.slice(0,200))));
+    return;
+  }
+  const rd = res.body.getReader(); const dec = new TextDecoder(); let buf = '';
+  while (true){
+    const {done, value} = await rd.read(); if (done) break;
+    buf += dec.decode(value, {stream:true});
+    const parts = buf.split('\n\n'); buf = parts.pop();
+    for (const p of parts){
+      if (!p.startsWith('data: ')) continue;
+      let m; try { m = JSON.parse(p.slice(6)); } catch (e){ continue; }
+      if (m.kind === 'round'){ ROUND = m.payload; renderRound(ROUND); }
+      if (m.kind === 'done' && m.payload.phase === 'comparison'){
+        STATE = null;
+        await enterComparison();
+        $('#tabRound').hidden = false;
+      }
+    }
+  }
 }
 
 /* ---------------- item master ----------------
@@ -877,7 +1024,7 @@ async function ask(q){
     headers:{'Content-Type':'application/json'}, body: JSON.stringify({question:q})});
   const rd = res.body.getReader(); const dec = new TextDecoder(); let buf = '';
   // A model narrating each tool call often repeats itself verbatim. Say it once.
-  let lastText = '', draftNoted = false;
+  let lastText = '';
   try {
   while (true){
     const {done, value} = await rd.read(); if (done) break;
@@ -902,8 +1049,9 @@ async function ask(q){
         // transcript of stale copies, which is the exact thing the pinned
         // canvas exists to avoid.
         LASTDRAFT = blk; renderDraftPanel(); refreshDraft();
-        if (!draftNoted){ draftNoted = true;
-          t.appendChild(el('div','block status','↑ RFx draft updated above')); }
+        // No "updated above" pointer any more. Either the model's own
+        // sentence says what changed, or the card changed visibly; sending the
+        // buyer to go and look was doing neither.
         $('#chat').scrollTop = 1e9;
         continue;
       }
@@ -1118,31 +1266,43 @@ function renderDraft(b){
 
 function renderMail(b){
   const d = el('div','block mail');
-  d.innerHTML = `<div class="h">Covering mail — for your approval</div>
+  const n = (b.to || []).length;
+  d.innerHTML = `<div class="h">Covering mail \u2014 exactly what goes out</div>
     <table class="draft">
-      <tr><th>To</th><td>${b.to.map(esc).join(', ')}</td></tr>
+      <tr><th>To</th><td>${(b.to||[]).map(esc).join(', ')}</td></tr>
       <tr><th>Subject</th><td>${esc(b.subject)}</td></tr>
+      <tr><th>Attached</th><td>${(b.attachments||[]).map(a=>'\uD83D\uDCCE '+esc(a)).join('<br>')}</td></tr>
     </table>
-    <pre class="mailbody">${esc(b.body)}</pre>
-    <div class="attach">${b.attachments.map(a=>'📎 '+esc(a)).join('  ')}</div>
-    <div class="stub">${esc(b.stub_note)}</div>`;
+    <pre class="mailbody mailfull">${esc(b.body)}</pre>
+    <div class="stub">${esc(b.stub_note || '')}</div>` +
+    (b.verify
+      ? `<div class="verify">Before this goes out, the two things worth checking
+         are the <b>line schedule</b> and the <b>vendor list</b> \u2014 everything
+         else you can change after the quotes land, and those two you cannot.</div>`
+      : '');
 
-  /* The approval is a BUTTON, and issue_rfx refuses without it. Before this the
-     co-pilot could draft the mail and issue it in the same turn, which made "a
-     covering mail they approve" a sentence in a README rather than a step
-     anybody took. Re-drafting clears the approval, so an edit after approval
-     cannot ride out on the old one. */
+  /* Sending is a BUTTON, and the server refuses without the approval it writes.
+     Before this the co-pilot could draft a mail and issue it in the same turn,
+     which made "a covering mail they approve" a sentence in a README rather
+     than a step anybody took. Re-drafting clears the approval, so an edit
+     cannot ride out on the last one. */
   const foot = el('div','rfoot');
-  const go = el('button','go','Approve and send');
+  const go = el('button','go', n ? `Send to ${n} vendor${n===1?'':'s'}` : 'Send');
   go.onclick = async () => {
-    go.disabled = true; edit.disabled = true; go.textContent = 'approved';
+    [...foot.querySelectorAll('button')].forEach(x => x.disabled = true);
+    go.textContent = 'sending\u2026';
     await patchDraft({mail_approved: true});
-    ask('Approved — send it.');
+    await sendRfx(d);
   };
-  const edit = el('button','other','Change something first');
+  const items = el('button','other','Check the line items');
+  items.onclick = () => { $('#pinned').classList.remove('folded'); openTab('items'); };
+  const vend = el('button','other','Check the vendors');
+  vend.onclick = () => { $('#pinned').classList.remove('folded'); openTab('vendors'); };
+  const edit = el('button','other','Change the wording');
   edit.onclick = () => { $('#q').focus();
-    $('#q').placeholder = 'e.g. add the drawing revision to the subject'; };
-  foot.appendChild(go); foot.appendChild(edit);
+    $('#q').placeholder = 'e.g. ask for the drawing revision in the subject line'; };
+  foot.appendChild(go); foot.appendChild(items);
+  foot.appendChild(vend); foot.appendChild(edit);
   d.appendChild(foot);
   return d;
 }
