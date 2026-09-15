@@ -231,6 +231,102 @@ def allocate(gt: GroundTruth, rows: list[NormalisedLine], *,
 
 
 # ---------------------------------------------------------------------------
+# The decision layer
+# ---------------------------------------------------------------------------
+
+def lead_times(gt: GroundTruth) -> dict[str, int | None]:
+    """Production lead time per vendor, from questionnaire Q9.
+
+    A split waits for its SLOWEST vendor, not its average one, so this is the
+    number that decides whether "cheapest" is also "in time for the season".
+    A vendor who did not answer gets None rather than a default: an unstated
+    lead time is not a fast one, and guessing it here would be the same class
+    of error as guessing a price.
+    """
+    out: dict[str, int | None] = {}
+    for sub in gt.submissions:
+        a = next((x for x in sub.questionnaire if x.q_no == 9), None)
+        m = re.match(r"\s*(\d+)", a.answer) if a and a.answer else None
+        out[sub.vendor.vendor_id] = int(m.group(1)) if m else None
+    return out
+
+
+def _span(alloc: Allocation, lt: dict[str, int | None]) -> int | None:
+    vals = [lt.get(v) for v in alloc.vendors_used]
+    return None if any(v is None for v in vals) or not vals else max(vals)
+
+
+def options(gt: GroundTruth, rows: list[NormalisedLine]) -> list[dict]:
+    """The three shapes of answer a category manager actually chooses between.
+
+    Not a ranking of 25 subsets — nobody decides from that. Cheapest, fastest,
+    and the one-throat-to-choke option, each with what it costs, who is in it,
+    how long it takes, and the reason it might not be available at all. The
+    single-vendor option is included EVEN WHEN IT IS INFEASIBLE, because "no
+    single vendor can cover this schedule" is itself the finding.
+    """
+    allocs = allocate(gt, rows)
+    lt = lead_times(gt)
+    feasible = [a for a in allocs if a.feasible]
+    if not allocs:
+        return []
+
+    def card(alloc, kind, label, why):
+        return {"kind": kind, "label": label, "why": why,
+                "strategy": alloc.strategy,
+                "vendors": alloc.vendors_used,
+                "vendor_names": [next(s.vendor.name for s in gt.submissions
+                                      if s.vendor.vendor_id == v)
+                                 for v in alloc.vendors_used],
+                "total_inr": alloc.total_inr,
+                "line_value_inr": alloc.line_value_inr,
+                "freight_inr": alloc.freight_inr,
+                "tooling_inr": alloc.tooling_inr,
+                "lead_time_days": _span(alloc, lt),
+                "lines_covered": sum(1 for x in alloc.awards if x.vendor_id),
+                "lines_total": len(gt.rfx.lines),
+                "feasible": alloc.feasible,
+                "violations": alloc.violations,
+                "caveats": alloc.caveats[:3]}
+
+    out = []
+    cheapest = feasible[0] if feasible else None
+    if cheapest:
+        out.append(card(cheapest, "cheapest", "Cheapest",
+                        "Lowest total landed cost among splits that clear every "
+                        "constraint — minimum order quantities, tooling, and the "
+                        "questionnaire gate."))
+
+    timed = [a for a in feasible if _span(a, lt) is not None]
+    if timed:
+        fastest = min(timed, key=lambda a: (_span(a, lt), a.total_inr))
+        if not cheapest or fastest.strategy != cheapest.strategy:
+            premium = fastest.total_inr - cheapest.total_inr if cheapest else 0
+            out.append(card(fastest, "fastest", "Fastest",
+                            f"Shortest wait, because a split is only as quick as its "
+                            f"slowest vendor. Costs ₹{premium:,.0f} more than the "
+                            f"cheapest option."))
+        elif cheapest:
+            out[0]["label"] = "Cheapest — and fastest"
+            out[0]["why"] += " It also happens to be the quickest."
+
+    singles = [a for a in allocs if len(a.vendors_used) == 1]
+    single = (min([a for a in singles if a.feasible], key=lambda a: a.total_inr)
+              if any(a.feasible for a in singles)
+              else (min(singles, key=lambda a: a.total_inr) if singles else None))
+    if single:
+        if single.feasible:
+            extra = single.total_inr - cheapest.total_inr if cheapest else 0
+            why = (f"One contract, one relationship, one invoice stream. "
+                   f"₹{extra:,.0f} more than splitting.")
+        else:
+            why = ("No single vendor can cover this schedule on its own — "
+                   "which is the finding, not a failure of the search.")
+        out.append(card(single, "single", "Single vendor", why))
+    return out
+
+
+# ---------------------------------------------------------------------------
 
 def _self_test() -> int:
     gt = GroundTruth.model_validate(

@@ -140,6 +140,41 @@ class RefusalBlock(BaseModel):
     would_need: list[str] = Field(default_factory=list)
 
 
+class OptionCard(BaseModel):
+    kind: str                       # cheapest | fastest | single
+    label: str
+    why: str
+    strategy: str
+    vendors: list[str] = Field(default_factory=list)
+    vendor_names: list[str] = Field(default_factory=list)
+    total_inr: float = 0.0
+    line_value_inr: float = 0.0
+    freight_inr: float = 0.0
+    tooling_inr: float = 0.0
+    lead_time_days: int | None = None
+    lines_covered: int = 0
+    lines_total: int = 0
+    feasible: bool = True
+    violations: list[str] = Field(default_factory=list)
+    caveats: list[str] = Field(default_factory=list)
+
+
+class OptionsBlock(BaseModel):
+    """The three shapes of answer, before any question is asked.
+
+    A comparison grid is a means; nobody awards a contract from one. What a
+    category manager decides between is cheapest, fastest, and one-throat-to-
+    choke — so lead with those, with the cost of each and the reason it might
+    not be on the table at all. Ending at the table is why the spreadsheet
+    survives.
+    """
+
+    type: Literal["options"] = "options"
+    title: str = "Three ways to award this"
+    cards: list[OptionCard] = Field(default_factory=list)
+    note: str | None = None
+
+
 class DraftField(BaseModel):
     label: str
     value: str
@@ -192,4 +227,4 @@ class MailDraftBlock(BaseModel):
 # classes is only valid from Python 3.10. macOS still ships 3.9.
 Block = Union[TextBlock, TableBlock, ChartBlock, EvidenceBlock, ReviewBlock,
               AssumptionBlock, QueryBlock, RefusalBlock, RfxDraftBlock,
-              MailDraftBlock]
+              MailDraftBlock, OptionsBlock]

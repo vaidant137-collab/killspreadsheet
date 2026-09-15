@@ -339,6 +339,32 @@ def catalogue() -> dict:
     return _catalogue()
 
 
+@app.get("/api/options")
+def options() -> dict:
+    """The decision layer. Served from the store and the authored RFx, so it
+    renders with no model call and cannot disagree with the table above it.
+
+    It rebuilds through the same `apply_draft` the pipeline used rather than
+    reconstructing the RFx from the database, because gating is a buyer policy
+    that the schema does not persist — reading it back from the template would
+    quietly answer a question about a tender nobody issued.
+    """
+    import json as _json
+
+    import pipeline
+    from allocate.subsets import options as build_options
+    from contracts.quote import GroundTruth
+    from normalize.engine import normalise_all
+
+    gt = GroundTruth.model_validate(
+        _json.loads((DATA / "ground_truth.json").read_text(encoding="utf-8")))
+    draft = SESSION["draft"]
+    if draft.issued:
+        gt = pipeline.apply_draft(gt, draft)
+    return {"cards": build_options(gt, normalise_all(gt)),
+            "authored": draft.issued}
+
+
 @app.get("/api/memo")
 def memo() -> dict:
     """The decision record. The artifact that actually leaves the tool."""
