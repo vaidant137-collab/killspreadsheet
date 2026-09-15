@@ -22,7 +22,7 @@ class AnthropicClient:
     name = "anthropic"
     supports_vision = True
 
-    def __init__(self, model: str = "claude-sonnet-4-6"):
+    def __init__(self, model: str = "claude-sonnet-5"):
         import anthropic
         self._c = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
         self.model = model
@@ -121,6 +121,14 @@ def get_client(role: str = "extract"):
     if want in cls:
         if not have[want]:
             raise RuntimeError(f"{want} selected for '{role}' but its API key is not set.")
+        # Extraction is the expensive half (66% image tokens, ~15k output per
+        # pass) and is schema-constrained, so a cheaper model has little room to
+        # go wrong. The analyst is what anyone actually watches. Two models, one
+        # provider, set independently.
+        if want == "anthropic":
+            env = "ANTHROPIC_ANALYST_MODEL" if role == "analyst" else "ANTHROPIC_EXTRACT_MODEL"
+            m = os.getenv(env)
+            return AnthropicClient(model=m) if m else AnthropicClient()
         return cls[want]()
     # auto: cheapest capable provider first, so a spare key is never the
     # expensive one by accident
