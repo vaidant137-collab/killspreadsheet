@@ -251,7 +251,7 @@ reply and the comparison grid all rendered as nothing, while every endpoint
 behind them returned the right answer. So that check starts the real server and
 drives the real page through the whole tender — thirty line items, five vendors,
 nine questions, the mail, the round, the table, the follow-up that resolves six
-gaps, the review queue — and fails on any uncaught exception. 73 checks. It needs
+gaps, the review queue — and fails on any uncaught exception. 75 checks. It needs
 playwright (`pip install playwright && playwright install chromium`) and skips
 itself politely without one.
 

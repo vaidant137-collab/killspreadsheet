@@ -514,6 +514,27 @@ async def run(port: int, c: Checks) -> None:
         c.eq(await card(pg, "summary").count(), 1,
              "with what it means still under it")
 
+        # ---- the door for a reviewer whose model call fails ----------------
+        # /api/issue_default is demo insurance, and it is also the endpoint that
+        # 500-ed on the live site for a week: the deploy runs EXTRACTOR=replay
+        # with no recording committed, and the pipeline refused to replay a run
+        # that was never made. Nothing else on this page calls it, so nothing
+        # else catches that.
+        httpx.post(f"{url}api/reset", timeout=10)
+        await pg.goto(url, wait_until="networkidle")
+        await pg.wait_for_timeout(600)
+        # Read the body before navigating away, or the aborted download is
+        # reported as a failed request and blamed on the page.
+        st = await pg.evaluate(
+            "fetch('/api/issue_default', {method:'POST'})"
+            ".then(async r => { await r.text(); return r.status; })")
+        c.eq(st, 200, "the template RFx still issues in the deploy's own "
+                      "extractor configuration")
+        await pg.goto(url, wait_until="networkidle")
+        await pg.wait_for_timeout(2200)
+        c.at_least(await card(pg, "cmp").locator("table.cmp tbody tr").count(), 20,
+                   "and lands the reviewer on a real comparison")
+
         await b.close()
 
     c.is_(not problems, "no uncaught exception and no console error",

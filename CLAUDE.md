@@ -43,7 +43,7 @@ the header says so.
 | `python -m llm.test_seam` | every provider satisfies the LLMClient seam |
 | `python -m data.build_adversarial` | renders the five adversarial documents |
 | `python -m eval.adversarial` | scores the five attacks |
-| `python -m tools.smoke_ui` | drives the real page in a real browser (73 checks) |
+| `python -m tools.smoke_ui` | drives the real page in a real browser (75 checks) |
 | `python -m analyst.loop --self-test` | a question ends the turn |
 
 ## Rules this codebase holds to
