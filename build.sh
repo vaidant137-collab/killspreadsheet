@@ -34,6 +34,19 @@ if [ -d data/extraction_runs ] && [ -n "$(ls -A data/extraction_runs 2>/dev/null
   HAD_RECORDING=1
 fi
 
+# A recording committed to the repo is the artefact; re-making it on every
+# deploy was the right design only while there was none. Four deploys spent ten
+# minutes each calling a model, hitting the build ceiling and falling back, and
+# a deploy that takes twelve minutes to arrive at the same bytes is a deploy
+# nobody runs. Set FORCE_RECORD=1 to make a fresh one — for instance after
+# changing the documents or the extraction schema.
+if [ "$HAD_RECORDING" -eq 1 ] && [ -z "$FORCE_RECORD" ]; then
+  echo "--- extraction: replaying the real run committed in the repo ---"
+  ls data/extraction_runs/*.json 2>/dev/null | wc -l | xargs echo "--- documents:"
+  python -m pipeline --extractor replay
+  exit 0
+fi
+
 if [ -n "$OPENROUTER_API_KEY$ANTHROPIC_API_KEY$GEMINI_API_KEY$OPENAI_API_KEY" ]; then
   echo "--- extraction: recording a real model run ---"
   # A ceiling on the whole recording, not just on each call. Belt and braces: if

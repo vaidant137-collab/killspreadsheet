@@ -218,6 +218,20 @@ python -m tools.smoke_ui                  # drives the real page in a browser
 python -m tools.fetch_wild_set            # real documents, on your machine
 ```
 
+**Recording a real extraction run.** The deployed site replays a run that a
+model genuinely performed, with the model name and timestamp attached, and the
+header says so. Make one by double-clicking `RECORD-EXTRACTION.command` (it asks
+for a key once, puts it in `.env`, which is gitignored), or:
+
+```bash
+LLM_TIMEOUT_S=600 python -m pipeline --extractor record
+```
+
+Then commit `data/extraction_runs/`. Once a recording is in the repo the build
+replays it rather than re-making it — a deploy that spends ten minutes calling a
+model to arrive at the same bytes is a deploy nobody runs. `FORCE_RECORD=1`
+overrides that, for when the documents or the extraction schema change.
+
 `tools/smoke_ui.py` exists because everything above it sits **behind the API**,
 and the API answered correctly through every failure this project has had. What
 broke was the browser code in front of it — three functions called and never
