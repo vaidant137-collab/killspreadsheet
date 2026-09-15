@@ -107,10 +107,45 @@ class OpenAIClient:
                 model=self.model, max_tokens=max_tokens, messages=msgs,
                 response_format={"type": "json_object"})
 
+        return self._validate_or_repair(r, schema, msgs, max_tokens)
+
+    def _validate_or_repair(self, r, schema: type[T], msgs: list,
+                            max_tokens: int, _second_try: bool = False) -> T:
+        """Validate, and if the shape is wrong, hand the model its own error.
+
+        Three deploys in a row lost five documents each to a different field the
+        model had shaped wrongly — a string where a list belonged, a missing
+        label, a nested object flattened. Chasing them one at a time costs a ten
+        minute build and a live API call per guess, and only ever fixes the
+        mismatch you already saw.
+
+        So: show the model exactly what pydantic rejected and let it correct the
+        shape. One extra call, once, only on failure. This repairs the CONTAINER
+        and never the content — the retry is still validated by the same schema,
+        so a model that responds by inventing a plausible number fails here just
+        as it would have the first time.
+        """
         text = (r.choices[0].message.content or "").strip()
         if text.startswith("```"):
             text = text.split("```")[1].lstrip("json").strip()
-        return schema.model_validate(json.loads(text))
+        try:
+            return schema.model_validate(json.loads(text))
+        except Exception as e:                                # noqa: BLE001
+            if _second_try:
+                raise
+            repair = msgs + [
+                {"role": "assistant", "content": text[:6000]},
+                {"role": "user", "content":
+                    "That response did not match the required shape. The "
+                    f"validator said:\n\n{str(e)[:1500]}\n\nReturn the SAME "
+                    "information again, corrected to fit the schema. Do not "
+                    "invent, add or change any value — fix only the structure. "
+                    "Return JSON only, no prose, no code fence."}]
+            r2 = self._c.chat.completions.create(
+                model=self.model, max_tokens=max_tokens, messages=repair,
+                response_format={"type": "json_object"})
+            return self._validate_or_repair(r2, schema, msgs, max_tokens,
+                                            _second_try=True)
 
 
 class GeminiClient(OpenAIClient):
