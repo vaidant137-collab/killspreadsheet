@@ -5,16 +5,19 @@ services:
     name: killspreadsheet
     runtime: python
     plan: free
-    buildCommand: pip install -r requirements.txt
+    buildCommand: bash build.sh
     startCommand: bash start.sh
     healthCheckPath: /healthz
     envVars:
       # Python 3.11 so none of the 3.9 union-syntax issues can recur on the host.
       - key: PYTHON_VERSION
         value: "3.11.9"
-      # fixture until a recorded run exists; flip to "replay" afterwards.
+      # The build records a real extraction run; the runtime replays it. This
+      # only matters if the database is missing at boot, which on Render it is
+      # not -- build.sh made it. "replay" rather than "fixture" so that even the
+      # fallback path serves the real run rather than a stand-in.
       - key: EXTRACTOR
-        value: fixture
+        value: replay
       # Set in the Render dashboard, never in the repo. Without it the site
       # still works -- only the live analyst chat needs it.
       - key: OPENROUTER_API_KEY

@@ -93,7 +93,33 @@ def state() -> dict:
     return {"rfx": rfx, "vendors": vendors, "counts": counts,
             "open_reviews": open_reviews, "threshold": REVIEW_THRESHOLD,
             "contradictions": contradictions, "injections": injections,
+            "provenance": _provenance(),
             "comparison": json.loads(blocks[0].model_dump_json())}
+
+
+def _provenance() -> dict:
+    """Where the numbers on screen actually came from.
+
+    The one thing a demo must never do is let a viewer assume a model read the
+    documents when a fixture did. So this is served to the header, unprompted,
+    on every load: the model name and the timestamp of the run, or a plain
+    admission that this instance is running the stand-in.
+    """
+    from extract.recorded import provenance
+    runs = (provenance() or {}).get("runs") or []
+    if not runs:
+        return {"mode": "fixture",
+                "label": "fixture path — no model read these documents",
+                "detail": "Extraction is replaying known-good output. Deploy with "
+                          "an API key set, or run `python -m pipeline "
+                          "--extractor record`, to have a model do the reading."}
+    models = sorted({r["model"] for r in runs})
+    return {"mode": "recorded",
+            "label": f"extraction by {', '.join(models)}",
+            "detail": f"{len(runs)} documents parsed by a real model run, "
+                      f"recorded {min(r['recorded_at'] for r in runs)} and "
+                      f"replayed verbatim. Re-recorded on every deploy.",
+            "runs": runs}
 
 
 @app.get("/api/comparison")

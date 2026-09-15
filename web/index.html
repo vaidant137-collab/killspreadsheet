@@ -29,6 +29,12 @@ body{margin:0;background:var(--paper);color:var(--ink);
   -webkit-font-smoothing:antialiased;display:flex;flex-direction:column}
 .mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
 
+table.prov{width:100%;border-collapse:collapse;margin-top:10px;font-size:11px}
+table.prov th{text-align:left;font-family:"IBM Plex Mono",monospace;font-size:9.5px;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--dim);
+  padding:4px 10px 4px 0;border-bottom:1px solid var(--rule)}
+table.prov td{padding:4px 10px 4px 0;border-bottom:1px solid var(--rule)}
+
 /* ---------- header ---------- */
 header{border-bottom:1px solid var(--rule);background:var(--surface);
   padding:12px 20px;display:flex;gap:18px;align-items:baseline;flex-wrap:wrap;flex:none}
@@ -168,6 +174,7 @@ svg.chart text{font-family:"IBM Plex Mono",monospace;font-size:9px;fill:var(--in
   <h1>Kill the Quote Spreadsheet</h1>
   <div class="meta" id="meta"></div>
   <div class="spacer"></div>
+  <button class="chip" id="chipProv" hidden></button>
   <button class="chip risk" id="chipReview" hidden></button>
   <button class="chip warn" id="chipAsm">assumptions</button>
 </header>
@@ -233,6 +240,16 @@ async function boot(){
     const b = $('#chipReview'); b.hidden = false;
     b.textContent = STATE.open_reviews + ' need review';
     b.onclick = showReviews;
+  }
+  // Say where the numbers came from before anyone asks. A viewer who assumes a
+  // model read these documents when a fixture did has been misled by omission.
+  const prov = STATE.provenance;
+  if (prov){
+    const b = $('#chipProv'); b.hidden = false;
+    b.textContent = prov.label;
+    b.className = 'chip' + (prov.mode === 'fixture' ? ' warn' : '');
+    b.title = prov.detail;
+    b.onclick = () => showProvenance(prov);
   }
   $('#chipAsm').onclick = showAssumptions;
   renderTable(STATE.comparison);
@@ -452,6 +469,20 @@ async function showAssumptions(){
   const r = await (await fetch('/api/assumptions')).json();
   turn('Assumptions').appendChild(renderAssumptions({title:'Assumptions in force',
     rows: r.rows, note:'Every derived number rests on these.'}));
+}
+
+function showProvenance(prov){
+  const t = turn('Provenance');
+  const runs = (prov.runs || []).map(r =>
+    `<tr><td class="mono">${esc(r.vendor_id)}</td><td class="mono">${esc(r.extractor)}</td>
+     <td class="mono">${esc(r.model)}</td><td class="mono">${r.lines} lines</td>
+     <td class="mono">${esc(r.recorded_at)}</td></tr>`).join('');
+  t.appendChild(el('div', 'block derivation',
+    `<h4>Where these numbers came from</h4>
+     <div>${esc(prov.detail)}</div>` +
+    (runs ? `<table class="prov"><thead><tr><th>vendor</th><th>parser</th>
+             <th>model</th><th>read</th><th>recorded</th></tr></thead>
+             <tbody>${runs}</tbody></table>` : '')));
 }
 
 function explainGap(note){
