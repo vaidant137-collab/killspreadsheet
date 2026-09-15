@@ -37,6 +37,7 @@ fixture, deletes the recordings, and the header says so.
 | `python -m data.build_adversarial` | renders the five adversarial documents |
 | `python -m eval.adversarial` | scores the five attacks |
 | `python -m tools.smoke_ui` | drives the real page in a real browser |
+| `python -m analyst.loop --self-test` | a question ends the turn |
 
 ## Rules this codebase holds to
 

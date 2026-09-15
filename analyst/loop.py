@@ -135,6 +135,13 @@ class Analyst:
                 return
 
             results = []
+            # A block that ASKS the buyer something ends the turn. Nothing the
+            # model says after a question can matter until the question is
+            # answered, and a model with no reason to stop does not stop: the
+            # live site put the payment-terms picker on screen four times in one
+            # reply, then kept going until it ran out of steps. Discipline in the
+            # prompt is a request; this is the mechanism.
+            awaiting_buyer = False
             for call in reply["tool_calls"]:
                 yield "status", f"{call['name']}…"
                 try:
@@ -143,7 +150,12 @@ class Analyst:
                     payload, blocks = {"error": f"{type(e).__name__}: {e}"}, []
                 for b in blocks:
                     yield "block", b
+                    if getattr(b, "type", "") == "choice":
+                        awaiting_buyer = True
                 results.append({"id": call["id"], "content": json.dumps(payload, default=str)})
+
+            if awaiting_buyer:
+                return
 
             # Intermediate narration is the model THINKING, not answering. It
             # used to be streamed to the screen as a block, so a turn that made
@@ -158,3 +170,76 @@ class Analyst:
         yield "block", TextBlock(
             text="I stopped after eight steps without reaching an answer. Narrow the "
                  "question and I'll try again.")
+
+
+# ---------------------------------------------------------------------------
+
+def _self_test() -> int:
+    """A turn that asks the buyer something must END there.
+
+    Written after the live site put the payment-terms picker on screen four
+    times in a single reply and then kept going until it ran out of steps. The
+    prompt asked for one decision per turn; a prompt is a request. This asserts
+    the mechanism, with a model that does the worst thing it could do.
+
+    Run:  python -m analyst.loop --self-test
+    """
+    from contracts.blocks import ChoiceBlock, ChoiceOption
+
+    class AlwaysAsks:
+        """A model with no self-restraint: every turn, two more pickers."""
+
+        def __init__(self):
+            self.turns = 0
+
+        def raw_turn(self, *, system, messages, tools):
+            self.turns += 1
+            return {"content": [], "text": "let me also check something",
+                    "tool_calls": [
+                        {"id": f"t{self.turns}a", "name": "ask_choice",
+                         "input": {"key": "payment_terms"}},
+                        {"id": f"t{self.turns}b", "name": "ask_choice",
+                         "input": {"key": "payment_terms"}}]}
+
+    class OneChoiceTools:
+        """Stands in for AuthorTools: refuses a second decision in a turn."""
+
+        def __init__(self):
+            self.asked = []
+
+        def dispatch(self, name, args):
+            if self.asked:
+                return {"refused": "one decision at a time"}, []
+            self.asked.append(args.get("key"))
+            return {"asked": args.get("key")}, [ChoiceBlock(
+                key=args.get("key"), title="Payment terms",
+                options=[ChoiceOption(value="45", label="45 days")])]
+
+    client = AlwaysAsks()
+    a = Analyst(None, client, tools=OneChoiceTools(), specs=[], system="x")
+    out = list(a.ask("put it out to tender"))
+    choices = [p for k, p in out if k == "block" and getattr(p, "type", "") == "choice"]
+
+    checks = [
+        (len(choices) == 1,
+         f"exactly one decision reaches the screen (got {len(choices)})"),
+        (client.turns == 1,
+         f"the turn ends at the question, without another model call "
+         f"(got {client.turns} turns)"),
+        (not any(k == "block" and getattr(p, "type", "") == "text"
+                 for k, p in out),
+         "nothing is said after the question"),
+    ]
+    print("\n  ANALYST LOOP — a question ends the turn\n")
+    for ok, name in checks:
+        print(f"    [{'ok  ' if ok else 'FAIL'}]  {name}")
+    bad = [c for c in checks if not c[0]]
+    print(f"\n  {len(checks) - len(bad)} of {len(checks)} checks pass.\n")
+    return 1 if bad else 0
+
+
+if __name__ == "__main__":
+    import sys
+    if "--self-test" in sys.argv:
+        sys.exit(_self_test())
+    print("usage: python -m analyst.loop --self-test")

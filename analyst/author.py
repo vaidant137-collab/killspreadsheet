@@ -55,6 +55,12 @@ ask_choice: options they click, one short line each on what that option COSTS. \
 Never ask an open question in prose when a choice would do. Never list options \
 in a sentence.
 
+ONE DECISION PER TURN, THEN STOP. Call ask_choice at most once and end the \
+turn there — no closing sentence, no second picker, no "and also". The buyer \
+answers, and the next decision is the next turn's job. Four questions at once \
+is the same as none. After propose_default_rfx the decision worth asking first \
+is payment terms, because it re-prices every line.
+
 THE CARD IS ON SCREEN. It shows lines, vendors, terms, gates and what is still \
 missing. Never restate it, never re-count it, never tell them how many lines or \
 vendors they have. They can see it.
@@ -98,7 +104,9 @@ AUTHOR_TOOL_SPECS = [
          "  gates          each questionnaire question, with who it disqualifies\n"
          "  vendors        the approved list, with who is already invited\n"
          "  lines          the item master by category\n\n"
-         "Use this instead of asking an open question in prose."),
+         "Use this instead of asking an open question in prose. ONCE per turn: "
+         "the picker goes on screen and your turn is over. A second call in the "
+         "same turn is refused."),
      "input_schema": {"type": "object", "properties": {
          "key": {"type": "string",
                  "enum": ["payment_terms", "gates", "vendors", "lines"]},
@@ -191,6 +199,9 @@ class AuthorTools:
     def __init__(self, draft: RfxDraft, catalogue: dict):
         self.draft = draft
         self.cat = catalogue          # {"lines": [...], "questions": [...], "vendors": [...]}
+        # One instance per request, so this is per TURN: which decision has
+        # already been put to the buyer and is still waiting for an answer.
+        self._asked: list[str] = []
 
     # -- dispatch ----------------------------------------------------------
     def dispatch(self, name: str, args: dict):
@@ -229,12 +240,27 @@ class AuthorTools:
         on FSC removes three of five vendors" is a measurement, and a model
         writing that line from memory would produce a number the buyer would act
         on and nobody could check.
+
+        ONE decision per turn. The loop stops the turn the moment a choice
+        reaches the screen, and this is the other half of the same guard: a
+        single assistant turn can emit several tool calls at once, and the live
+        site emitted four identical payment-terms pickers that way. A buyer
+        asked four questions at once has been asked none of them.
         """
         builder = getattr(self, f"_choices_{key}", None)
         if builder is None:
             return {"error": f"no choices for '{key}'"}, []
+        if self._asked:
+            return ({"refused": "one decision at a time",
+                     "already_asked": self._asked[0],
+                     "note": f"'{self._asked[0]}' is already on screen and the "
+                             f"buyer has not answered it. Stop here. Say nothing "
+                             f"further this turn."}, [])
+        self._asked.append(key)
         block = builder(title)
-        return ({"asked": key, "options": [o.label for o in block.options]}, [block])
+        return ({"asked": key, "options": [o.label for o in block.options],
+                 "note": "The picker is on screen. The turn is over — do not "
+                         "describe it, do not ask anything else."}, [block])
 
     def _choices_payment_terms(self, title: str) -> ChoiceBlock:
         cur = self.draft.payment_terms_days
