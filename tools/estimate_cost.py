@@ -22,6 +22,7 @@ PX_PER_IMAGE_TOKEN = 750
 
 # Published rates, USD per million tokens. Check before relying on them.
 PRICES = {
+    "GLM-4.6V":           (0.30, 0.90),
     "Gemini Flash-Lite":  (0.30, 2.50),
     "Gemini Flash":       (0.75, 3.75),
     "Claude Haiku 4.5":   (1.00, 5.00),

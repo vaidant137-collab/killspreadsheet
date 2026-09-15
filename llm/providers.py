@@ -104,6 +104,26 @@ class GeminiClient(OpenAIClient):
         return schema.model_validate(json.loads(r.choices[0].message.content))
 
 
+class OpenRouterClient(OpenAIClient):
+    """OpenRouter, through its OpenAI-compatible endpoint.
+
+    One key, every provider, pass-through token rates. Worth noting for the
+    write-up: this is the fourth provider added to this system and it cost four
+    lines, because the model provider was a seam from the first commit rather
+    than something retrofitted once a signup went wrong.
+
+    It also decouples the build from any single vendor's onboarding. That is not
+    a hypothetical benefit -- it is why this project has a working key tonight.
+    """
+
+    name = "openrouter"
+    BASE = "https://openrouter.ai/api/v1"
+    KEY_ENV = "OPENROUTER_API_KEY"
+
+    def __init__(self, model: str = "z-ai/glm-4.6v"):
+        super().__init__(model=model)
+
+
 def get_client(role: str = "extract"):
     """Pick a provider for this role from whatever key is present.
 
@@ -115,8 +135,10 @@ def get_client(role: str = "extract"):
 
     have = {"anthropic": bool(os.getenv("ANTHROPIC_API_KEY")),
             "openai": bool(os.getenv("OPENAI_API_KEY")),
-            "gemini": bool(os.getenv("GEMINI_API_KEY"))}
-    cls = {"anthropic": AnthropicClient, "openai": OpenAIClient, "gemini": GeminiClient}
+            "gemini": bool(os.getenv("GEMINI_API_KEY")),
+            "openrouter": bool(os.getenv("OPENROUTER_API_KEY"))}
+    cls = {"anthropic": AnthropicClient, "openai": OpenAIClient,
+           "gemini": GeminiClient, "openrouter": OpenRouterClient}
 
     if want in cls:
         if not have[want]:
@@ -125,19 +147,21 @@ def get_client(role: str = "extract"):
         # pass) and is schema-constrained, so a cheaper model has little room to
         # go wrong. The analyst is what anyone actually watches. Two models, one
         # provider, set independently.
-        if want == "anthropic":
-            env = "ANTHROPIC_ANALYST_MODEL" if role == "analyst" else "ANTHROPIC_EXTRACT_MODEL"
-            m = os.getenv(env)
-            return AnthropicClient(model=m) if m else AnthropicClient()
-        return cls[want]()
+        # Extraction is vision-heavy and schema-constrained; the analyst is what
+        # anyone watches. Same provider, two models, set independently.
+        prefix = {"anthropic": "ANTHROPIC", "openrouter": "OPENROUTER",
+                  "gemini": "GEMINI", "openai": "OPENAI"}[want]
+        env = f"{prefix}_ANALYST_MODEL" if role == "analyst" else f"{prefix}_EXTRACT_MODEL"
+        m = os.getenv(env)
+        return cls[want](model=m) if m else cls[want]()
     # auto: cheapest capable provider first, so a spare key is never the
     # expensive one by accident
-    for name in ("gemini", "anthropic", "openai"):
+    for name in ("openrouter", "gemini", "anthropic", "openai"):
         if have[name]:
             return cls[name]()
     raise RuntimeError(
-        "No model API key found. Set GEMINI_API_KEY, ANTHROPIC_API_KEY or "
-        "OPENAI_API_KEY in .env.\n"
+        "No model API key found. Set OPENROUTER_API_KEY, GEMINI_API_KEY, "
+        "ANTHROPIC_API_KEY or OPENAI_API_KEY in .env.\n"
         "Everything except extraction and the analyst runs without one:\n"
         "  python -m data.build_ground_truth\n"
         "  python -m tools.render_all\n"
