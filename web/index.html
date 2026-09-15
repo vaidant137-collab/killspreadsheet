@@ -543,7 +543,11 @@ function renderDraftPanel(){
   const vname = id => (c.vendors.find(v => v.vendor_id === id) || {}).name || id;
   const qtext = n => {
     const q = c.questions.find(x => x.q_no === n);
-    return q ? 'Q' + n + ' · ' + q.question : 'Q' + n;
+    if (!q) return 'Q' + n;
+    // Enough to recognise the question, not the whole of it. The card is a
+    // summary of the tender; the questionnaire itself is one tab away.
+    const t = q.question.length > 52 ? q.question.slice(0, 50).trim() + '…' : q.question;
+    return 'Q' + n + ' · ' + t;
   };
   const nLines = (d.line_nos || []).length;
   const nQs    = (d.question_nos || []).length;
@@ -978,12 +982,38 @@ function renderChoice(b){
   }
   d.appendChild(foot);
 
-  function send(blk, values){
+  /* A click writes to the draft FIRST, then tells the co-pilot.
+
+     The obvious shape is to send the sentence and let the model apply it, and
+     it mostly works — but "45 days from GRN" has to survive a round trip
+     through a model before it reaches the field that re-prices 139 cells, and
+     "mostly" is not the word you want on that path. The picker knows exactly
+     which field it edits, so it edits it: the card updates instantly, the draft
+     is right whatever the model does next, and the model's job shrinks to the
+     part it is good at — saying what this changed and what to decide next. */
+  async function send(blk, values){
     if (blk.key === 'lines' && values[0] === 'pick'){ openTab('items'); return; }
     const labels = values.map(v =>
       (blk.options.find(o => o.value === v) || {}).label || v);
     d.querySelectorAll('button').forEach(x => x.disabled = true);
     d.classList.add('done');
+
+    const patch = {};
+    if (blk.key === 'payment_terms' && /^\d+$/.test(values[0]))
+      patch.payment_terms_days = Number(values[0]);
+    else if (blk.key === 'gates')
+      patch.gating_q_nos = values.map(Number).filter(n => !isNaN(n));
+    else if (blk.key === 'vendors')
+      patch.vendor_ids = values;
+    else if (blk.key === 'lines' && CATALOGUE){
+      const all = CATALOGUE.lines;
+      if (values[0] === 'all') patch.line_nos = all.map(l => l.line_no);
+      else if (values[0] === '3' || values[0] === '5')
+        patch.line_nos = all.filter(l => String(l.ply) === values[0]).map(l => l.line_no);
+    }
+    if (Object.keys(patch).length){
+      try { await patchDraft(patch); } catch (e){ console.error('draft patch', e); }
+    }
     ask(`${blk.title}: ${labels.length ? labels.join('; ') : 'none'}`);
   }
   return d;

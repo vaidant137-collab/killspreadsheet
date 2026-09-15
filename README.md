@@ -213,8 +213,21 @@ python -m normalize.engine --self-test    # 8 steps from quote to landed cost
 python -m match.matcher   --self-test     # vendor label -> buyer line
 python -m allocate.subsets --self-test    # 25 splits, questionnaire gate
 python -m eval.harness                    # the scorecard
+python -m llm.test_seam                   # every provider satisfies the seam
+python -m tools.smoke_ui                  # drives the real page in a browser
 python -m tools.fetch_wild_set            # real documents, on your machine
 ```
+
+`tools/smoke_ui.py` exists because everything above it sits **behind the API**,
+and the API answered correctly through every failure this project has had. What
+broke was the browser code in front of it — three functions called and never
+defined, and a fourth writing to an element a redesign had removed. Two
+exceptions, and between them the tabs, the draft card, the co-pilot's first
+reply and the comparison grid all rendered as nothing, while every endpoint
+behind them returned the right answer. So that check starts the real server and
+drives the real page, and fails on any uncaught exception. It needs playwright
+(`pip install playwright && playwright install chromium`) and skips itself
+politely without one.
 
 ## Where it stands
 

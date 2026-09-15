@@ -36,6 +36,7 @@ fixture, deletes the recordings, and the header says so.
 | `python -m llm.test_seam` | every provider satisfies the LLMClient seam |
 | `python -m data.build_adversarial` | renders the five adversarial documents |
 | `python -m eval.adversarial` | scores the five attacks |
+| `python -m tools.smoke_ui` | drives the real page in a real browser |
 
 ## Rules this codebase holds to
 
@@ -116,8 +117,10 @@ clicks write straight to `/api/draft` with no model call.
 functions were called and never defined, and a fourth wrote to an element the
 header cleanup had removed; between them they took out the tabs, the draft card,
 the co-pilot's first reply and the comparison grid, while every API behind them
-answered correctly. Drive the page against a local server after any change to
-`web/index.html` — `node --check` on the script catches syntax and nothing else.
+answered correctly. `python -m tools.smoke_ui` starts the server, drives the page
+in a real browser and fails on any uncaught exception — run it after any change
+to `web/index.html`. It needs playwright and skips itself politely without one.
+`node --check` on the script catches syntax and nothing else.
 
 **Not built:** the wild set in `tools/fetch_wild_set.py` is fetched but
 unlabelled, so the 97% is measured only against documents this repo generated.
