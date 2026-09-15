@@ -770,7 +770,10 @@ def issue_round():
                                 format=e.get("format"),
                                 note=f"replied by {e.get('format')}")
                 else:
-                    note = f"{e.get('lines')} lines read"
+                    ms = e.get("ms")
+                    took = (f" in {ms/1000:.1f}s" if ms and ms >= 1000
+                            else f" in {ms}ms" if ms else "")
+                    note = f"{e.get('lines')} lines read{took}"
                     if e.get("degraded"):
                         note += " \u00b7 fell back to the fixture path"
                     if e.get("injection"):

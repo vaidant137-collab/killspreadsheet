@@ -10,6 +10,7 @@ Run:  python -m pipeline            (uses EXTRACTOR=fixture by default)
 from __future__ import annotations
 
 import json
+import time
 
 from config import DATA, DB_PATH, EXTRACTOR, REVIEW_THRESHOLD
 from contracts.extraction import SourceDoc
@@ -133,6 +134,7 @@ def run(*, fresh: bool = True, verbose: bool = True, mode: str | None = None,
         doc = SourceDoc(doc_id=f"{vid}-quote", vendor_id=vid,
                         path=docs.get(vid, {}).get("path", ""),
                         kind=sub.vendor.reply_format, role="quote")
+        t0 = time.monotonic()
         if on_progress:
             on_progress({"vendor_id": vid, "vendor": sub.vendor.name,
                          "state": "reading",
@@ -162,6 +164,11 @@ def run(*, fresh: bool = True, verbose: bool = True, mode: str | None = None,
         if on_progress:
             on_progress({"vendor_id": vid, "vendor": sub.vendor.name,
                          "state": "read", "lines": len(matched),
+                         # How long this document actually took. On the replay
+                         # path it is milliseconds; on a live model run it is
+                         # where the minutes of a round go, and either way the
+                         # number is measured rather than staged.
+                         "ms": int((time.monotonic() - t0) * 1000),
                          "injection": bool(raw.injection_attempts),
                          "degraded": any(v == vid for v, _ in degraded)})
 

@@ -937,7 +937,9 @@ function renderRound(r){
   p.appendChild(el('div','roundnote',
     'The send is stubbed \u2014 no mail left the building. Everything after it is '
     + 'real work on real documents: five replies in five formats, read one at a '
-    + 'time, which is why this takes as long as it does.'));
+    + 'time. The times are measured, not staged; on the replay path they are '
+    + 'milliseconds, and on a live model run this is where the minutes of a '
+    + 'round go.'));
   $('#pinSub').textContent = `${done} of ${r.vendors.length} replies read`;
 }
 
