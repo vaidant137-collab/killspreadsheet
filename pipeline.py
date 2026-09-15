@@ -78,6 +78,16 @@ def apply_draft(gt: GroundTruth, draft) -> GroundTruth:
     return gt
 
 
+def _has_recordings() -> bool:
+    """Is there a real recorded run on disk to replay?
+
+    A path check rather than an import: pipeline.py is allowed to import any
+    module, but there is nothing here worth importing extract/ for.
+    """
+    d = DATA / "extraction_runs"
+    return d.is_dir() and any(d.glob("*.json"))
+
+
 def run(*, fresh: bool = True, verbose: bool = True, mode: str | None = None,
         draft=None) -> dict:
     gt = load_gt()
@@ -85,6 +95,22 @@ def run(*, fresh: bool = True, verbose: bool = True, mode: str | None = None,
         gt = apply_draft(gt, draft)
     lines = {l.line_no: l for l in gt.rfx.lines}
     mode = mode or EXTRACTOR
+
+    # A deploy can be configured for `replay` and ship with nothing recorded.
+    # That is not hypothetical: it is exactly what a build looks like after its
+    # record run fails and falls back. Before this check, every re-run of the
+    # pipeline through the API — which is what ISSUING an authored RFx does —
+    # raised on the first document, so the whole second half of the product
+    # 500'd on the live site while the first half looked perfectly healthy.
+    #
+    # Refusing is still the right behaviour FOR THE EXTRACTOR: replay returns a
+    # recorded run verbatim or nothing at all. What to do about that refusal is
+    # a composition decision, and this is the composition root.
+    if mode == "replay" and not _has_recordings():
+        if verbose:
+            print("  replay was asked for and nothing is recorded — falling back "
+                  "to the fixture path, and provenance will say so")
+        mode = "fixture"
 
     # 1. extract, then 2. match — separately, so a bad parse cannot propagate
     #    into the arithmetic and a bad match is scored on its own terms.
@@ -111,7 +137,7 @@ def run(*, fresh: bool = True, verbose: bool = True, mode: str | None = None,
             # provenance reports "4 of 5 read by a model" rather than implying
             # five. A partial real run described accurately beats a complete one
             # described loosely.
-            if mode in ("model", "record"):
+            if mode in ("model", "record", "replay"):
                 degraded.append((vid, f"{type(e).__name__}: {e}"))
                 raw = get_extractor(path, "fixture").extract(doc)
             else:

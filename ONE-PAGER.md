@@ -74,6 +74,13 @@ today. **The moat isn't the parser; it's the reconciliation graph it builds.**
   static HTML on screen and stops. The reply had arrived and the browser simply
   could not draw it. Nothing in the Python suite could see any of this: it is all
   downstream of the API, which was answering correctly throughout.
+- **The live site 500'd on the half of the product nobody had reached.** Issuing
+  an RFx re-runs the pipeline, the deploy sets `EXTRACTOR=replay`, and a build
+  whose recording had failed shipped with nothing to replay — so the extractor
+  refused, correctly, and the API turned that into a 500. Every local check
+  passed, because locally the extractor defaults to `fixture`. Refusing was
+  right for the extractor; deciding what to do about the refusal belongs in the
+  composition root, and there was no decision there at all.
 - **The flagship interaction returned a non-answer, silently.** Asked which single
   vendor was cheapest, the analyst ran its query, got rows back, said "I will
   calculate the total" — and stopped. A malformed tool-call round-trip drew an

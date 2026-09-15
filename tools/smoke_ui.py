@@ -25,6 +25,7 @@ Run:  python -m tools.smoke_ui
 from __future__ import annotations
 
 import json
+import os
 import socket
 import subprocess
 import sys
@@ -185,7 +186,10 @@ async def run(port: int, c: Checks) -> None:
              "picking terms writes the field that re-prices 139 cells")
 
         # ---- the comparison half -------------------------------------------
-        httpx.post(f"{url}api/issue_default", timeout=180)
+        # The button the walkthrough falls back to when the model is down, and
+        # the same code path the co-pilot uses once the buyer approves the mail.
+        issued = httpx.post(f"{url}api/issue_default", timeout=180)
+        c.eq(issued.status_code, 200, "issuing the RFx runs the pipeline")
         await pg.goto(url, wait_until="networkidle")
         await pg.wait_for_timeout(900)
         c.eq(await pg.locator("#tableWrap table tbody tr").count(), 30,
@@ -253,10 +257,18 @@ def main() -> int:
         return 0
 
     port = _free_port()
+    # Run the server the way the DEPLOY runs it. This harness first ran with
+    # the local default (fixture) while production sets replay, and the gap hid
+    # a 500 on /api/issue_default that took out the entire second half of the
+    # product on the live site -- the pipeline refused to replay a run that was
+    # never recorded, and every check here passed regardless. A check that runs
+    # a configuration nobody ships is checking the wrong program.
+    env = {**os.environ, "EXTRACTOR": os.getenv("EXTRACTOR", "replay")}
     srv = subprocess.Popen(
         [sys.executable, "-m", "uvicorn", "api.app:app",
          "--host", "127.0.0.1", "--port", str(port)],
-        cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        cwd=ROOT, env=env,
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
         import httpx
         for _ in range(40):

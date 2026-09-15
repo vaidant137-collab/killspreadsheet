@@ -120,6 +120,10 @@ the co-pilot's first reply and the comparison grid, while every API behind them
 answered correctly. `python -m tools.smoke_ui` starts the server, drives the page
 in a real browser and fails on any uncaught exception — run it after any change
 to `web/index.html`. It needs playwright and skips itself politely without one.
+It runs the server with `EXTRACTOR=replay`, **because that is what the deploy
+sets**: the first version used the local default and missed a 500 on
+`/api/issue_default` that took out the whole comparison half of the live site.
+A check that runs a configuration nobody ships is checking the wrong program.
 `node --check` on the script catches syntax and nothing else.
 
 **Not built:** the wild set in `tools/fetch_wild_set.py` is fetched but
