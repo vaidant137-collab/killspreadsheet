@@ -159,6 +159,28 @@ async def run(port: int, c: Checks) -> None:
         c.is_(not dangling, "every element the script reaches for exists",
               ", ".join(dangling))
 
+        # Nothing the vendors have not sent may reach the drafting screen — and
+        # not just the pixels. The payload used to carry the finished
+        # comparison, every qualification and the injection log while the buyer
+        # was still writing the RFx; the page drew none of it, which made the
+        # invariant hold by luck rather than by design.
+        leaked = await pg.evaluate(r"""async () => {
+          const names = ["Shakti", "Nova", "Apex", "Meridian", "Ganesh"];
+          const out = [];
+          for (const path of ["api/state", "api/catalogue", "api/draft"]) {
+            const body = await fetch("/" + path).then(r => r.text());
+            for (const n of names)
+              if (body.includes(n + " saves") || body.includes(n + " costs")
+                  || body.includes("removes " + n)) out.push(path + ": " + n);
+            if (path === "api/state" && /"qualified"|"comparison"/.test(body))
+              out.push(path + ": qualification/comparison");
+          }
+          return out;
+        }""")
+        c.is_(not leaked,
+              "nothing a vendor has not sent reaches the drafting screen",
+              "; ".join(leaked))
+
         c.at_least(await pg.locator("#suggest button").count(), 3,
                    "the empty chat offers openers")
         c.is_(not await pg.locator("#panelDraft").is_hidden(),

@@ -187,8 +187,27 @@ def index() -> str:
 
 @app.get("/api/state")
 def state() -> dict:
+    """What the screen is allowed to know, which depends on what has happened.
+
+    While the buyer is still writing the RFx this used to return the finished
+    comparison, every vendor's qualification, the contradiction list and the
+    injection log — the whole answer, one devtools tab away from a screen whose
+    premise is that nothing has been sent. The page never drew any of it, which
+    made it worse rather than better: an invariant that holds only because
+    nobody happens to read the payload is not an invariant.
+    """
     conn = db()
     rfx = dict(conn.execute("SELECT * FROM rfx LIMIT 1").fetchone())
+    if SESSION["phase"] == "draft":
+        return {"phase": "draft", "provenance": _provenance(),
+                "threshold": REVIEW_THRESHOLD,
+                # The template's own header fields. The buyer wrote these, or
+                # inherited them from last year's tender; nothing here came out
+                # of a reply.
+                "rfx": {k: rfx.get(k) for k in
+                        ("rfx_id", "title", "buyer_org", "category", "currency",
+                         "delivery_point", "required_incoterm",
+                         "required_payment_terms", "cost_of_capital_pct")}}
     vendors = [dict(r) for r in conn.execute(
         "SELECT vendor_id,name,city,reply_format,currency,incoterm,tax_basis,"
         "payment_days,validity_days,moq_pieces,qualified,disqualified_because "
