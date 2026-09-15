@@ -43,7 +43,7 @@ the header says so.
 | `python -m llm.test_seam` | every provider satisfies the LLMClient seam |
 | `python -m data.build_adversarial` | renders the five adversarial documents |
 | `python -m eval.adversarial` | scores the five attacks |
-| `python -m tools.smoke_ui` | drives the real page in a real browser (45 checks) |
+| `python -m tools.smoke_ui` | drives the real page in a real browser (73 checks) |
 | `python -m analyst.loop --self-test` | a question ends the turn |
 
 ## Rules this codebase holds to
@@ -100,7 +100,7 @@ analyst/     tools.py · loop.py · memo.py · author.py (the RFx co-pilot)
 store/       schema.sql · repo.py
 eval/        harness.py — field/unit/match accuracy, escape rate, calibration
 api/         FastAPI + SSE
-web/         index.html — chat, pinned comparison, evidence drawer
+web/         index.html — one column: the steps, the round, the table, the drawer
 tools/       document renderers, inline previews, cost estimator, wild set
 data/        ground_truth.json · generated/ · attachments/ · SOURCES.md
 ```
@@ -117,9 +117,31 @@ review queue   29 at threshold 0.82
 
 **Built since:** RFx authoring (`analyst/author.py` — same loop, different tools
 and prompt), the decision layer (`allocate.subsets.options`), inline source
-previews (`tools/doc_preview.py`), real recorded extraction at build time, and
-the picker layer — item master, approved vendors, the live draft card — whose
-clicks write straight to `/api/draft` with no model call.
+previews (`tools/doc_preview.py`), real recorded extraction at build time, the
+picker layer whose clicks write straight to `/api/draft` with no model call, and
+round two (`analyst/gaps.py`, `pipeline.apply_clarifications`) — the follow-up
+mail that resolves cells rather than reporting them.
+
+**The screen is one column, and that was a rewrite.** It used to be a chat with a
+pinned comparison above it and six tabs inside that: the table a buyer had just
+waited for was behind a tab, the item master was a place you went rather than a
+step you took, and the conversation scrolled underneath all of it. Now every
+artifact is a card in the same column, in the order the work happens — four
+editable authoring steps (items, vendors, questions, the covering mail), the
+round filling in as replies land, the table itself, what it means and what to do
+about it, and the follow-up mails that fill the gaps. A step collapses to one
+line when it is done and its summary is a function of the draft, not a string
+frozen when it closed. Rules that fell out of it: a class selector with `display`
+outranks the UA's `[hidden]` rule (a finished step kept showing its own Continue
+button), and scroll events are dispatched a frame late (a chart tooltip opened by
+a hover that had to scroll was hidden again immediately).
+
+**A line nobody priced is a caveat, not a violation.** `allocate.evaluate` used
+to count every uncovered line against the split it was evaluating — so a line the
+buyer added this year, which by definition has no quotes, made all 25 splits
+infeasible and the screen told the buyer their own new line had broken the
+tender. A line no vendor priced is missing from every split equally; only a line
+somebody else quoted is evidence against this one.
 
 **The front end is not covered by the Python suite and needs driving.** Three
 functions were called and never defined, and a fourth wrote to an element the
@@ -132,7 +154,10 @@ It runs the server with `EXTRACTOR=replay`, **because that is what the deploy
 sets**: the first version used the local default and missed a 500 on
 `/api/issue_default` that took out the whole comparison half of the live site.
 A check that runs a configuration nobody ships is checking the wrong program.
-`node --check` on the script catches syntax and nothing else.
+`node --check` on the script catches syntax and nothing else. The check now
+drives the whole tender — thirty lines, five vendors, nine questions, the mail,
+the send, the table, a follow-up that resolves six cells, the review queue — and
+every claim in it is phrased as the product behaviour it protects.
 
 **Not built:** the wild set in `tools/fetch_wild_set.py` is fetched but
 unlabelled, so the 97% is measured only against documents this repo generated.

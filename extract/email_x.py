@@ -15,7 +15,6 @@ pointer is recorded as a pointer, with rate left null — never zero.
 
 from __future__ import annotations
 
-from pathlib import Path
 
 from pydantic import BaseModel
 

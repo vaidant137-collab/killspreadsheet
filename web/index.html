@@ -8,6 +8,21 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:wght@400;500&family=Public+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
+/* ---------------------------------------------------------------------------
+   ONE COLUMN.
+
+   This screen used to be a chat with a pinned artifact above it and six tabs
+   inside that artifact. Everything the buyer needed was on screen and none of
+   it was where they were looking: the comparison they had just waited for was
+   behind a tab, the item master was a place you went rather than a step you
+   took, and the conversation scrolled underneath all of it.
+
+   So: one column, top to bottom, in the order the work happens. Choosing line
+   items is a card. The covering mail is a card. The round is a card that fills
+   in as replies land. The price table is a card — in the conversation, not
+   behind a control — and under it, in words, what it means and what to do.
+   Nothing is hidden behind a tab, because there are no tabs.
+--------------------------------------------------------------------------- */
 :root{
   --paper:#F1F0EC; --surface:#FAFAF8; --surface-2:#E8E7E1; --ink:#16191C;
   --ink-soft:#585F66; --ink-faint:#8B9198; --rule:#D8D6CE; --rule-soft:#E4E2DA;
@@ -26,109 +41,124 @@
   --risk:#E08B84; --risk-bg:#301E1C; --risk-line:#6E3B36;
   --rank:#5E8CB4; color-scheme:dark;}}
 *{box-sizing:border-box}
+/* A class selector with `display` outranks the UA's [hidden] rule, so el.hidden
+   silently does nothing — which is how a finished step card kept showing its
+   "Continue" button underneath its own summary. Say it once, loudly. */
+[hidden]{display:none!important}
 html,body{height:100%}
 body{margin:0;background:var(--paper);color:var(--ink);
   font-family:"Public Sans",system-ui,sans-serif;font-size:14px;line-height:1.55;
   -webkit-font-smoothing:antialiased;display:flex;flex-direction:column}
 .mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
+button{font-family:inherit}
 
-.block.options{padding:0}
-.block.options .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(228px,1fr));
-  gap:12px;margin-bottom:14px}
-.block.options .card{border:1px solid var(--rule);border-radius:7px;
-  padding:15px 16px 16px;background:var(--surface);position:relative;
-  display:flex;flex-direction:column;gap:7px}
-/* The recommendation is a recommendation. One accent rule says so without a
-   badge, a colour wash, or the word "best" — all of which would overclaim on a
-   number that rests on seven unresolved cells. */
-.block.options .card:first-child::before{content:"";position:absolute;left:-1px;right:-1px;
-  top:-1px;height:2px;background:var(--accent);border-radius:7px 7px 0 0}
-.block.options .card.bad{border-color:var(--risk-line);background:var(--risk-bg)}
-.block.options .lbl{font-family:"IBM Plex Mono",monospace;font-size:9.5px;
-  letter-spacing:.09em;text-transform:uppercase;color:var(--dim);margin:0}
-.block.options .cost{font-family:Newsreader,Georgia,serif;font-size:1.62rem;
-  line-height:1;margin:0;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
-.block.options .delta{font-family:"IBM Plex Mono",monospace;font-size:10.5px;
-  color:var(--dim);vertical-align:middle;margin-left:3px}
-.block.options .facts{display:flex;flex-wrap:wrap;gap:4px 12px;
-  font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--dim);margin:0;
-  padding-bottom:8px;border-bottom:1px solid var(--rule-soft)}
-.block.options .who{font-size:11.5px;margin:0;line-height:1.45}
-.block.options .why{font-size:11.5px;color:var(--dim);line-height:1.5;margin:0}
-.block.options .viol{margin:0;padding-left:15px;font-size:11px;color:var(--risk)}
-.block.options .note{font-size:11px;color:var(--dim);margin:0 0 12px}
-.block.memo .md{font-size:13px;line-height:1.6}
-.block.memo h3{font-family:Newsreader,Georgia,serif;font-weight:500;font-size:1.15rem;margin:.2em 0 .5em}
-.block.memo h4{font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.08em;
-  text-transform:uppercase;color:var(--dim);margin:1.4em 0 .5em}
-.block.memo h5{font-size:12.5px;margin:1em 0 .3em}
-.block.memo ul{padding-left:18px;margin:.4em 0}
-.block.memo hr{border:0;border-top:1px solid var(--rule);margin:1.2em 0}
+/* ---------- header ---------- */
+header{border-bottom:1px solid var(--rule);background:var(--surface);
+  padding:11px 20px;display:flex;gap:16px;align-items:baseline;flex-wrap:wrap;flex:none}
+header h1{font-family:Newsreader,Georgia,serif;font-weight:500;font-size:1.1rem;margin:0;
+  letter-spacing:-.01em;white-space:nowrap}
+header .meta{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--ink-faint);display:flex;gap:14px;flex-wrap:wrap}
+header .spacer{flex:1}
+.chip{font-family:"IBM Plex Mono",monospace;font-size:10.5px;font-weight:600;
+  padding:3px 8px;border-radius:2px;letter-spacing:.04em;cursor:pointer;border:0}
+.chip.warn{background:var(--derived-bg);color:var(--derived)}
+.chip.risk{background:var(--risk-bg);color:var(--risk)}
+.chip.plain{background:none;color:var(--ink-faint);border:1px solid var(--rule)}
+.chip.plain:hover{color:var(--ink)}
 
-.block.draft,.block.mail{border:1px solid var(--rule);border-radius:6px;padding:14px 16px;
-  background:var(--surface)}
-.block.draft{border-left:2px solid var(--accent)}
+/* ---------- the column ---------- */
+/* No smooth scrolling here. It looks nice and it keeps emitting scroll events
+   for a third of a second after the gesture that caused it — which hides the
+   chart tooltip the moment you hover a bar the browser had to scroll into
+   view. A tooltip that works except just after a scroll is a tooltip that
+   works except when you use it. */
+#thread{flex:1;overflow:auto;min-height:0;padding:20px 20px 4px}
+#col{max-width:940px;margin:0 auto}
+.turn{margin:0 0 4px}
+.turn.you{text-align:right}
+.turn.you .bubble{display:inline-block;background:var(--accent);color:#fff;
+  padding:7px 13px;border-radius:3px;text-align:left;font-size:13.5px;max-width:70ch}
+.who{font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--ink-faint);margin:0 0 5px;font-weight:600}
+.block{margin:0 0 12px;max-width:80ch}
+.block p{margin:0 0 8px}
+.status{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--ink-faint);
+  margin:0 0 10px}
 
-/* ---------- artifact tabs and pickers ---------- */
-nav.tabs{display:flex;gap:2px}
-nav.tabs button{font:inherit;font-size:11.5px;cursor:pointer;background:none;
-  border:0;border-bottom:2px solid transparent;color:var(--ink-faint);
-  padding:3px 9px 5px}
-nav.tabs button:hover{color:var(--ink)}
-nav.tabs button.on{color:var(--ink);border-bottom-color:var(--accent)}
-.panel{overflow:auto;padding:14px 20px 18px;flex:1;min-height:0}
-.panel .empty{color:var(--dim);font-size:12.5px;padding:18px 0;max-width:52ch;
-  line-height:1.6}
-.phead{display:flex;align-items:center;gap:12px;margin-bottom:11px}
+/* ---------- a card in the column ---------- */
+.box{border:1px solid var(--rule);border-radius:8px;background:var(--surface);
+  margin:0 0 16px;overflow:hidden}
+.box>.bh{display:flex;align-items:baseline;gap:10px;padding:11px 16px 10px;
+  border-bottom:1px solid var(--rule-soft)}
+.box>.bh h2{font-size:13.5px;font-weight:600;margin:0;letter-spacing:-.005em}
+.box>.bh .n{font-family:"IBM Plex Mono",monospace;font-size:10px;font-weight:600;
+  color:var(--accent);background:var(--accent-soft);border-radius:3px;padding:1px 6px;
+  flex:none}
+.box>.bh .sub{font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--ink-faint);
+  letter-spacing:.04em;margin-left:auto;text-align:right;white-space:nowrap}
+.box>.bb{padding:13px 16px 4px}
+.box>.bb.flush{padding:0}
+.box>.bf{display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+  padding:11px 16px;border-top:1px solid var(--rule-soft);background:var(--paper)}
+.box.done{background:var(--paper)}
+.box.done>.bh{border-bottom:0}
+.box.done>.bh h2{font-weight:500;color:var(--ink-soft)}
+.box .lead{font-size:12.5px;color:var(--ink-soft);line-height:1.55;max-width:74ch;
+  margin:0 0 11px}
+.box .lead b{color:var(--ink);font-weight:600}
+.done-line{font-size:12.5px;color:var(--ink-soft);margin-left:auto;text-align:right;
+  max-width:56ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tick-ok{color:var(--good);font-weight:600;margin-right:6px}
+
+/* buttons */
+.go,.alt,.mini{font:inherit;font-size:11.5px;cursor:pointer;border-radius:4px;
+  padding:5px 12px;border:1px solid var(--rule);background:none;color:var(--ink-soft)}
+.go{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:500}
+.go:hover{filter:brightness(1.12)}
+.alt:hover{border-color:var(--accent);color:var(--accent)}
+.mini{font-size:10.5px;padding:3px 8px}
+button:disabled{cursor:default;opacity:.55}
+.spacer{flex:1}
+
+/* ---------- pickers ---------- */
+.phead{display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap}
 .phead select.catsel{font:inherit;font-size:12px;background:var(--surface);
   color:var(--ink);border:1px solid var(--rule);border-radius:4px;padding:5px 8px}
 .pcount{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--dim)}
-.pfoot{display:flex;gap:8px;margin-top:12px}
-.rgroup{border:1px solid var(--rule);border-left:2px solid var(--derived);
-  border-radius:6px;padding:12px 13px 10px;margin:0 0 9px;background:var(--surface)}
-.rgroup.done{opacity:.5;border-left-color:var(--ok)}
-.rgroup .top{display:flex;align-items:baseline;gap:9px;margin-bottom:5px}
-.rgroup .top b{font-weight:500;font-size:13px;flex:1}
-.rgroup .n,.rgroup .conf{font-family:"IBM Plex Mono",monospace;font-size:10px;
-  color:var(--dim);white-space:nowrap}
-.rgroup .why{font-size:12px;line-height:1.5;color:var(--ink-soft);max-width:62ch}
-.rgroup .who2{font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--ink-faint);
-  margin-top:5px}
-.rfoot{display:flex;gap:8px;margin-top:10px;align-items:center}
-.rfoot .go,.rfoot .other{font:inherit;font-size:11px;cursor:pointer;border-radius:4px;
-  padding:5px 11px;border:1px solid var(--rule);background:none;color:var(--ink-soft)}
-.rfoot .go{background:var(--accent);border-color:var(--accent);color:#fff}
-.rfoot button:disabled{cursor:default;opacity:.6}
-.rcells{margin-top:9px;padding-top:9px;border-top:1px solid var(--rule-soft)}
-.fixrow{display:flex;gap:6px;margin-top:8px;align-items:center}
-.fixrow input{font:inherit;font-size:12px;flex:1;min-width:0;padding:5px 8px;
-  border:1px solid var(--accent);border-radius:4px;background:var(--surface);
-  color:var(--ink)}
-.fixrow button{font:inherit;font-size:11px;cursor:pointer;border-radius:4px;
-  padding:5px 10px;border:1px solid var(--rule);background:none;color:var(--ink-soft)}
-.fixrow button.go{background:var(--accent);border-color:var(--accent);color:#fff}
-.pfoot .go,.pfoot .other{font:inherit;font-size:11px;cursor:pointer;border-radius:4px;
-  padding:5px 11px;border:1px solid var(--rule);background:none;color:var(--ink-soft)}
-.pfoot .go{background:var(--accent);border-color:var(--accent);color:#fff}
-
+.scroll{max-height:min(46vh,420px);overflow:auto;border:1px solid var(--rule-soft);
+  border-radius:5px}
 table.pick{width:100%;border-collapse:collapse;font-size:12.5px}
 table.pick th{text-align:left;font-family:"IBM Plex Mono",monospace;font-size:9.5px;
   letter-spacing:.06em;text-transform:uppercase;color:var(--dim);
-  padding:0 10px 6px 0;border-bottom:1px solid var(--rule)}
+  padding:7px 10px 6px 0;border-bottom:1px solid var(--rule);position:sticky;top:0;
+  background:var(--surface);z-index:2}
+table.pick th:first-child,table.pick td:first-child{padding-left:11px}
 table.pick th.num,table.pick td.num{text-align:right}
 table.pick td{padding:6px 10px 6px 0;border-bottom:1px solid var(--rule-soft);
   vertical-align:top}
 table.pick td small{display:block;font-size:10px;color:var(--dim);
   font-family:"IBM Plex Mono",monospace}
+table.pick input.qty{font:inherit;font-size:12px;width:96px;text-align:right;
+  background:none;border:1px solid transparent;border-radius:4px;padding:2px 5px;
+  color:var(--ink);font-family:"IBM Plex Mono",monospace}
+table.pick input.qty:hover{border-color:var(--rule)}
+table.pick input.qty:focus{border-color:var(--accent);background:var(--surface);outline:none}
+table.pick input.qty.moved{color:var(--accent);font-weight:500}
+table.pick tr.new td{background:var(--accent-soft)}
 table.pick tbody tr{cursor:pointer}
 table.pick tbody tr:hover{background:var(--surface-2)}
 table.pick .mark{display:inline-block;width:12px;height:12px;border-radius:3px;
   border:1px solid var(--rule);margin-top:2px}
 table.pick tr.on .mark{background:var(--accent);border-color:var(--accent);
   box-shadow:inset 0 0 0 2px var(--surface)}
+.addrow{display:flex;gap:6px;margin-top:10px;align-items:center;flex-wrap:wrap}
+.addrow input,.addrow select{font:inherit;font-size:12px;padding:5px 8px;
+  border:1px solid var(--rule);border-radius:4px;background:var(--surface);color:var(--ink)}
+.addrow input.d{flex:1;min-width:240px}
+.addrow input.q{width:110px;text-align:right}
 
-.pbody.vendors{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));
-  gap:9px}
+.vgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:9px}
 .vcard{text-align:left;font:inherit;cursor:pointer;background:var(--surface);
   border:1px solid var(--rule);border-radius:6px;padding:11px 12px;color:var(--ink);
   display:flex;flex-direction:column;gap:3px;position:relative}
@@ -141,100 +171,84 @@ table.pick tr.on .mark{background:var(--accent);border-color:var(--accent);
 .vcard b{font-weight:500;font-size:12.5px;padding-right:18px}
 .vcard em{font-style:normal;font-size:11px;color:var(--dim)}
 
-.block.choice{border:1px solid var(--rule);border-radius:6px;padding:13px 14px 11px;
-  background:var(--surface)}
-.block.choice.done{opacity:.55}
-.block.choice .h{font-family:"IBM Plex Mono",monospace;font-size:9.5px;
-  letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:9px}
-.block.choice .opts{display:flex;flex-direction:column;gap:1px}
-.block.choice .opt{display:flex;align-items:flex-start;gap:9px;width:100%;
-  text-align:left;background:none;border:0;border-radius:4px;padding:7px 9px;
-  cursor:pointer;color:var(--ink);font:inherit;font-size:12.5px;line-height:1.4}
-.block.choice .opt:hover{background:var(--surface-2)}
-.block.choice .opt .mark{flex:none;width:12px;height:12px;margin-top:3px;
-  border:1px solid var(--rule);border-radius:3px}
-.block.choice .opt.on .mark{background:var(--accent);border-color:var(--accent);
+/* questionnaire */
+.qrow{display:grid;grid-template-columns:16px 1fr auto;gap:11px;align-items:start;
+  padding:8px 2px;border-bottom:1px solid var(--rule-soft);cursor:pointer}
+.qrow:hover{background:var(--surface-2)}
+.qrow .mark{width:12px;height:12px;border-radius:3px;border:1px solid var(--rule);
+  margin-top:3px}
+.qrow.on .mark{background:var(--accent);border-color:var(--accent);
   box-shadow:inset 0 0 0 2px var(--surface)}
-.block.choice .opt .txt{display:block}
-.block.choice .opt em{display:block;font-style:normal;font-size:11px;
-  color:var(--dim);margin-top:1px}
-.block.choice .cnote{font-family:"IBM Plex Mono",monospace;font-size:10px;
-  color:var(--ink-faint);margin-top:9px;line-height:1.5}
-.block.choice .foot{display:flex;gap:8px;margin-top:10px;padding-top:9px;
+.qrow .qt{font-size:12.5px;line-height:1.45}
+.qrow .qt b{font-family:"IBM Plex Mono",monospace;font-size:11px;font-weight:600;
+  color:var(--ink-faint);margin-right:6px}
+.qrow .qt em{display:block;font-style:normal;font-size:11px;color:var(--dim);
+  margin-top:2px}
+.qrow.off{opacity:.45}
+.qrow .gate{font:inherit;font-size:10px;letter-spacing:.05em;text-transform:uppercase;
+  font-family:"IBM Plex Mono",monospace;cursor:pointer;border-radius:3px;padding:3px 7px;
+  border:1px solid transparent;background:none;color:var(--ink-faint);white-space:nowrap}
+/* Nine outlined buttons down the right-hand side read as nine things to do.
+   The control is there for every row; it only draws itself on the row you are
+   on, or on the rows where it is already switched on. */
+.qrow:hover .gate,.qrow .gate:focus-visible{border-color:var(--rule)}
+.qrow .gate.on{background:var(--risk-bg);border-color:var(--risk-line);color:var(--risk);
+  font-weight:600}
+.qrow.off .gate{visibility:hidden}
+.terms{display:flex;gap:7px;flex-wrap:wrap;margin:4px 0 6px}
+.terms button{font:inherit;font-size:12px;cursor:pointer;border-radius:4px;padding:5px 12px;
+  border:1px solid var(--rule);background:none;color:var(--ink-soft);
+  font-family:"IBM Plex Mono",monospace}
+.terms button.on{border-color:var(--accent);background:var(--accent-soft);color:var(--ink);
+  font-weight:600}
+.consq{font-size:11.5px;color:var(--dim);line-height:1.5;margin:0 0 12px;max-width:70ch}
+.fieldrow{display:flex;gap:10px;align-items:center;margin:0 0 12px;flex-wrap:wrap}
+.fieldrow label{font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--dim)}
+.fieldrow input{font:inherit;font-size:12.5px;padding:5px 9px;border:1px solid var(--rule);
+  border-radius:4px;background:var(--surface);color:var(--ink)}
+.sechead{font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--dim);margin:16px 0 7px;padding-top:12px;
   border-top:1px solid var(--rule-soft)}
-.block.choice .go,.block.choice .other{font:inherit;font-size:11px;cursor:pointer;
-  border-radius:4px;padding:5px 11px;border:1px solid var(--rule);
-  background:none;color:var(--ink-soft)}
-.block.choice .go{background:var(--accent);border-color:var(--accent);color:#fff}
-.block.choice button:disabled{cursor:default;opacity:.7}
-.block.draft .h,.block.mail .h{font-family:"IBM Plex Mono",monospace;font-size:9.5px;
-  letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:10px}
-table.draft{width:100%;border-collapse:collapse;font-size:12.5px}
-table.draft th{text-align:left;vertical-align:top;white-space:nowrap;width:150px;
+.sechead:first-child{margin-top:0;padding-top:0;border-top:0}
+
+/* ---------- the covering mail ---------- */
+table.kvt{width:100%;border-collapse:collapse;font-size:12.5px}
+table.kvt th{text-align:left;vertical-align:top;white-space:nowrap;width:120px;
   font-weight:400;color:var(--dim);padding:5px 14px 5px 0;
-  border-bottom:1px solid var(--rule)}
-table.draft td{padding:5px 0;border-bottom:1px solid var(--rule)}
-table.draft .chg{font-size:11px;color:var(--dim);margin-top:2px;font-style:italic}
-.block.draft .gaps{margin-top:11px;font-size:11.5px;color:var(--warn)}
-.block.draft .ok{margin-top:11px;font-size:11.5px;color:var(--good)}
-.mailbody{white-space:pre-wrap;font-family:"Public Sans",system-ui,sans-serif;
-  font-size:12.5px;line-height:1.55;margin:12px 0 10px;padding:12px 14px;
-  background:var(--bg);border-left:2px solid var(--rule);border-radius:0 4px 4px 0}
-.block.mail .attach{font-size:11px;color:var(--dim);margin-bottom:10px}
-.block.mail .stub{font-size:11px;color:var(--dim);border-top:1px solid var(--rule);
-  padding-top:9px;font-style:italic}
+  border-bottom:1px solid var(--rule-soft)}
+table.kvt td{padding:5px 0;border-bottom:1px solid var(--rule-soft)}
+table.kvt input.subj{width:100%;font:inherit;font-size:12.5px;padding:4px 7px;
+  border:1px solid transparent;border-radius:4px;background:none;color:var(--ink)}
+table.kvt input.subj:hover{border-color:var(--rule)}
+table.kvt input.subj:focus{border-color:var(--accent);background:var(--paper);outline:none}
+textarea.mailbody{width:100%;min-height:340px;font-family:"Public Sans",system-ui,sans-serif;
+  font-size:12.5px;line-height:1.6;margin:12px 0 4px;padding:12px 14px;
+  background:var(--paper);color:var(--ink);border:1px solid var(--rule);border-radius:5px;
+  resize:vertical}
+textarea.mailbody:focus{outline:2px solid var(--accent);outline-offset:-2px}
+.mailbody-ro{white-space:pre-wrap;font-size:12.5px;line-height:1.6;margin:12px 0 4px;
+  padding:12px 14px;background:var(--paper);border:1px solid var(--rule-soft);
+  border-radius:5px;max-height:320px;overflow:auto}
+.attach{font-size:11px;color:var(--dim);margin:8px 0 0}
+.stub{font-size:11px;color:var(--dim);font-style:italic;margin:10px 0 0;
+  max-width:74ch;line-height:1.5}
+.edited{font-size:11px;color:var(--accent);font-family:"IBM Plex Mono",monospace}
 
-.src details.sheet{margin-bottom:12px}
-.src details.sheet summary{font-family:"IBM Plex Mono",monospace;font-size:10px;
-  letter-spacing:.06em;text-transform:uppercase;color:var(--dim);cursor:pointer;
-  padding:5px 0}
-table.grid{border-collapse:collapse;font-family:"IBM Plex Mono",monospace;
-  font-size:10.5px;width:100%;table-layout:fixed}
-table.grid td{border:1px solid var(--rule);padding:3px 5px;overflow:hidden;
-  text-overflow:ellipsis;white-space:nowrap;max-width:110px}
-table.grid td.hid{opacity:.45;font-style:italic}
-table.grid td.hit{background:var(--accent-soft);outline:1.5px solid var(--accent);
-  outline-offset:-1.5px}
-table.grid tr.hit td{background:var(--accent-soft)}
-.src h5{font-size:12px;margin:1em 0 .3em}
-.src p{font-size:12px;line-height:1.55;margin:.4em 0}
+/* ---------- the round ---------- */
+table.round{width:100%;border-collapse:collapse;font-size:12.5px}
+table.round td{padding:7px 10px 7px 0;border-bottom:1px solid var(--rule-soft);
+  vertical-align:top}
+table.round td.v{font-weight:500;width:220px}
+table.round td.s{width:145px;font-family:"IBM Plex Mono",monospace;font-size:10.5px;
+  letter-spacing:.04em;text-transform:uppercase;color:var(--ink-faint)}
+table.round tr.done td.s{color:var(--ok)}
+table.round tr.wait td.s{color:var(--warn)}
+table.round td.n{font-size:11.5px;color:var(--dim)}
 
-table.prov{width:100%;border-collapse:collapse;margin-top:10px;font-size:11px}
-table.prov th{text-align:left;font-family:"IBM Plex Mono",monospace;font-size:9.5px;
-  letter-spacing:.06em;text-transform:uppercase;color:var(--dim);
-  padding:4px 10px 4px 0;border-bottom:1px solid var(--rule)}
-table.prov td{padding:4px 10px 4px 0;border-bottom:1px solid var(--rule)}
-
-/* ---------- header ---------- */
-header{border-bottom:1px solid var(--rule);background:var(--surface);
-  padding:12px 20px;display:flex;gap:18px;align-items:baseline;flex-wrap:wrap;flex:none}
-header h1{font-family:Newsreader,Georgia,serif;font-weight:500;font-size:1.15rem;margin:0;
-  letter-spacing:-.01em;white-space:nowrap}
-header .meta{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.05em;
-  text-transform:uppercase;color:var(--ink-faint);display:flex;gap:16px;flex-wrap:wrap}
-header .meta b{color:var(--ink);font-weight:500}
-header .spacer{flex:1}
-.chip{font-family:"IBM Plex Mono",monospace;font-size:10.5px;font-weight:600;
-  padding:3px 8px;border-radius:2px;letter-spacing:.04em;cursor:pointer;border:0}
-.chip.warn{background:var(--derived-bg);color:var(--derived)}
-.chip.risk{background:var(--risk-bg);color:var(--risk)}
-
-/* ---------- layout ---------- */
-main{flex:1;display:grid;grid-template-columns:minmax(0,1fr);min-height:0}
-#stage{display:flex;flex-direction:column;min-height:0;min-width:0}
-
-/* ---------- pinned comparison ---------- */
-#pinned{border-bottom:1px solid var(--rule);background:var(--surface);
-  display:flex;flex-direction:column;min-height:0;max-height:48vh}
-/* An id selector with `display` outranks the UA's [hidden] rule, so el.hidden
-   silently does nothing here. Say it explicitly. */
-#pinned[hidden]{display:none}
-#pinned .bar{display:flex;align-items:baseline;gap:12px;padding:9px 20px 7px;flex:none}
-#pinned .bar h2{font-size:.86rem;font-weight:600;margin:0}
-#pinned .bar .sub{font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--ink-faint);
-  letter-spacing:.04em}
-#pinned .bar .right{margin-left:auto;display:flex;gap:14px;align-items:center}
-.legend{display:flex;gap:12px;font-size:10.5px;color:var(--ink-soft);align-items:center}
+/* ---------- the comparison grid, in the conversation ---------- */
+.legend{display:flex;gap:12px;font-size:10.5px;color:var(--ink-soft);align-items:center;
+  flex-wrap:wrap;margin:0 0 9px}
 .legend i{width:11px;height:11px;display:inline-block;border:1px solid var(--rule);
   margin-right:5px;vertical-align:-1px}
 .legend .d{background:var(--derived-bg);border-color:var(--derived-line)}
@@ -242,55 +256,137 @@ main{flex:1;display:grid;grid-template-columns:minmax(0,1fr);min-height:0}
 .legend .b{background:var(--accent);border:0;width:2px;height:12px}
 .legend .r{background:var(--rank);border:0;width:14px;height:2px;opacity:.75}
 .legend .sep{width:1px;height:12px;background:var(--rule)}
-#pinned.tall{max-height:78vh}
-#pinned.folded{max-height:none}
-#pinned.folded .panel,#pinned.folded #tableWrap,#pinned.folded #foot{display:none}
-#pinned .bar .fold{font:inherit;font-size:13px;line-height:1;cursor:pointer;
-  background:none;border:1px solid var(--rule);border-radius:4px;color:var(--ink-faint);
-  padding:2px 7px;order:-1}
-#pinned .bar .fold:hover{color:var(--ink);border-color:var(--ink-faint)}
-#pinned.folded .bar .fold{transform:rotate(180deg)}
-
-table.round{width:100%;border-collapse:collapse;font-size:12.5px}
-table.round td{padding:7px 10px 7px 0;border-bottom:1px solid var(--rule-soft);
+.gridwrap{max-height:min(62vh,560px);overflow:auto;border-top:1px solid var(--rule-soft)}
+table.cmp{border-collapse:separate;border-spacing:0;width:100%;font-size:12.5px}
+table.cmp thead th{position:sticky;top:0;z-index:2;background:var(--surface-2);
+  font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--ink-soft);font-weight:600;text-align:left;
+  padding:7px 10px;border-bottom:1px solid var(--rule);white-space:nowrap}
+table.cmp thead th.num{text-align:right}
+table.cmp tbody td{padding:5px 10px;border-bottom:1px solid var(--rule-soft);
   vertical-align:top}
-table.round td.v{font-weight:500;width:230px}
-table.round td.s{width:150px;font-family:"IBM Plex Mono",monospace;font-size:10.5px;
-  letter-spacing:.04em;text-transform:uppercase}
-table.round tr.done td.s{color:var(--ok)}
-table.round tr.wait td.s{color:var(--warn)}
-table.round td.n{font-size:11.5px;color:var(--dim)}
-.roundhead{display:flex;align-items:baseline;gap:10px;margin-bottom:11px}
-.roundhead b{font-weight:500;font-size:13px}
-.roundhead .st{font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--dim);
-  text-transform:uppercase;letter-spacing:.06em}
-.roundnote{margin-top:11px;font-size:11.5px;color:var(--dim);max-width:60ch;line-height:1.55}
+table.cmp tbody td.num{text-align:right;font-family:"IBM Plex Mono",monospace;
+  font-variant-numeric:tabular-nums;white-space:nowrap;cursor:pointer;position:relative}
+table.cmp tbody td.num:hover{outline:1.5px solid var(--accent);outline-offset:-1.5px}
+table.cmp td.num small{display:block;font-size:9.5px;color:var(--ink-faint);
+  font-family:"IBM Plex Mono",monospace;letter-spacing:.02em;margin-top:1px}
+td.s-derived{background:var(--derived-bg);box-shadow:inset 2px 0 0 var(--derived-line)}
+td.s-unresolved{background:var(--risk-bg);box-shadow:inset 2px 0 0 var(--risk-line);
+  color:var(--risk);font-weight:600}
+td.s-extracted{background:transparent}
+table.cmp tbody td.num i.rank{position:absolute;left:6px;bottom:3px;height:2px;
+  border-radius:1px;background:var(--rank);opacity:.75;max-width:calc(100% - 12px);
+  pointer-events:none}
+table.cmp tbody td.best{font-weight:500}
+table.cmp tbody td.best::before{content:"";position:absolute;left:0;top:4px;bottom:4px;
+  width:2px;background:var(--accent);border-radius:1px}
+td.item{max-width:330px;font-size:12px;line-height:1.35}
+td.item small{display:block;color:var(--ink-faint);font-family:"IBM Plex Mono",monospace;
+  font-size:9.5px;letter-spacing:.03em}
+.foots{padding:8px 16px;font-size:11px;color:var(--ink-soft);
+  border-top:1px solid var(--rule-soft)}
+/* The grid bleeds to the card edge; the prose above it keeps its gutter. */
+.box>.bb>.gridwrap{margin:10px -16px 0}
+.box>.bb>.foots{margin:0 -16px}
+.choice .opts{display:flex;flex-direction:column;gap:1px}
 
-.block.mail .mailfull{max-height:none}
-.block.mail .verify{margin-top:10px;padding-top:9px;border-top:1px solid var(--rule-soft);
-  font-size:12px;color:var(--ink-soft);line-height:1.5}
+/* ---------- options, memo, suggestions ---------- */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(228px,1fr));gap:12px;
+  margin-bottom:12px}
+.ocard{border:1px solid var(--rule);border-radius:7px;padding:15px 16px 16px;
+  background:var(--surface);position:relative;display:flex;flex-direction:column;gap:7px}
+.ocard:first-child::before{content:"";position:absolute;left:-1px;right:-1px;top:-1px;
+  height:2px;background:var(--accent);border-radius:7px 7px 0 0}
+.ocard.bad{border-color:var(--risk-line);background:var(--risk-bg)}
+.ocard.off{opacity:.62;border-style:dashed}
+.ocard .lbl{font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--dim);margin:0}
+.ocard .cost{font-family:Newsreader,Georgia,serif;font-size:1.62rem;line-height:1;margin:0;
+  font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.ocard .cost.na{font-size:1rem;color:var(--dim);font-family:"IBM Plex Mono",monospace}
+.ocard .delta{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--dim);
+  vertical-align:middle;margin-left:3px}
+.ocard .facts{display:flex;flex-wrap:wrap;gap:4px 12px;font-family:"IBM Plex Mono",monospace;
+  font-size:10px;color:var(--dim);margin:0;padding-bottom:8px;
+  border-bottom:1px solid var(--rule-soft)}
+.ocard .who2{font-size:11.5px;margin:0;line-height:1.45}
+.ocard .why{font-size:11.5px;color:var(--dim);line-height:1.5;margin:0}
+.ocard .viol{margin:0;padding-left:15px;font-size:11px;color:var(--risk)}
+.ocard .pick{margin-top:auto;font:inherit;font-size:11px;cursor:pointer;border-radius:4px;
+  padding:5px 10px;border:1px solid var(--rule);background:none;color:var(--ink-soft)}
+.ocard .pick:hover{border-color:var(--accent);color:var(--accent)}
+.sug{display:flex;gap:11px;padding:10px 0;border-bottom:1px solid var(--rule-soft);
+  align-items:baseline}
+.sug:last-child{border-bottom:0}
+.sug .i{font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--ink-faint);
+  flex:none;padding-top:2px}
+.sug b{font-weight:600;font-size:12.5px;display:block;margin-bottom:2px}
+.sug span{font-size:11.5px;color:var(--ink-soft);line-height:1.5}
+.md{font-size:13px;line-height:1.6}
+.md h3{font-family:Newsreader,Georgia,serif;font-weight:500;font-size:1.15rem;margin:.2em 0 .5em}
+.md h4{font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--dim);margin:1.4em 0 .5em}
+.md h5{font-size:12.5px;margin:1em 0 .3em}
+.md ul{padding-left:18px;margin:.4em 0}
+.md hr{border:0;border-top:1px solid var(--rule);margin:1.2em 0}
+
+/* ---------- gaps and follow-up ---------- */
+.gap{border:1px solid var(--rule);border-left:2px solid var(--derived);border-radius:6px;
+  padding:11px 13px;margin:0 0 9px;background:var(--surface)}
+.gap.sent{border-left-color:var(--ok);opacity:.85}
+.gap .top{display:flex;align-items:baseline;gap:9px;margin-bottom:4px;flex-wrap:wrap}
+.gap .top b{font-weight:600;font-size:12.5px}
+.gap .at{font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--dim);
+  margin-left:auto}
+.gap ul{margin:5px 0 0;padding-left:16px;font-size:12px;color:var(--ink-soft)}
+.gap li{margin-bottom:3px}
+.gap li em{font-style:normal;color:var(--ink-faint);font-size:11px;display:block}
+.gap .rfoot{display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap}
+.moved{display:flex;gap:18px;flex-wrap:wrap;margin:8px 0 0}
+.moved div{font-size:12px}
+.moved b{display:block;font-family:"IBM Plex Mono",monospace;font-size:15px;font-weight:600}
+.moved .up{color:var(--good)} .moved .dn{color:var(--good)}
+
+/* ---------- review queue ---------- */
+.rgroup{border:1px solid var(--rule);border-left:2px solid var(--derived);border-radius:6px;
+  padding:12px 13px 10px;margin:0 0 9px;background:var(--surface)}
+.rgroup.done{opacity:.5;border-left-color:var(--ok)}
+.rgroup .top{display:flex;align-items:baseline;gap:9px;margin-bottom:5px}
+.rgroup .top b{font-weight:500;font-size:13px;flex:1}
+.rgroup .n,.rgroup .conf{font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--dim);
+  white-space:nowrap}
+.rgroup .why{font-size:12px;line-height:1.5;color:var(--ink-soft);max-width:62ch}
+.rgroup .who2{font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--ink-faint);
+  margin-top:5px}
+.rfoot{display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap}
+.rcells{margin-top:9px;padding-top:9px;border-top:1px solid var(--rule-soft)}
+.cell{border:1px solid var(--rule);background:var(--paper);padding:10px 12px;margin:0 0 8px;
+  border-radius:5px}
+.cell .top{display:flex;gap:10px;align-items:baseline;margin-bottom:4px}
+.cell .conf{font-family:"IBM Plex Mono",monospace;font-size:10.5px;font-weight:600;
+  color:var(--risk);background:var(--risk-bg);padding:2px 6px;border-radius:2px}
+.cell .why{font-size:12px;color:var(--ink-soft);margin:4px 0 8px}
+.cell button{font-size:11px;padding:4px 10px;margin-right:6px;border:1px solid var(--rule);
+  background:var(--surface);color:var(--ink-soft);cursor:pointer;border-radius:4px}
+.cell button:hover{border-color:var(--accent);color:var(--accent)}
+.fixrow{display:flex;gap:6px;margin-top:8px;align-items:center}
+.fixrow input{font:inherit;font-size:12px;flex:1;min-width:0;padding:5px 8px;
+  border:1px solid var(--accent);border-radius:4px;background:var(--surface);color:var(--ink)}
+
+/* ---------- charts ---------- */
 .fig{margin:0 0 22px}
 .fig h3{font-size:13px;font-weight:500;margin:0 0 2px}
-.fig .sub{font-size:11.5px;color:var(--dim);margin:0 0 11px;line-height:1.5;max-width:64ch}
+.fig .sub{font-size:11.5px;color:var(--dim);margin:0 0 11px;line-height:1.5;max-width:70ch}
 .fig svg{display:block;width:100%;height:auto;overflow:visible}
 .fig .bar{fill:var(--accent)}
 .fig .bar.tail{fill:var(--rule)}
 .fig .bar:hover{fill:var(--rank)}
 .fig .lbl{font-family:"IBM Plex Mono",monospace;font-size:9px;fill:var(--ink-faint)}
 .fig .val{font-family:"IBM Plex Mono",monospace;font-size:9.5px;fill:var(--ink-soft)}
-.fig .axis{stroke:var(--rule-soft);stroke-width:1}
-.fig .foot{display:flex;gap:8px;margin-top:8px;align-items:center}
-.fig .foot button{font:inherit;font-size:11px;cursor:pointer;border-radius:4px;
-  padding:4px 10px;border:1px solid var(--rule);background:none;color:var(--ink-soft)}
+.fig .foot{display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap}
 .fig .key{font-size:11px;color:var(--dim);display:flex;gap:14px;align-items:center}
 .fig .key i{width:10px;height:10px;display:inline-block;margin-right:5px;vertical-align:-1px}
 .fig .key .a{background:var(--accent)} .fig .key .t{background:var(--rule)}
-#tip{position:fixed;pointer-events:none;z-index:60;background:var(--ink);color:var(--paper);
-  font-size:11.5px;line-height:1.45;padding:7px 9px;border-radius:5px;max-width:280px;
-  box-shadow:0 6px 20px rgba(0,0,0,.25)}
-#tip[hidden]{display:none}
-#tip b{font-weight:600}
-#tip .m{font-family:"IBM Plex Mono",monospace;font-size:10.5px;opacity:.85;display:block;margin-top:2px}
 table.sheet{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px}
 table.sheet th{text-align:left;font-family:"IBM Plex Mono",monospace;font-size:9.5px;
   letter-spacing:.06em;text-transform:uppercase;color:var(--dim);padding:0 10px 5px 0;
@@ -298,91 +394,73 @@ table.sheet th{text-align:left;font-family:"IBM Plex Mono",monospace;font-size:9
 table.sheet td{padding:5px 10px 5px 0;border-bottom:1px solid var(--rule-soft)}
 table.sheet td.num,table.sheet th.num{text-align:right;
   font-family:"IBM Plex Mono",monospace;font-size:11px}
-#tableWrap{overflow:auto;min-height:0}
-#tableWrap td.num small{display:block;font-size:9.5px;color:var(--ink-faint);
-  font-family:"IBM Plex Mono",monospace;letter-spacing:.02em;margin-top:1px}
-table{border-collapse:separate;border-spacing:0;width:100%;font-size:12.5px}
-thead th{position:sticky;top:0;z-index:2;background:var(--surface-2);
-  font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.06em;
-  text-transform:uppercase;color:var(--ink-soft);font-weight:600;text-align:left;
-  padding:7px 10px;border-bottom:1px solid var(--rule);white-space:nowrap}
-thead th.num{text-align:right}
-tbody td{padding:5px 10px;border-bottom:1px solid var(--rule-soft);vertical-align:top}
-tbody td.num{text-align:right;font-family:"IBM Plex Mono",monospace;
-  font-variant-numeric:tabular-nums;white-space:nowrap;cursor:pointer}
-tbody td.num:hover{outline:1.5px solid var(--accent);outline-offset:-1.5px}
-td.s-derived{background:var(--derived-bg);box-shadow:inset 2px 0 0 var(--derived-line)}
-td.s-unresolved{background:var(--risk-bg);box-shadow:inset 2px 0 0 var(--risk-line);
-  color:var(--risk);font-weight:600}
-td.s-extracted{background:transparent}
+#tip{position:fixed;pointer-events:none;z-index:60;background:var(--ink);color:var(--paper);
+  font-size:11.5px;line-height:1.45;padding:7px 9px;border-radius:5px;max-width:280px;
+  box-shadow:0 6px 20px rgba(0,0,0,.25)}
+#tip[hidden]{display:none}
+#tip b{font-weight:600}
+#tip .m{font-family:"IBM Plex Mono",monospace;font-size:10.5px;opacity:.85;display:block;
+  margin-top:2px}
 
-/* Price rank. A 2px mark, not a wash: length is the magnitude channel and the
-   background stays reserved for cell state. #5B8DB8 clears 3:1 on the light
-   surface and #5E8CB4 clears 4.6:1 on the dark one. */
-tbody td.num{position:relative}
-tbody td.num i.rank{position:absolute;left:6px;bottom:3px;height:2px;border-radius:1px;
-  background:var(--rank);opacity:.75;max-width:calc(100% - 12px);pointer-events:none}
-tbody td.best{font-weight:500}
-tbody td.best::before{content:"";position:absolute;left:0;top:4px;bottom:4px;width:2px;
-  background:var(--accent);border-radius:1px}
-td.item{max-width:340px;font-size:12px;line-height:1.35}
-td.item small{display:block;color:var(--ink-faint);font-family:"IBM Plex Mono",monospace;
-  font-size:9.5px;letter-spacing:.03em}
-tr.flash td{animation:flash .9s ease-out}
-@keyframes flash{0%{background:var(--accent-soft)}100%{}}
-#foot{padding:7px 20px;font-size:11px;color:var(--ink-soft);border-top:1px solid var(--rule-soft);flex:none}
-
-/* ---------- chat ---------- */
-#chat{flex:1;overflow:auto;padding:18px 20px 8px;min-height:0}
-.turn{max-width:78ch;margin:0 0 16px}
-.turn.you{margin-left:auto;text-align:right}
-.turn.you .bubble{display:inline-block;background:var(--accent);color:#fff;
-  padding:7px 13px;border-radius:3px;text-align:left;font-size:13.5px}
-.who{font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.11em;
-  text-transform:uppercase;color:var(--ink-faint);margin-bottom:5px;font-weight:600}
-.block{margin:0 0 10px}
-.block p{margin:0 0 8px}
-.status{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--ink-faint)}
-details.qry{border-left:2px solid var(--rule);padding-left:10px;margin:6px 0}
+/* ---------- chat blocks ---------- */
+details.qry{border-left:2px solid var(--rule);padding-left:10px;margin:6px 0 12px}
 details.qry summary{cursor:pointer;font-family:"IBM Plex Mono",monospace;font-size:10.5px;
   color:var(--ink-faint);letter-spacing:.05em}
 details.qry pre{font-family:"IBM Plex Mono",monospace;font-size:11px;white-space:pre-wrap;
   background:var(--surface);padding:9px 11px;margin:6px 0 0;overflow-x:auto;
   border:1px solid var(--rule-soft)}
-.refusal{border-left:3px solid var(--derived);background:var(--surface);padding:12px 15px}
+.refusal{border-left:3px solid var(--derived);background:var(--surface);padding:12px 15px;
+  border-radius:0 5px 5px 0;margin:0 0 12px;max-width:80ch}
 .refusal .h{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.11em;
   text-transform:uppercase;color:var(--derived);font-weight:600;margin-bottom:5px}
 .refusal ul{margin:7px 0 0;padding-left:18px;font-size:12.5px;color:var(--ink-soft)}
-.card{border:1px solid var(--rule);background:var(--surface);padding:11px 13px;margin:0 0 8px}
-.card .top{display:flex;gap:10px;align-items:baseline;margin-bottom:5px}
-.card .conf{font-family:"IBM Plex Mono",monospace;font-size:10.5px;font-weight:600;
-  color:var(--risk);background:var(--risk-bg);padding:2px 6px;border-radius:2px}
-.card .why{font-size:12px;color:var(--ink-soft);margin:4px 0 8px}
-.card button{font-size:11.5px;padding:4px 10px;margin-right:6px;border:1px solid var(--rule);
-  background:var(--surface-2);color:var(--ink);cursor:pointer;border-radius:2px;
-  font-family:inherit}
-.card button:hover{border-color:var(--accent);color:var(--accent)}
-.asm{width:100%;font-size:12px}
-.asm td{padding:4px 8px;border-bottom:1px solid var(--rule-soft)}
-.asm input{width:88px;font-family:"IBM Plex Mono",monospace;font-size:11.5px;
-  background:var(--surface);color:var(--ink);border:1px solid var(--rule);padding:2px 5px}
-svg.chart text{font-family:"IBM Plex Mono",monospace;font-size:9px;fill:var(--ink-soft)}
+.choice{border:1px solid var(--rule);border-radius:6px;padding:13px 14px 11px;
+  background:var(--surface);margin:0 0 12px;max-width:80ch}
+.choice.done{opacity:.55}
+.choice .h{font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--dim);margin-bottom:9px}
+.choice .opt{display:flex;align-items:flex-start;gap:9px;width:100%;text-align:left;
+  background:none;border:0;border-radius:4px;padding:7px 9px;cursor:pointer;color:var(--ink);
+  font:inherit;font-size:12.5px;line-height:1.4}
+.choice .opt:hover{background:var(--surface-2)}
+.choice .opt .mark{flex:none;width:12px;height:12px;margin-top:3px;border:1px solid var(--rule);
+  border-radius:3px}
+.choice .opt.on .mark{background:var(--accent);border-color:var(--accent);
+  box-shadow:inset 0 0 0 2px var(--surface)}
+.choice .opt em{display:block;font-style:normal;font-size:11px;color:var(--dim);margin-top:1px}
+.choice .cnote{font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--ink-faint);
+  margin-top:9px;line-height:1.5}
+.choice .foot{display:flex;gap:8px;margin-top:10px;padding-top:9px;
+  border-top:1px solid var(--rule-soft)}
+.asm{width:100%;font-size:12px;border-collapse:collapse}
+.asm td{padding:4px 8px 4px 0;border-bottom:1px solid var(--rule-soft)}
+.derivation{background:var(--paper);border:1px solid var(--rule-soft);padding:10px 12px;
+  font-size:12px;margin:0 0 12px;border-radius:5px}
+.derivation h4{margin:0 0 6px;font-family:"IBM Plex Mono",monospace;font-size:10px;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint)}
+.derivation li{margin-bottom:5px;color:var(--ink-soft)}
+table.prov{width:100%;border-collapse:collapse;margin-top:10px;font-size:11px}
+table.prov th{text-align:left;font-family:"IBM Plex Mono",monospace;font-size:9.5px;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--dim);padding:4px 10px 4px 0;
+  border-bottom:1px solid var(--rule)}
+table.prov td{padding:4px 10px 4px 0;border-bottom:1px solid var(--rule)}
 
 /* ---------- composer ---------- */
-#composer{flex:none;border-top:1px solid var(--rule);background:var(--surface);padding:11px 20px}
+#composer{flex:none;border-top:1px solid var(--rule);background:var(--surface);
+  padding:11px 20px}
+#composer .in{max-width:940px;margin:0 auto}
 #composer form{display:flex;gap:9px}
 #q{flex:1;font-family:inherit;font-size:14px;padding:9px 12px;background:var(--paper);
   color:var(--ink);border:1px solid var(--rule);border-radius:3px}
 #q:focus{outline:2px solid var(--accent);outline-offset:-1px}
-#composer button{padding:9px 18px;background:var(--accent);color:#fff;border:0;
-  border-radius:3px;font-family:inherit;font-size:13.5px;font-weight:500;cursor:pointer}
+#composer form button{padding:9px 18px;background:var(--accent);color:#fff;border:0;
+  border-radius:3px;font-size:13.5px;font-weight:500;cursor:pointer}
 .suggest{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
-#composer .suggest button{background:transparent;border:1px solid var(--rule);
-  color:var(--ink-soft);font-size:11.5px;padding:4px 9px;border-radius:2px;
-  cursor:pointer;font-family:inherit;font-weight:400}
-#composer .suggest button:hover{border-color:var(--accent);color:var(--accent)}
+.suggest button{background:transparent;border:1px solid var(--rule);color:var(--ink-soft);
+  font-size:11.5px;padding:4px 9px;border-radius:2px;cursor:pointer;font-weight:400}
+.suggest button:hover{border-color:var(--accent);color:var(--accent)}
 
-/* ---------- drawer ---------- */
+/* ---------- evidence drawer ---------- */
 #drawer{position:fixed;top:0;right:0;height:100%;width:min(520px,92vw);
   background:var(--surface);border-left:1px solid var(--rule);z-index:40;
   transform:translateX(101%);transition:transform .22s ease;display:flex;
@@ -402,79 +480,50 @@ svg.chart text{font-family:"IBM Plex Mono",monospace;font-size:9px;fill:var(--in
   font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.04em;
   text-transform:uppercase;padding-top:2px}
 .kv b{font-weight:600}
-.derivation{background:var(--paper);border:1px solid var(--rule-soft);padding:10px 12px;
-  font-size:12px;margin:0 0 12px}
-.derivation h4{margin:0 0 6px;font-family:"IBM Plex Mono",monospace;font-size:10px;
-  letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint)}
-.derivation li{margin-bottom:5px;color:var(--ink-soft)}
+.src details.sheet{margin-bottom:12px}
+.src details.sheet summary{font-family:"IBM Plex Mono",monospace;font-size:10px;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--dim);cursor:pointer;padding:5px 0}
+table.grid{border-collapse:collapse;font-family:"IBM Plex Mono",monospace;font-size:10.5px;
+  width:100%;table-layout:fixed}
+table.grid td{border:1px solid var(--rule);padding:3px 5px;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;max-width:110px}
+table.grid td.hid{opacity:.45;font-style:italic}
+table.grid td.hit{background:var(--accent-soft);outline:1.5px solid var(--accent);
+  outline-offset:-1.5px}
+table.grid tr.hit td{background:var(--accent-soft)}
+.src h5{font-size:12px;margin:1em 0 .3em}
+.src p{font-size:12px;line-height:1.55;margin:.4em 0}
 #scrim{position:fixed;inset:0;background:rgba(10,12,14,.30);z-index:39;display:none}
 #scrim.on{display:block}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:680px){
+  .box>.bh .sub{display:none}
+  td.item{max-width:200px}
+}
 </style>
 </head>
 <body>
 
 <header>
   <h1>Kill the Quote Spreadsheet</h1>
-  <!-- The header used to recite the state of the data — "NO RFX YET · ITEM
-       MASTER 30 LINES · APPROVED VENDORS 5". None of it was actionable and all
-       of it is visible elsewhere. What belongs here is where you are, and the
-       two things that need your attention. -->
   <div class="meta" id="meta"></div>
   <div class="spacer"></div>
   <button class="chip risk" id="chipReview" hidden></button>
-  <button class="chip warn" id="chipAsm">assumptions</button>
+  <button class="chip warn" id="chipAsm" hidden>assumptions</button>
+  <button class="chip plain" id="chipReset">start over</button>
 </header>
 
-<main>
-  <div id="stage">
-    <section id="pinned">
-      <div class="bar">
-        <!-- Tabs live INSIDE the artifact, not beside the chat: picking line
-             items is editing the RFx, so the picker belongs with it. -->
-        <nav class="tabs" id="tabs">
-          <button data-tab="main" class="on" id="tabMain">RFx draft</button>
-          <button data-tab="options" id="tabOptions" hidden>Options</button>
-          <button data-tab="spend" id="tabSpend" hidden>Where the money is</button>
-          <button data-tab="round" id="tabRound" hidden>Round</button>
-          <button data-tab="items">Item master</button>
-          <button data-tab="vendors">Vendors</button>
-        </nav>
-        <span class="sub" id="pinSub"></span>
-        <div class="right">
-          <button class="fold" id="fold" title="Collapse this panel"
-                  aria-label="Collapse this panel">⌃</button>
-          <div class="legend" id="legend">
-            <span><i class="e"></i>extracted</span>
-            <span><i class="d"></i>derived</span>
-            <span><i class="u"></i>unresolved</span>
-            <span class="sep"></span>
-            <span><i class="b"></i>cheapest on the line</span>
-            <span><i class="r"></i>how far above it</span>
-          </div>
-        </div>
-      </div>
-      <div id="tableWrap"></div>
-      <div id="panelDraft" class="panel" hidden></div>
-      <div id="panelOptions" class="panel" hidden></div>
-      <div id="panelItems" class="panel" hidden></div>
-      <div id="panelVendors" class="panel" hidden></div>
-      <div id="panelRound" class="panel" hidden></div>
-      <div id="panelSpend" class="panel" hidden></div>
-      <div id="foot"></div>
-    </section>
+<main id="thread"><div id="col"></div></main>
 
-    <div id="chat"></div>
-
-    <div id="composer">
-      <form id="f">
-        <input id="q" autocomplete="off" placeholder="Tell me what you need to buy…">
-        <button type="submit">Ask</button>
-      </form>
-      <div class="suggest" id="suggest"></div>
-    </div>
+<div id="composer">
+  <div class="in">
+    <form id="f">
+      <input id="q" autocomplete="off" placeholder="Tell me what you need to buy…">
+      <button type="submit">Ask</button>
+    </form>
+    <div class="suggest" id="suggest"></div>
   </div>
-</main>
+</div>
 
 <div id="tip" hidden></div>
 <div id="scrim"></div>
@@ -484,490 +533,638 @@ svg.chart text{font-family:"IBM Plex Mono",monospace;font-size:9px;fill:var(--in
 </aside>
 
 <script>
+/* ===========================================================================
+   Helpers
+   ======================================================================== */
 const $ = s => document.querySelector(s);
 const el = (t, c, h) => { const e = document.createElement(t); if (c) e.className = c;
   if (h !== undefined) e.innerHTML = h; return e; };
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const inr = n => '₹' + Number(n).toLocaleString('en-IN', {maximumFractionDigits:2});
+const inr  = n => '₹' + Number(n).toLocaleString('en-IN', {maximumFractionDigits:2});
+const inr0 = n => '₹' + Math.round(n).toLocaleString('en-IN');
+const num  = n => Number(n).toLocaleString('en-IN');
+const plural = (n, w) => n + ' ' + w + (n === 1 ? '' : 's');
+const fortnight = () => new Date(Date.now() + 14 * 864e5).toISOString().slice(0, 10);
+const jget = async u => { const r = await fetch(u);
+  if (!r.ok) throw new Error((await r.text()).slice(0, 180)); return r.json(); };
 
-let STATE = null, CATALOGUE = null, DRAFT = null, LASTDRAFT = null,
-    ITEMCAT = 'corrugated', ROUND = null, ISSUE_OFFERED = false;
+let CAT = null, DRAFT = null, STATE = null, ROUND = null, SPENDDATA = null;
+let PHASE = 'draft', ITEMCAT = 'corrugated';
+const S = {};                       // the cards, by name — one of each, ever
 
-/* ---------------- boot ---------------- */
+/* ---------------- the column ---------------- */
+const col = () => $('#col');
+function atEnd(node){ col().appendChild(node); scrollEnd(); return node; }
+function scrollEnd(){ requestAnimationFrame(() => { $('#thread').scrollTop = 1e9; }); }
+
+function turn(who, cls){
+  const d = el('div', 'turn ' + (cls || ''));
+  if (who) d.appendChild(el('div', 'who', esc(who)));
+  return atEnd(d);
+}
+function say(who, html){
+  const t = turn(who);
+  t.appendChild(el('div', 'block', html));
+  return t;
+}
+
+/* A card. Header, body, footer; it can collapse to one line and come back. */
+function box(o){
+  const b = el('section', 'box');
+  if (o.key) b.dataset.card = o.key;   // a stable hook for the smoke test
+  const bh = el('div', 'bh');
+  if (o.n) bh.appendChild(el('span', 'n', esc(o.n)));
+  bh.appendChild(el('h2', '', esc(o.title)));
+  const sub = el('span', 'sub');
+  bh.appendChild(sub);
+  const bb = el('div', 'bb' + (o.flush ? ' flush' : ''));
+  const bf = el('div', 'bf'); bf.hidden = true;
+  b.append(bh, bb, bf);
+  b.head = bh; b.body = bb; b.foot = bf;
+  b.setSub = t => { sub.textContent = t || ''; };
+  return b;
+}
+function collapse(b, text, onEdit){
+  // The summary is a function of the draft, not a string frozen when the step
+  // was closed. The co-pilot can change a closed step from the box at the
+  // bottom, and a card still claiming "30 lines" after it was cut to twelve is
+  // worse than no summary at all.
+  b._sum = typeof text === 'function' ? text : () => text;
+  b.classList.add('done');
+  b.body.hidden = true; b.foot.hidden = true;
+  b.setSub('');
+  b.head.querySelectorAll('.done-line,.reopen').forEach(x => x.remove());
+  b.head.appendChild(el('span', 'done-line',
+    '<span class="tick-ok">✓</span>' + esc(b._sum())));
+  if (onEdit !== null){
+    const edit = el('button', 'mini reopen', 'Change');
+    edit.onclick = () => { expand(b); if (onEdit) onEdit(); };
+    b.head.appendChild(edit);
+  }
+  return b;
+}
+function resummarise(b){
+  if (!b || !b._sum || !b.classList.contains('done')) return;
+  const line = b.head.querySelector('.done-line');
+  if (line) line.innerHTML = '<span class="tick-ok">\u2713</span>' + esc(b._sum());
+}
+function expand(b){
+  b.classList.remove('done');
+  b.body.hidden = false; b.foot.hidden = false;
+  b.head.querySelectorAll('.done-line,.reopen').forEach(x => x.remove());
+  b.scrollIntoView({block:'nearest'});
+  return b;
+}
+function actions(b, list){
+  b.foot.replaceChildren();
+  b.foot.hidden = !list.length;
+  list.forEach(([label, cls, fn, disabled]) => {
+    const x = el('button', cls, esc(label));
+    if (disabled) x.disabled = true;
+    x.onclick = fn;
+    b.foot.appendChild(x);
+  });
+  return b.foot;
+}
+
+/* ===========================================================================
+   Boot
+   ======================================================================== */
 async function boot(){
-  // The item master and the vendor list are needed in BOTH halves of the
-  // product, so they load here rather than in enterDraft. They used to load
-  // only while drafting, which meant that after the quotes arrived — the exact
-  // moment a buyer wants to check what was actually asked for — those two tabs
-  // opened on nothing at all.
-  const [st, cat] = await Promise.all([
-    fetch('/api/state').then(r => r.json()),
-    fetch('/api/catalogue').then(r => r.json())]);
-  STATE = st; CATALOGUE = cat;
-  await refreshDraft();
   $('#chipAsm').onclick = showAssumptions;
-  $('#tabs').querySelectorAll('button').forEach(
-    b => b.onclick = () => openTab(b.dataset.tab));
-  // The pinned artifact is the point of the screen and it is also the thing in
-  // the way of the conversation. Let it fold.
-  $('#fold').onclick = () => {
-    const on = $('#pinned').classList.toggle('folded');
-    $('#fold').title = on ? 'Show this panel' : 'Collapse this panel';
-  };
-  // A round that is already under way outlives the tab it was started in:
-  // anyone opening the page mid-round should see where it has got to.
-  try {
-    ROUND = await fetch('/api/round').then(r => r.json());
-    if (ROUND && ROUND.state && ROUND.state !== 'idle'){
-      $('#tabRound').hidden = false;
-      renderRound(ROUND);
-    }
-  } catch (e){ /* a round is a bonus; never block the page on it */ }
-  if (STATE.phase === 'draft') enterDraft(); else await enterComparison();
+  $('#chipReset').onclick = resetAll;
+  $('#dClose').onclick = closeDrawer; $('#scrim').onclick = closeDrawer;
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+  $('#f').onsubmit = e => { e.preventDefault();
+    const v = $('#q').value.trim(); if (v) ask(v); };
+
+  let d;
+  [d, CAT] = await Promise.all([jget('/api/draft'), jget('/api/catalogue')]);
+  DRAFT = d.draft; DRAFT.missing = d.missing; PHASE = d.phase;
+  try { ROUND = await jget('/api/round'); } catch (e){ ROUND = null; }
+
+  if (PHASE === 'comparison'){ await enterResults({restored: true}); }
+  else { openAuthoring(); }
 }
 
-/* The product has two halves and the screen has two states. Before an RFx
-   exists there is nothing to pin, so the canvas is empty and the conversation
-   is the whole surface — which is the honest shape of that half of the job. */
-async function enterDraft(){
-  $('#tabMain').textContent = 'RFx draft';
-  $('#tabOptions').hidden = true;
-  $('#meta').innerHTML = '<span>Drafting</span>';
-  $('#chipAsm').hidden = true;
-  $('#q').placeholder = 'Tell me what you need to buy…';
-  openTab('main');
-  $('#panelDraft').replaceChildren(el('div','empty',
-    'No RFx yet. Say what you need to buy and I will draft the whole thing — '
-    + 'or open the item master and pick the lines yourself.'));
-  const t = turn('Co-pilot');
-  t.appendChild(el('div','block', `<p>Tell me what you're buying and I'll draft
-    the RFx — schedule, questionnaire, terms — then you change what matters.</p>`));
-  suggest([
-    'Annual corrugated packaging, back in two weeks',
-    'Same as last year, but 30-day terms',
-    'What should I gate on?',
-    'Only the 3-ply boxes this quarter']);
+async function resetAll(){
+  await fetch('/api/reset', {method:'POST'});
+  location.reload();
 }
 
-async function enterComparison(){
-  STATE = await (await fetch('/api/state')).json();
-  const r = STATE.rfx, c = STATE.counts;
-  $('#tabMain').textContent = 'Comparison';
-  $('#tabOptions').hidden = false;
-  $('#tabSpend').hidden = false;
-  $('#chipAsm').hidden = false;
-  $('#q').placeholder = 'Ask about the comparison…';
-  $('#meta').innerHTML = `<span>${esc(r.rfx_id)}</span>
-    <span>${esc(r.required_payment_terms)}</span>
-    <span>${c.unresolved} unresolved</span>`;
-  const b = $('#chipReview');
-  if (STATE.open_reviews){
-    b.hidden = false; b.textContent = STATE.open_reviews + ' need review';
-    b.onclick = showReviews;
-  } else { b.hidden = true; }
-  renderTable(STATE.comparison);
-  openTab('main');
-  greet();
+/* The draft is read back from the server, never tracked here. Two copies of the
+   RFx — one in the browser, one in the session — is exactly how a picker and a
+   co-pilot end up disagreeing about what is going out to five companies. */
+async function patchDraft(patch){
+  const r = await fetch('/api/draft', {method:'POST',
+    headers:{'Content-Type':'application/json'}, body: JSON.stringify(patch)});
+  const j = await r.json();
+  DRAFT = j.draft; DRAFT.missing = j.missing;
+  headerMeta();
+  return DRAFT;
+}
+async function reloadDraft(){
+  const j = await jget('/api/draft');
+  DRAFT = j.draft; DRAFT.missing = j.missing; PHASE = j.phase;
+  headerMeta();
+  return DRAFT;
+}
+
+function headerMeta(){
+  const m = $('#meta');
+  if (PHASE === 'draft'){
+    const l = (DRAFT.line_nos || []).length, v = (DRAFT.vendor_ids || []).length;
+    m.innerHTML = `<span>Drafting</span>` +
+      (l ? `<span>${l} line${l === 1 ? '' : 's'}</span>` : '') +
+      (v ? `<span>${v} vendor${v === 1 ? '' : 's'}</span>` : '');
+  } else if (STATE && STATE.rfx){
+    m.innerHTML = `<span>${esc(STATE.rfx.rfx_id)}</span>
+      <span>${esc(STATE.rfx.required_payment_terms || '')}</span>
+      <span>${STATE.counts.unresolved} unresolved</span>`;
+  }
 }
 
 function suggest(list){
   const s = $('#suggest'); s.replaceChildren();
-  list.forEach(x => {
-    const b = el('button', '', esc(x.length > 46 ? x.slice(0,44) + '…' : x));
-    b.title = x; b.onclick = () => ask(x); s.appendChild(b); });
+  (list || []).forEach(x => {
+    const b = el('button', '', esc(x.length > 46 ? x.slice(0, 44) + '…' : x));
+    b.title = x; b.onclick = () => ask(x); s.appendChild(b);
+  });
 }
 
-
-/* ---------------- the panels behind the tabs ----------------
-
-   Four tabs, one artifact. The comparison and the draft share a slot because
-   they are the same object at two ages — before quotes and after. The item
-   master and the approved-vendor list sit beside them rather than in the chat,
-   because picking a line is EDITING the RFx, not asking a question about it.
-
-   Every click in here writes straight to /api/draft with no model call. Ticking
-   twelve line items is data entry, and a co-pilot that occasionally mis-ticks
-   one is strictly worse than a checkbox. The model is for the decisions. */
-
-function openTab(name){
-  const drafting = !STATE || STATE.phase === 'draft';
-  $('#tabs').querySelectorAll('button').forEach(
-    b => b.classList.toggle('on', b.dataset.tab === name));
-  $('#tableWrap').hidden    = !(name === 'main' && !drafting);
-  $('#panelDraft').hidden   = !(name === 'main' && drafting);
-  if (!$('#pinned').classList.contains('folded')) $('#fold').hidden = false;
-  $('#panelOptions').hidden = name !== 'options';
-  $('#panelItems').hidden   = name !== 'items';
-  $('#panelVendors').hidden = name !== 'vendors';
-  $('#panelRound').hidden   = name !== 'round';
-  $('#panelSpend').hidden   = name !== 'spend';
-  // The legend explains cell states in the comparison grid. On any other tab it
-  // is labelling something that is not on screen.
-  $('#legend').style.visibility = (name === 'main' && !drafting) ? '' : 'hidden';
-  // A panel remembers where it was scrolled to, which means opening a tab can
-  // land you halfway down a chart you have never seen.
-  ['#panelDraft','#panelOptions','#panelItems','#panelVendors','#panelRound',
-   '#panelSpend','#tableWrap'].forEach(sel => { const e = $(sel); if (e) e.scrollTop = 0; });
-  // Thirty bars twice over needs more than half a screen, and this is the one
-  // tab where the artifact IS the whole answer.
-  $('#pinned').classList.toggle('tall', name === 'spend');
-  if (name === 'items')   renderItems();
-  if (name === 'vendors') renderVendors();
-  if (name === 'options') renderOptionsPanel();
-  if (name === 'round')   renderRound(ROUND);
-  if (name === 'spend')   renderSpend();
+/* ===========================================================================
+   AUTHORING — four steps, in the order a buyer takes them
+   ---------------------------------------------------------------------------
+   Items, then vendors, then questions, then the mail. Each one is a card you
+   can change, and nothing is sent until you have read the actual text going
+   out. The co-pilot is still there in the box at the bottom — it can do any of
+   these in a sentence — but the steps do not depend on it, and a click writes
+   straight to the draft with no model call.
+   ======================================================================== */
+function openAuthoring(){
+  headerMeta();
+  $('#q').placeholder = 'Tell me what you need to buy…';
+  say('Co-pilot', `<p>Let's put a tender together. Four steps: <b>what you're
+    buying</b>, <b>who you're asking</b>, <b>what you want to know about them</b>,
+    then the covering mail — which you read in full and send yourself.</p>
+    <p>Change anything at any point. You can also just tell me in a sentence and
+    I'll fill it in.</p>`);
+  suggest(['Annual corrugated packaging, back in two weeks',
+           'Same as last year, but 30-day terms',
+           'What should I gate on?',
+           'Only the 3-ply boxes this quarter']);
+  stepItems();
 }
 
-/* The draft is read back from the server, never tracked here. Two copies of the
-   RFx — one in the browser, one in SESSION — is exactly how a picker and a
-   co-pilot end up disagreeing about what is going out to vendors. */
-async function refreshDraft(){
-  const j = await (await fetch('/api/draft')).json();
-  DRAFT = j.draft; DRAFT.missing = j.missing;
-  renderDraftPanel();
-  if ($('#panelItems')   && !$('#panelItems').hidden)   renderItems();
-  if ($('#panelVendors') && !$('#panelVendors').hidden) renderVendors();
-  // The moment the RFx is complete, the buyer's next act is sending it to five
-  // companies. What belongs in front of them then is the mail itself, not a
-  // note saying one exists.
-  if (j.phase === 'draft' && !DRAFT.missing.length && !DRAFT.issued) offerToIssue();
-  return DRAFT;
-}
-
-async function patchDraft(patch){
-  const j = await (await fetch('/api/draft', {method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify(patch)})).json();
-  DRAFT = j.draft; DRAFT.missing = j.missing;
-  renderDraftPanel();
-  // Both write paths have to notice completeness: the model sets a field and
-  // refreshDraft runs, a picker sets one and this does. Wiring it to only one
-  // of them means the mail appears or does not depending on which way the last
-  // decision happened to be made.
-  if (!DRAFT.missing.length && !DRAFT.issued && !DRAFT.mail_approved) offerToIssue();
-  return DRAFT;
-}
-
-function renderDraftPanel(){
-  const p = $('#panelDraft');
-  if (!p) return;
-  if (!DRAFT || !CATALOGUE){
-    p.replaceChildren(el('div','empty',
-      'No RFx yet. Say what you need to buy and I will draft the whole thing — '
-      + 'or open the item master and pick the lines yourself.'));
-    return;
+/* ---------------- 1 · line items ---------------- */
+function stepItems(){
+  if (S.items){ expand(S.items); drawItems(); return; }
+  const b = S.items = box({n:'1', title:'What are you buying?', key:'items'});
+  atEnd(b);
+  // The item master is what the buyer HAS bought. Starting with all of it
+  // ticked is the honest default for an annual tender — the work is taking
+  // things OUT, not putting thirty back in one at a time.
+  if (!(DRAFT.line_nos || []).length && CAT.lines.length){
+    patchDraft({line_nos: CAT.lines.map(l => l.line_no)}).then(drawItems);
   }
-  const c = CATALOGUE, d = DRAFT;
-  const def = c.defaults || {};
-  const vname = id => (c.vendors.find(v => v.vendor_id === id) || {}).name || id;
-  const qtext = n => {
-    const q = c.questions.find(x => x.q_no === n);
-    if (!q) return 'Q' + n;
-    // Enough to recognise the question, not the whole of it. The card is a
-    // summary of the tender; the questionnaire itself is one tab away.
-    const t = q.question.length > 52 ? q.question.slice(0, 50).trim() + '…' : q.question;
-    return 'Q' + n + ' · ' + t;
-  };
-  const nLines = (d.line_nos || []).length;
-  const nQs    = (d.question_nos || []).length;
-  const gate   = d.gating_q_nos || [];
-  const inv    = d.vendor_ids || [];
-  const row = (k, v, extra) =>
-    `<tr><th>${esc(k)}</th><td>${v}` +
-    (extra ? `<div class="chg">${extra}</div>` : '') + `</td></tr>`;
-
-  const box = el('div','block draft');
-  box.innerHTML =
-    `<div class="h">RFx draft${d.issued ? ' · issued' : ''}</div>
-     <table class="draft">
-      ${row('Buyer', esc(d.buyer_org || def.buyer_org || '—'))}
-      ${row('Category', esc(d.category || def.category || '—'))}
-      ${row('Deliver to', esc(d.delivery_point || def.delivery_point || '—'),
-            esc(d.required_incoterm || def.required_incoterm || ''))}
-      ${row('Payment terms', d.payment_terms_days != null
-            ? esc(d.payment_terms_days + ' days from GRN')
-            : '<span style="color:var(--warn)">not decided</span>',
-            d.payment_terms_days != null
-              ? 'Every landed cost is NPV-adjusted to this, so it decides who looks cheapest'
-              : '')}
-      ${row('Responses due', d.response_due ? esc(d.response_due)
-            : '<span style="color:var(--warn)">not decided</span>')}
-      ${row('Schedule', nLines
-            ? esc(nLines + ' of ' + c.lines.length + ' item-master lines')
-            : '<span style="color:var(--warn)">nothing scheduled yet</span>')}
-      ${row('Questionnaire', esc(nQs + ' question' + (nQs === 1 ? '' : 's')),
-            gate.length
-              ? 'Disqualifying: ' + gate.map(n => esc(qtext(n))).join('<br>')
-              : 'Nothing gated — price decides alone')}
-      ${row('Invited', inv.length ? inv.map(id => esc(vname(id))).join(', ')
-            : '<span style="color:var(--warn)">no vendors chosen</span>')}
-     </table>` +
-    ((d.missing || []).length
-      ? `<div class="gaps">Still to decide: ${d.missing.map(esc).join(' · ')}</div>`
-      : `<div class="ok">Ready to issue — the mail is in the conversation below,
-           in full, with the send button on it</div>`);
-
-  const foot = el('div','pfoot');
-  const toItems = el('button','other','Choose line items');
-  toItems.onclick = () => openTab('items');
-  const toVend = el('button','other','Choose vendors');
-  toVend.onclick = () => openTab('vendors');
-  foot.appendChild(toItems); foot.appendChild(toVend);
-  box.appendChild(foot);
-
-  p.replaceChildren(box);
-  $('#pinSub').textContent = nLines
-    ? `${nLines} line${nLines === 1 ? '' : 's'} · ${inv.length} vendor${inv.length === 1 ? '' : 's'}`
-    : 'nothing scheduled yet';
+  drawItems();
 }
 
-/* ---------------- where the money is ----------------
+function drawItems(){
+  const b = S.items; if (!b) return;
+  const cats = CAT.categories || [];
+  const cat = cats.find(c => c.key === ITEMCAT) || cats[0] || {key:'corrugated'};
+  ITEMCAT = cat.key;
+  const lines = CAT.lines.filter(l => (l.category || 'corrugated') === cat.key);
+  const chosen = new Set(DRAFT.line_nos || []);
+  const extra = DRAFT.extra_lines || [];
+  const inCat = lines.filter(l => chosen.has(l.line_no)).length;
+  const mine = chosen.size;
 
-   Two questions the grid cannot answer, because a table sorted by line number
-   hides both of them. Thirty lines look like thirty equal decisions: they are
-   not. One layer-pad line is 28% of the award, thirteen lines carry 80% of it,
-   and a buyer with a week needs to know which five are worth a phone call.
+  b.body.replaceChildren();
+  b.body.appendChild(el('div', 'lead',
+    `Your item master, as it stands. Untick anything you are not buying this
+     year, change a quantity where the volume has moved — <b>it decides whether
+     a line clears a vendor's minimum order</b> — and add anything new.`));
 
-   And a line only rewards negotiation if somebody else wanted it. The spread
-   between the best and the worst price on a line is the closest thing an RFx
-   has to a measure of how contested it was.
-
-   Both are horizontal bars because the categories are long and there are
-   thirty. One hue carries "this is the subject", the tail goes grey: the form
-   is emphasis, not identity, and nothing here needs a second colour. Length
-   carries the magnitude, which is what a bar is for. */
-
-const SPEND = {data: null, table: {money: false, spread: false}};
-
-function tipShow(e, html){
-  const t = $('#tip'); t.innerHTML = html; t.hidden = false;
-  const r = t.getBoundingClientRect();
-  let x = e.clientX + 14, y = e.clientY + 14;
-  if (x + r.width > innerWidth - 8) x = e.clientX - r.width - 14;
-  if (y + r.height > innerHeight - 8) y = e.clientY - r.height - 14;
-  t.style.left = x + 'px'; t.style.top = y + 'px';
-}
-const tipHide = () => { $('#tip').hidden = true; };
-document.addEventListener('scroll', tipHide, true);
-
-/* One figure: a sorted horizontal bar chart with a hover layer and a table. */
-function figure(o){
-  const fig = el('div','fig');
-  fig.innerHTML = `<h3>${esc(o.title)}</h3><div class="sub">${o.sub}</div>`;
-
-  const rows = o.rows, n = rows.length;
-  const H = 13, GAP = 2, LW = 34, RW = 84;      // row height, spacer, gutters
-  const W = 760, plot = W - LW - RW;
-  const max = Math.max(...rows.map(r => r.v)) || 1;
-  const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
-  svg.setAttribute('viewBox', `0 0 ${W} ${n * (H + GAP) + 6}`);
-  svg.setAttribute('role','img');
-  svg.setAttribute('aria-label', o.title + '. ' + o.alt);
-
-  rows.forEach((r, i) => {
-    const y = i * (H + GAP);
-    const w = Math.max(1.5, (r.v / max) * plot);
-    const g = document.createElementNS('http://www.w3.org/2000/svg','g');
-    g.innerHTML =
-      `<text class="lbl" x="${LW - 6}" y="${y + H - 4}" text-anchor="end">L${r.line_no}</text>` +
-      `<rect class="bar${r.tail ? ' tail' : ''}" x="${LW}" y="${y}" width="${w}" ` +
-      `height="${H - 2}" rx="4" ry="4"></rect>` +
-      (i < o.label_top ? `<text class="val" x="${LW + w + 6}" y="${y + H - 4}">${esc(r.label)}</text>` : '');
-    // A hit target the width of the row, not the width of the bar.
-    const hit = document.createElementNS('http://www.w3.org/2000/svg','rect');
-    hit.setAttribute('x', 0); hit.setAttribute('y', y);
-    hit.setAttribute('width', W); hit.setAttribute('height', H + GAP);
-    hit.setAttribute('fill','transparent');
-    hit.onmousemove = ev => tipShow(ev, r.tip);
-    hit.onmouseleave = tipHide;
-    hit.onclick = () => { tipHide(); openTab('main'); flashLine(r.line_no); };
-    g.appendChild(hit);
-    svg.appendChild(g);
+  const head = el('div', 'phead');
+  const sel = el('select', 'catsel');
+  cats.forEach(c => {
+    const o = document.createElement('option');
+    o.value = c.key;
+    o.textContent = c.name + (c.lines ? ` (${c.lines})` : ' — empty');
+    if (c.key === ITEMCAT) o.selected = true;
+    sel.appendChild(o);
   });
-  fig.appendChild(svg);
+  sel.onchange = () => { ITEMCAT = sel.value; drawItems(); };
+  head.appendChild(sel);
+  head.appendChild(el('span', 'pcount',
+    lines.length ? `${inCat} of ${lines.length} selected`
+      + (extra.length ? ` · ${plural(extra.length, 'line')} added` : '') : ''));
+  b.body.appendChild(head);
 
-  const foot = el('div','foot');
-  const key = el('div','key',
-    `<span><i class="a"></i>${esc(o.key_a)}</span><span><i class="t"></i>${esc(o.key_t)}</span>`);
-  const toggle = el('button','','Show as a table');
-  const holder = el('div');
-  toggle.onclick = () => {
-    SPEND.table[o.key] = !SPEND.table[o.key];
-    toggle.textContent = SPEND.table[o.key] ? 'Show as a chart' : 'Show as a table';
-    svg.hidden = SPEND.table[o.key];
-    holder.replaceChildren(SPEND.table[o.key] ? o.table() : document.createComment(''));
-  };
-  foot.appendChild(key); foot.appendChild(toggle);
-  fig.appendChild(foot); fig.appendChild(holder);
-  return fig;
-}
+  if (!lines.length){
+    b.body.appendChild(el('div', 'status', esc(cat.note || 'No data available.')));
+  } else {
+    const wrap = el('div', 'scroll');
+    const t = el('table', 'pick');
+    t.innerHTML = `<thead><tr><th style="width:18px"></th><th style="width:34px">#</th>
+      <th>Item</th><th class="num">Annual qty</th><th>Unit</th></tr></thead>`;
+    const tb = document.createElement('tbody');
 
-function flashLine(line_no){
-  const rows = [...document.querySelectorAll('#tableWrap table tbody tr')];
-  const tr = rows.find(r => r.children[0] && r.children[0].textContent.trim() === String(line_no));
-  if (!tr) return;
-  tr.scrollIntoView({block:'center'});
-  tr.style.transition = 'background .18s'; tr.style.background = 'var(--accent-soft)';
-  setTimeout(() => { tr.style.background = ''; }, 1400);
-}
+    lines.forEach(l => {
+      const tr = document.createElement('tr');
+      if (chosen.has(l.line_no)) tr.className = 'on';
+      const tags = [l.ply ? l.ply + '-ply' : null,
+                    l.food_contact ? 'food contact' : null,
+                    l.requires_tooling ? 'tooling' : null].filter(Boolean).join(' · ');
+      const over = (DRAFT.qty_overrides || {});
+      const qty = over[l.line_no] != null ? over[l.line_no] : l.annual_qty;
+      const moved = qty !== l.annual_qty;
+      tr.innerHTML = `<td><span class="mark"></span></td>
+        <td>${l.line_no}</td>
+        <td>${esc(l.description)}<small>${esc(l.code)}${tags ? ' · ' + esc(tags) : ''}</small></td>
+        <td class="num"><input class="qty${moved ? ' moved' : ''}" inputmode="numeric"
+            value="${num(qty)}" aria-label="Annual quantity for line ${l.line_no}">${
+            moved ? `<small>was ${num(l.annual_qty)}</small>` : ''}</td>
+        <td>${esc(l.uom)}</td>`;
+      const input = tr.querySelector('input.qty');
+      input.onclick = e => e.stopPropagation();
+      const save = async () => {
+        const n = parseInt(String(input.value).replace(/[^0-9]/g, ''), 10);
+        if (!n || n === qty){ drawItems(); return; }
+        const o = {...(DRAFT.qty_overrides || {})};
+        if (n === l.annual_qty) delete o[l.line_no]; else o[l.line_no] = n;
+        const next = new Set(DRAFT.line_nos || []);
+        next.add(l.line_no);                  // editing a quantity schedules it
+        await patchDraft({qty_overrides: o, line_nos: [...next].sort((a, b) => a - b)});
+        drawItems(); staleMail();
+      };
+      input.onblur = save;
+      input.onkeydown = e => { if (e.key === 'Enter') input.blur();
+                               if (e.key === 'Escape') drawItems(); };
+      tr.onclick = async () => {
+        const next = new Set(DRAFT.line_nos || []);
+        next.has(l.line_no) ? next.delete(l.line_no) : next.add(l.line_no);
+        tr.classList.toggle('on');                      // optimistic; feels instant
+        await patchDraft({line_nos: [...next].sort((a, b) => a - b)});
+        drawItems(); staleMail();
+      };
+      tb.appendChild(tr);
+    });
 
-async function renderSpend(){
-  const p = $('#panelSpend');
-  if (!SPEND.data){
-    p.replaceChildren(el('div','empty','Working out where the money is…'));
-    try { SPEND.data = await (await fetch('/api/spend')).json(); }
-    catch (e){ p.replaceChildren(el('div','empty','Not available yet.')); return; }
+    // Lines the buyer added this year. No history and no quotes — which is the
+    // honest result: they come back as gaps, and the screen already knows how
+    // to say "not a zero, not a no-quote".
+    extra.forEach(x => {
+      const tr = document.createElement('tr');
+      tr.className = 'on new';
+      tr.innerHTML = `<td><span class="mark"></span></td>
+        <td>${x.line_no}</td>
+        <td>${esc(x.description)}<small>added this year · no price history</small></td>
+        <td class="num">${num(x.annual_qty)}</td>
+        <td>${esc(x.uom || 'piece')}</td>`;
+      tr.onclick = async () => {
+        await patchDraft({extra_lines: extra.filter(y => y.line_no !== x.line_no),
+                          line_nos: (DRAFT.line_nos || []).filter(n => n !== x.line_no)});
+        drawItems(); staleMail();
+      };
+      tb.appendChild(tr);
+    });
+    t.appendChild(tb); wrap.appendChild(t); b.body.appendChild(wrap);
   }
-  const d = SPEND.data;
-  const money = [...d.lines].sort((a,b) => b.annual_inr - a.annual_inr);
-  const head = d.lines_for_80pct;
 
-  const moneyFig = figure({
-    key: 'money',
-    title: 'Where the money is',
-    sub: `Annual spend per line at the cheapest landed rate. `
-       + `<b>${head} of ${d.lines.length} lines carry 80% of the ${inr0(d.total_inr)}</b>`
-       + ` — the rest is a long tail, and a week of negotiation spent evenly across`
-       + ` thirty lines is a week spent mostly on the tail.`,
-    alt: `${head} lines account for 80 percent of annual spend`,
-    key_a: `the ${head} that make up 80%`, key_t: 'the tail',
-    label_top: 6,
-    rows: money.map((x, i) => ({
-      line_no: x.line_no, v: x.annual_inr, tail: i >= head,
-      label: `${x.share_pct.toFixed(1)}%`,
-      tip: `<b>Line ${x.line_no} — ${esc(x.description.slice(0,58))}</b>`
-         + `<span class="m">${inr0(x.annual_inr)} a year · ${x.share_pct.toFixed(1)}% of spend</span>`
-         + `<span class="m">${Number(x.annual_qty).toLocaleString('en-IN')} ${esc(x.uom)}`
-         + ` at ${x.best_inr != null ? inr(x.best_inr) : '—'} each</span>`
-         + `<span class="m">priced by ${x.priced_by} of 5 vendors</span>`})),
-    table: () => sheet(money.slice(0, 30), [
-      ['Line', x => x.line_no, true], ['Item', x => x.description.slice(0,52), false],
-      ['Annual ₹', x => inr0(x.annual_inr), true],
-      ['Share', x => x.share_pct.toFixed(1) + '%', true]]),
-  });
-
-  const spread = d.lines.filter(x => x.spread_pct != null)
-                        .sort((a,b) => b.spread_pct - a.spread_pct);
-  const w = d.widest_spread;
-  const spreadFig = figure({
-    key: 'spread',
-    title: 'Where the competition is',
-    sub: `The gap between the best and the worst landed price on each line, among`
-       + ` the vendors who priced it. <b>Line ${w ? w.line_no : '—'} spreads`
-       + ` ${w ? w.spread_pct : 0}%</b>, which is the closest thing an RFx has to a`
-       + ` measure of how contested a line was. A wide spread is where a second`
-       + ` round pays; a narrow one is the market price and arguing with it wastes`
-       + ` the call.`,
-    alt: `price spread per line, widest ${w ? w.spread_pct : 0} percent`,
-    key_a: 'spread above 25%', key_t: 'below',
-    label_top: 6,
-    rows: spread.map(x => ({
-      line_no: x.line_no, v: x.spread_pct, tail: x.spread_pct < 25,
-      label: x.spread_pct.toFixed(0) + '%',
-      tip: `<b>Line ${x.line_no} — ${esc(x.description.slice(0,58))}</b>`
-         + `<span class="m">best ${inr(x.best_inr)} · worst ${inr(x.worst_inr)} per ${esc(x.uom)}</span>`
-         + `<span class="m">${x.spread_pct.toFixed(1)}% apart, across ${x.priced_by} vendors</span>`
-         + `<span class="m">${inr0(x.annual_inr)} a year at the best rate</span>`})),
-    table: () => sheet(spread, [
-      ['Line', x => x.line_no, true], ['Item', x => x.description.slice(0,52), false],
-      ['Best ₹', x => inr(x.best_inr), true], ['Worst ₹', x => inr(x.worst_inr), true],
-      ['Spread', x => x.spread_pct.toFixed(1) + '%', true]]),
-  });
-
-  p.replaceChildren(moneyFig, spreadFig);
-  p.appendChild(el('div','roundnote', esc(d.note)
-    + ' Click any bar to find that line in the comparison.'));
-  // The reset in openTab fired before this content existed.
-  p.scrollTop = 0;
+  b.setSub(mine ? `${mine} scheduled` : 'nothing scheduled');
+  actions(b, [
+    [`Continue with ${plural(mine, 'line')}`, 'go', () => {
+      collapse(b, () => `${plural((DRAFT.line_nos || []).length, 'line')} scheduled`,
+        drawItems);
+      stepVendors();
+    }, !mine],
+    ['Select all ' + lines.length, 'alt', async () => {
+      const keep = (DRAFT.line_nos || []).filter(n => !lines.some(l => l.line_no === n));
+      await patchDraft({line_nos: [...new Set([...keep, ...lines.map(l => l.line_no)])]
+        .sort((a, b) => a - b)});
+      drawItems(); staleMail();
+    }],
+    ['Clear', 'alt', async () => {
+      await patchDraft({line_nos: (DRAFT.line_nos || [])
+        .filter(n => !lines.some(l => l.line_no === n))});
+      drawItems(); staleMail();
+    }],
+    ['Add a line', 'alt', () => addLineForm(b)],
+  ]);
 }
 
-function sheet(rows, cols){
-  const t = el('table','sheet');
-  t.innerHTML = '<thead><tr>' + cols.map(c =>
-    `<th${c[2] ? ' class="num"' : ''}>${esc(c[0])}</th>`).join('') + '</tr></thead>';
-  const tb = document.createElement('tbody');
-  rows.forEach(r => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = cols.map(c =>
-      `<td${c[2] ? ' class="num"' : ''}>${esc(c[1](r))}</td>`).join('');
-    tb.appendChild(tr);
-  });
-  t.appendChild(tb);
-  return t;
+function addLineForm(b){
+  if (b.body.querySelector('.addrow')) return;
+  const extra = DRAFT.extra_lines || [];
+  const row = el('div', 'addrow');
+  row.innerHTML = `<input class="d" placeholder="Description, e.g. Shelf-ready tray, 3-ply, 400x300 mm">
+    <input class="q" inputmode="numeric" placeholder="Annual qty">
+    <select class="u"><option value="piece">piece</option><option value="kg">kg</option>
+    <option value="set">set</option><option value="100_pieces">100 pieces</option></select>`;
+  const ok = el('button', 'go', 'Add'), no = el('button', 'alt', 'Cancel');
+  ok.onclick = async () => {
+    const desc = row.querySelector('.d').value.trim();
+    const q = parseInt(String(row.querySelector('.q').value).replace(/[^0-9]/g, ''), 10);
+    if (!desc || !q){ row.querySelector('.d').focus(); return; }
+    const used = new Set([...CAT.lines.map(l => l.line_no), ...extra.map(x => x.line_no)]);
+    let n = 91; while (used.has(n)) n++;
+    await patchDraft({
+      extra_lines: [...extra, {line_no:n, description:desc, annual_qty:q,
+        uom: row.querySelector('.u').value, style:'sheet', code:'NEW-' + n}],
+      line_nos: [...new Set([...(DRAFT.line_nos || []), n])]});
+    drawItems(); staleMail();
+  };
+  no.onclick = () => row.remove();
+  row.append(ok, no);
+  b.body.appendChild(row);
+  row.querySelector('.d').focus();
 }
 
-/* ---------------- the round ----------------
+/* ---------------- 2 · vendors ---------------- */
+function stepVendors(){
+  if (S.vendors){ expand(S.vendors); drawVendors(); return; }
+  const b = S.vendors = box({n:'2', title:'Who are you asking?', key:'vendors'});
+  atEnd(b);
+  if (!(DRAFT.vendor_ids || []).length && CAT.vendors.length){
+    patchDraft({vendor_ids: CAT.vendors.map(v => v.vendor_id)}).then(drawVendors);
+  }
+  drawVendors();
+}
 
+function drawVendors(){
+  const b = S.vendors; if (!b) return;
+  const vs = CAT.vendors || [];
+  const chosen = new Set(DRAFT.vendor_ids || []);
+  b.body.replaceChildren();
+  b.body.appendChild(el('div', 'lead',
+    `Your approved vendor list. Whoever is here can win, and nobody else can —
+     so this and the schedule are the two things you cannot fix after the quotes
+     land.`));
+  const grid = el('div', 'vgrid');
+  vs.forEach(v => {
+    const c = el('button', 'vcard' + (chosen.has(v.vendor_id) ? ' on' : ''));
+    c.innerHTML = `<span class="mark"></span><b>${esc(v.name)}</b>
+      <em>${esc(v.city || 'city not on file')}${v.incumbent ? ' · incumbent' : ''}</em>`;
+    c.onclick = async () => {
+      const next = new Set(DRAFT.vendor_ids || []);
+      next.has(v.vendor_id) ? next.delete(v.vendor_id) : next.add(v.vendor_id);
+      c.classList.toggle('on');
+      await patchDraft({vendor_ids: [...next]});
+      drawVendors(); staleMail();
+    };
+    grid.appendChild(c);
+  });
+  b.body.appendChild(grid);
+  b.setSub(`${chosen.size} of ${vs.length}`);
+  actions(b, [
+    [`Continue with ${plural(chosen.size, 'vendor')}`, 'go', () => {
+      collapse(b, () => (DRAFT.vendor_ids || []).map(id =>
+        (vs.find(v => v.vendor_id === id) || {}).name || id).join(', ') || 'nobody',
+        drawVendors);
+      stepQuestions();
+    }, !chosen.size],
+    ['Invite all ' + vs.length, 'alt', async () => {
+      await patchDraft({vendor_ids: vs.map(v => v.vendor_id)}); drawVendors(); staleMail();
+    }],
+  ]);
+}
+
+/* ---------------- 3 · the questionnaire and the terms ---------------- */
+function stepQuestions(){
+  if (S.questions){ expand(S.questions); drawQuestions(); return; }
+  const b = S.questions = box({n:'3', title:'What do you want to know about them?', key:'questions'});
+  atEnd(b);
+  const patch = {};
+  if (!DRAFT.questions_chosen && !(DRAFT.question_nos || []).length)
+    patch.question_nos = CAT.questions.map(q => q.q_no);
+  // The questions the template itself gates on, carried over rather than
+  // invented — this is last year's tender, and starting from it is the whole
+  // reason an item master exists. Said on the card, and changeable.
+  if (!(DRAFT.gating_q_nos || []).length && !DRAFT.questions_chosen)
+    patch.gating_q_nos = (CAT.gate_preview || [])
+      .filter(g => g.gating_now).map(g => g.q_no);
+  // A date on the template from a tender that closed a fortnight ago is not a
+  // default, it is a bug waiting to go out to five companies. Two weeks from
+  // today, and it is an editable field rather than a fact.
+  if (!DRAFT.response_due) patch.response_due = fortnight();
+  if (Object.keys(patch).length) patchDraft(patch).then(drawQuestions);
+  drawQuestions();
+}
+
+/* A question can be off, asked, or disqualifying. The third is the only one
+   that can remove a vendor from the tender, so it says so on its face and it
+   is a separate click from asking. */
+function drawQuestions(){
+  const b = S.questions; if (!b) return;
+  const asked = new Set(DRAFT.question_nos || []);
+  const gates = new Set(DRAFT.gating_q_nos || []);
+  const prev = Object.fromEntries((CAT.gate_preview || []).map(g => [g.q_no, g]));
+
+  b.body.replaceChildren();
+  b.body.appendChild(el('div', 'lead',
+    `${CAT.questions.length} questions on file. Tick the ones worth asking; mark
+     a question <b>disqualifying</b> and an unsatisfactory answer ends that
+     submission whatever the price — everything else is for information.` +
+    (gates.size ? ` The ${gates.size} marked now are the ones last year's tender
+     gated on; change them if this year is different.` : '')));
+
+  b.body.appendChild(el('div', 'sechead', 'Questionnaire'));
+  CAT.questions.forEach(q => {
+    const on = asked.has(q.q_no), gate = gates.has(q.q_no);
+    const row = el('div', 'qrow' + (on ? ' on' : ' off'));
+    const hint = gate ? (prev[q.q_no] || {}).consequence
+      : (!on && /lead time/i.test(q.question)
+          ? 'Leave this out and the fastest-delivery option cannot be built — nobody will have told you how long they take'
+          : '');
+    row.innerHTML = `<span class="mark"></span>
+      <div class="qt"><b>Q${q.q_no}</b>${esc(q.question)}` +
+      (hint ? `<em>${esc(hint)}</em>` : '') + `</div>`;
+    const g = el('button', 'gate' + (gate ? ' on' : ''),
+      gate ? 'disqualifying' : 'make disqualifying');
+    g.onclick = async e => {
+      e.stopPropagation();
+      const next = new Set(DRAFT.gating_q_nos || []);
+      next.has(q.q_no) ? next.delete(q.q_no) : next.add(q.q_no);
+      await patchDraft({gating_q_nos: [...next].sort((a, b) => a - b)});
+      drawQuestions(); staleMail();
+    };
+    row.appendChild(g);
+    row.onclick = async () => {
+      const next = new Set(DRAFT.question_nos || []);
+      next.has(q.q_no) ? next.delete(q.q_no) : next.add(q.q_no);
+      await patchDraft({question_nos: [...next].sort((a, b) => a - b)});
+      drawQuestions(); staleMail();
+    };
+    b.body.appendChild(row);
+  });
+
+  /* Terms are here because they are a question too — the one every vendor
+     answers by quoting a number that is not comparable with anyone else's
+     until it is adjusted back to these days. */
+  b.body.appendChild(el('div', 'sechead', 'Terms'));
+  const terms = el('div', 'terms');
+  const opts = (CAT.terms_preview || []).map(t => t.days);
+  (opts.length ? opts : [30, 45, 60, 90]).forEach(days => {
+    const t = el('button', DRAFT.payment_terms_days === days ? 'on' : '', days + ' days');
+    t.onclick = async () => { await patchDraft({payment_terms_days: days});
+                              drawQuestions(); staleMail(); };
+    terms.appendChild(t);
+  });
+  b.body.appendChild(terms);
+  const chosen = (CAT.terms_preview || []).find(t => t.days === DRAFT.payment_terms_days);
+  b.body.appendChild(el('div', 'consq', chosen
+    ? esc(chosen.consequence) + ' · ' + esc(chosen.basis)
+    : 'Payment terms not decided. Every landed cost is adjusted to them, so they '
+      + 'decide who looks cheapest — this is not a formality.'));
+
+  const dueRow = el('div', 'fieldrow');
+  dueRow.innerHTML = `<label for="due">Responses due</label>`;
+  const due = document.createElement('input');
+  due.type = 'date'; due.id = 'due';
+  due.value = DRAFT.response_due || '';
+  due.onchange = async () => { await patchDraft({response_due: due.value});
+                               staleMail(); b.setSub(subQ()); };
+  dueRow.appendChild(due);
+  dueRow.appendChild(el('span', 'pcount', 'two weeks out unless you move it'));
+  b.body.appendChild(dueRow);
+
+  function subQ(){
+    return `${asked.size} asked · ${gates.size} disqualifying`;
+  }
+  b.setSub(subQ());
+  // Payment terms are named rather than defaulted: silently filling them in is
+  // how a buyer ends up with quotes they cannot compare and no idea why. A
+  // disabled button with no explanation is its own bug, so it says what it is
+  // waiting for.
+  const ready = DRAFT.payment_terms_days != null;
+  actions(b, [
+    [ready ? 'Continue to the mail' : 'Pick payment terms to continue', 'go', () => {
+      collapse(b, () => `${plural((DRAFT.question_nos || []).length, 'question')}, `
+        + `${(DRAFT.gating_q_nos || []).length} disqualifying, `
+        + `${DRAFT.payment_terms_days}-day terms`, drawQuestions);
+      stepMail();
+    }, !ready],
+    ['Ask everything', 'alt', async () => {
+      await patchDraft({question_nos: CAT.questions.map(q => q.q_no)});
+      drawQuestions(); staleMail();
+    }],
+    ['Ask nothing', 'alt', async () => {
+      await patchDraft({question_nos: [], gating_q_nos: []});
+      drawQuestions(); staleMail();
+    }],
+  ]);
+}
+
+/* ---------------- 4 · the covering mail ---------------- */
+/* Composed from the draft, not written by a model: change the terms and this
+   changes, with nothing in the loop to paraphrase it into something almost
+   right. Editable, because a buyer's own wording is the whole point of a
+   covering note — and an edit un-approves it, so nothing rides out on the last
+   approval. */
+function staleMail(){
+  if (S.mail && !S.mail.dataset.sent) S.mail.dataset.stale = '1';
+  if (S.mail && !S.mail.dataset.sent && !S.mail.classList.contains('done')) drawMail();
+}
+
+async function stepMail(){
+  if (S.mail){ expand(S.mail); drawMail(); return; }
+  const b = S.mail = box({n:'4', title:'The covering mail', key:'mail'});
+  atEnd(b);
+  b.body.appendChild(el('div', 'status', 'composing…'));
+  drawMail();
+}
+
+async function drawMail(){
+  const b = S.mail; if (!b || b.dataset.sent) return;
+  let m;
+  try { m = await jget('/api/mail'); }
+  catch (e){ b.body.replaceChildren(el('div', 'status', 'Could not compose: ' + esc(e.message)));
+             return; }
+  delete b.dataset.stale;
+  const n = (m.to || []).length;
+  b.body.replaceChildren();
+  b.body.appendChild(el('div', 'lead',
+    `This is the actual text, going to ${plural(n, 'company')}. Read it, change
+     anything you want, then send it yourself. Nothing leaves until you do.`));
+
+  const kv = el('table', 'kvt');
+  kv.innerHTML = `<tr><th>To</th><td>${(m.to || []).map(esc).join(', ')}</td></tr>
+    <tr><th>Subject</th><td></td></tr>
+    <tr><th>Attached</th><td>${(m.attachments || []).map(a => '📎 ' + esc(a))
+      .join('<br>')}</td></tr>`;
+  const subj = document.createElement('input');
+  subj.className = 'subj'; subj.value = m.subject || '';
+  subj.setAttribute('aria-label', 'Subject');
+  subj.onchange = () => patchDraft({mail_subject: subj.value});
+  kv.querySelectorAll('td')[1].appendChild(subj);
+  b.body.appendChild(kv);
+
+  const body = document.createElement('textarea');
+  body.className = 'mailbody'; body.value = m.body || '';
+  body.setAttribute('aria-label', 'Mail body');
+  const edited = el('div', 'edited'); edited.hidden = true;
+  body.onchange = async () => {
+    await patchDraft({mail_body: body.value});
+    edited.textContent = 'Edited — your wording is what goes out.';
+    edited.hidden = false;
+  };
+  b.body.append(body, edited);
+  b.body.appendChild(el('div', 'stub', esc(m.stub_note || '')));
+
+  b.setSub(`${plural(n, 'recipient')}`);
+  actions(b, [
+    [n ? `Send to ${plural(n, 'vendor')}` : 'Send', 'go', () => sendRfx(), !n],
+    ['Recompose from the draft', 'alt', async () => {
+      await patchDraft({mail_body: '', mail_subject: ''});
+      drawMail();
+    }],
+    ['Check the line items', 'alt', () => stepItems()],
+    ['Check the vendors', 'alt', () => stepVendors()],
+  ]);
+}
+
+/* ===========================================================================
+   THE ROUND
+   ---------------------------------------------------------------------------
    A procurement round is not an instant. Mail goes out, replies come back one
    at a time in whatever format the vendor felt like, and for most of the week
-   the buyer's real question is "where has this got to". A spinner followed by a
-   finished table skips the part they actually live in.
-
-   Every line here is true. The extraction runs per document and takes real
-   time; the formats are the formats; the line counts are what came out. The one
-   fiction is the send, and it says so on its own row. */
-
-function renderRound(r){
-  const p = $('#panelRound');
-  if (!p) return;
-  if (!r || !r.vendors || !r.vendors.length){
-    p.replaceChildren(el('div','empty','No round has been issued yet.'));
-    return;
+   the buyer's real question is "where has this got to". Every line in this card
+   is true: extraction runs per document and takes real time, the formats are
+   the formats, the line counts are what came out. The one fiction is the send,
+   and it says so on its own row.
+   ======================================================================== */
+async function sendRfx(){
+  const mail = S.mail;
+  if (mail){
+    mail.dataset.sent = '1';
+    collapse(mail, 'sent — the text is above', null);
+    // Keep the mail readable after it has gone out, without the editor.
+    mail.body.hidden = false;
+    mail.body.querySelectorAll('textarea').forEach(t => {
+      const ro = el('div', 'mailbody-ro', esc(t.value)); t.replaceWith(ro);
+    });
+    mail.body.querySelectorAll('input').forEach(i => {
+      const s = el('span', '', esc(i.value)); i.replaceWith(s);
+    });
+    mail.body.querySelectorAll('.lead').forEach(x => x.remove());
   }
-  const head = el('div','roundhead');
-  const done = r.vendors.filter(v => v.state === 'quote read').length;
-  head.innerHTML = `<b>RFx round</b><span class="st">${esc(r.state)}</span>` +
-    `<span class="st">${done} of ${r.vendors.length} replies read</span>` +
-    (r.started_at ? `<span class="st">sent ${esc(r.started_at)}</span>` : '');
-  const t = el('table','round');
-  const tb = document.createElement('tbody');
-  r.vendors.forEach(v => {
-    const tr = document.createElement('tr');
-    tr.className = v.state === 'quote read' ? 'done'
-                 : (v.state === 'mail sent' || v.state === 'awaiting reply') ? 'wait' : '';
-    tr.innerHTML = `<td class="v">${esc(v.name)}</td>
-      <td class="s">${esc(v.state)}</td>
-      <td class="n">${esc(v.note || '')}</td>`;
-    tb.appendChild(tr);
-  });
-  t.appendChild(tb);
-  p.replaceChildren(head, t);
-  if (r.error) p.appendChild(el('div','roundnote', 'Failed: ' + esc(r.error)));
-  p.appendChild(el('div','roundnote',
-    'The send is stubbed \u2014 no mail left the building. Everything after it is '
-    + 'real work on real documents: five replies in five formats, read one at a '
-    + 'time. The times are measured, not staged; on the replay path they are '
-    + 'milliseconds, and on a live model run this is where the minutes of a '
-    + 'round go.'));
-  $('#pinSub').textContent = `${done} of ${r.vendors.length} replies read`;
-}
+  await patchDraft({mail_approved: true});
 
-/* Offer the send as a card in the CHAT, with the mail in full.
+  const b = S.round = box({title:'The round', key:'round'});
+  atEnd(b);
+  drawRound({state:'sending', vendors: (DRAFT.vendor_ids || []).map(v => ({
+    vendor_id: v, name: (CAT.vendors.find(x => x.vendor_id === v) || {}).name || v,
+    state:'mail sent', note:'stubbed — no mail left the building'}))});
 
-   "\u2191 RFx draft updated above" asked the buyer to go and look, and then to
-   take on trust that a mail existed. Before five companies hear from you, the
-   thing to read is the actual text going out and the actual list it is going
-   to. */
-async function offerToIssue(){
-  if (ISSUE_OFFERED) return;
-  ISSUE_OFFERED = true;
-  let m;
-  try { m = await (await fetch('/api/mail')).json(); }
-  catch (e){ ISSUE_OFFERED = false; return; }
-  const t = turn('Co-pilot');
-  t.appendChild(renderMail({...m, verify: true}));
-  $('#chat').scrollTop = 1e9;
-}
-
-async function sendRfx(card){
-  $('#tabRound').hidden = false;
-  ROUND = ROUND || {state:'sending', vendors:[]};
-  openTab('round');
   const res = await fetch('/api/issue', {method:'POST'});
   if (!res.ok){
     const why = await res.text();
-    card && card.appendChild(el('div','status','Could not send: ' + esc(why.slice(0,200))));
+    b.body.appendChild(el('div', 'status', 'Could not send: ' + esc(why.slice(0, 200))));
+    if (mail){ delete mail.dataset.sent; expand(mail); drawMail(); }
     return;
   }
   const rd = res.body.getReader(); const dec = new TextDecoder(); let buf = '';
@@ -978,179 +1175,154 @@ async function sendRfx(card){
     for (const p of parts){
       if (!p.startsWith('data: ')) continue;
       let m; try { m = JSON.parse(p.slice(6)); } catch (e){ continue; }
-      if (m.kind === 'round'){ ROUND = m.payload; renderRound(ROUND); }
-      if (m.kind === 'done' && m.payload.phase === 'comparison'){
-        STATE = null;
-        await enterComparison();
-        $('#tabRound').hidden = false;
+      if (m.kind === 'round'){ ROUND = m.payload; drawRound(ROUND); }
+      if (m.kind === 'done' && m.payload && m.payload.phase === 'comparison'){
+        await enterResults({});
       }
     }
   }
 }
 
-/* ---------------- item master ----------------
-   Five categories, one of them loaded. The four empty ones are not padding:
-   they say this is one category in a buyer's catalogue rather than a demo with
-   the answer hardcoded, and they say "no data" instead of inventing some. */
-function renderItems(){
-  const p = $('#panelItems');
-  if (!CATALOGUE){ p.replaceChildren(el('div','empty','Loading the item master…')); return; }
-  const cats = CATALOGUE.categories || [{key:'corrugated', name:'Corrugated packaging',
-                                         lines: CATALOGUE.lines.length, note:null}];
-  const cat = cats.find(c => c.key === ITEMCAT) || cats[0];
-  ITEMCAT = cat.key;
-  const lines = CATALOGUE.lines.filter(l => (l.category || 'corrugated') === cat.key);
-  const chosen = new Set(DRAFT ? (DRAFT.line_nos || []) : []);
-
-  const head = el('div','phead');
-  const sel = el('select','catsel');
-  cats.forEach(c => {
-    const o = document.createElement('option');
-    o.value = c.key;
-    o.textContent = c.name + (c.lines ? ` (${c.lines})` : ' — empty');
-    if (c.key === ITEMCAT) o.selected = true;
-    sel.appendChild(o);
-  });
-  sel.onchange = () => { ITEMCAT = sel.value; renderItems(); };
-  head.appendChild(sel);
-  head.appendChild(el('span','pcount',
-    lines.length ? `${chosen.size} of ${lines.length} selected` : ''));
-  p.replaceChildren(head);
-
-  if (!lines.length){
-    p.appendChild(el('div','empty', esc(cat.note || 'No data available.')));
-    return;
-  }
-
-  const body = el('div','pbody');
-  const t = el('table','pick');
-  t.innerHTML = `<thead><tr><th style="width:18px"></th><th style="width:34px">#</th>
-    <th>Item</th><th class="num">Annual qty</th><th>UOM</th></tr></thead>`;
+function drawRound(r){
+  const b = S.round; if (!b || !r) return;
+  ROUND = r;
+  const done = (r.vendors || []).filter(v => v.state === 'quote read').length;
+  b.body.replaceChildren();
+  b.body.appendChild(el('div', 'lead',
+    r.state === 'complete'
+      ? `All ${r.vendors.length} replies are in and read. Five formats, one
+         schedule — the table is below.`
+      : `Sent. Replies come back in whatever format the vendor uses, and each one
+         is read as it lands.`));
+  const t = el('table', 'round');
   const tb = document.createElement('tbody');
-  lines.forEach(l => {
+  (r.vendors || []).forEach(v => {
     const tr = document.createElement('tr');
-    if (chosen.has(l.line_no)) tr.className = 'on';
-    const tags = [l.ply ? l.ply + '-ply' : null,
-                  l.food_contact ? 'food contact' : null,
-                  l.requires_tooling ? 'tooling' : null].filter(Boolean).join(' · ');
-    tr.innerHTML = `<td><span class="mark"></span></td>
-      <td>${l.line_no}</td>
-      <td>${esc(l.description)}<small>${esc(l.code)}${tags ? ' · ' + esc(tags) : ''}</small></td>
-      <td class="num">${Number(l.annual_qty).toLocaleString('en-IN')}</td>
-      <td>${esc(l.uom)}</td>`;
-    tr.onclick = async () => {
-      const next = new Set(DRAFT ? (DRAFT.line_nos || []) : []);
-      next.has(l.line_no) ? next.delete(l.line_no) : next.add(l.line_no);
-      tr.classList.toggle('on');                       // optimistic, so it feels instant
-      await patchDraft({line_nos: [...next].sort((a,b) => a - b)});
-      renderItems();
-    };
+    tr.className = v.state === 'quote read' ? 'done'
+      : (v.state === 'mail sent' || v.state === 'awaiting reply') ? 'wait' : '';
+    tr.innerHTML = `<td class="v">${esc(v.name)}</td><td class="s">${esc(v.state)}</td>
+      <td class="n">${esc(v.note || '')}</td>`;
     tb.appendChild(tr);
   });
-  t.appendChild(tb); body.appendChild(t); p.appendChild(body);
-
-  const foot = el('div','pfoot');
-  const all = el('button','other','Select all ' + lines.length);
-  all.onclick = async () => {
-    const keep = (DRAFT.line_nos || []).filter(
-      n => !lines.some(l => l.line_no === n));
-    await patchDraft({line_nos: [...new Set([...keep, ...lines.map(l => l.line_no)])]
-      .sort((a,b) => a - b)});
-    renderItems();
-  };
-  const none = el('button','other','Clear');
-  none.onclick = async () => {
-    await patchDraft({line_nos: (DRAFT.line_nos || []).filter(
-      n => !lines.some(l => l.line_no === n))});
-    renderItems();
-  };
-  const back = el('button','go','Back to the draft');
-  back.onclick = () => openTab('main');
-  foot.appendChild(all); foot.appendChild(none); foot.appendChild(back);
-  p.appendChild(foot);
+  t.appendChild(tb);
+  b.body.appendChild(t);
+  if (r.error) b.body.appendChild(el('div', 'status', 'Failed: ' + esc(r.error)));
+  b.body.appendChild(el('div', 'stub',
+    'The send is stubbed — no mail left the building. Everything after it is real '
+    + 'work on real documents: the replies are read one at a time, and the times '
+    + 'are measured rather than staged.'));
+  b.setSub(`${done} of ${(r.vendors || []).length} read`);
 }
 
-/* ---------------- approved vendors ---------------- */
-function renderVendors(){
-  const p = $('#panelVendors');
-  if (!CATALOGUE){ p.replaceChildren(el('div','empty','Loading the vendor list…')); return; }
-  const vs = CATALOGUE.vendors || [];
-  const chosen = new Set(DRAFT ? (DRAFT.vendor_ids || []) : []);
+/* ===========================================================================
+   THE RESULTS
+   ---------------------------------------------------------------------------
+   In the order a buyer reads them: what came back, the table itself, what it
+   means and what to do about it, and then the mails that fill in what is still
+   missing. All in the column, none of it behind a control.
+   ======================================================================== */
+async function enterResults(o){
+  if (S.results) return;
+  S.results = true;
+  PHASE = 'comparison';
+  STATE = await jget('/api/state');
+  headerMeta();
+  $('#q').placeholder = 'Ask about the comparison…';
+  $('#chipAsm').hidden = false;
+  const chip = $('#chipReview');
+  if (STATE.open_reviews){
+    chip.hidden = false;
+    chip.textContent = STATE.open_reviews + ' need review';
+    chip.onclick = showReviews;
+  } else { chip.hidden = true; }
 
-  const head = el('div','phead');
-  head.appendChild(el('span','pcount',
-    `Approved vendors · ${chosen.size} of ${vs.length} invited`));
-  p.replaceChildren(head);
-
-  const grid = el('div','pbody vendors');
-  vs.forEach(v => {
-    const b = el('button', 'vcard' + (chosen.has(v.vendor_id) ? ' on' : ''));
-    b.innerHTML = `<span class="mark"></span><b>${esc(v.name)}</b>
-      <em>${esc(v.city || 'city not on file')}${v.incumbent ? ' · incumbent' : ''}</em>`;
-    b.onclick = async () => {
-      const next = new Set(DRAFT ? (DRAFT.vendor_ids || []) : []);
-      next.has(v.vendor_id) ? next.delete(v.vendor_id) : next.add(v.vendor_id);
-      b.classList.toggle('on');
-      await patchDraft({vendor_ids: [...next]});
-      renderVendors();
-    };
-    grid.appendChild(b);
-  });
-  p.appendChild(grid);
-
-  const foot = el('div','pfoot');
-  const all = el('button','other','Invite all ' + vs.length);
-  all.onclick = async () => {
-    await patchDraft({vendor_ids: vs.map(v => v.vendor_id)}); renderVendors(); };
-  const back = el('button','go','Back to the draft');
-  back.onclick = () => openTab('main');
-  foot.appendChild(all); foot.appendChild(back);
-  p.appendChild(foot);
-}
-
-/* ---------------- the decision layer, as a tab ----------------
-   Served from the store with no model call, so it cannot disagree with the
-   table it sits next to. */
-async function renderOptionsPanel(){
-  const p = $('#panelOptions');
-  p.replaceChildren(el('div','empty','Enumerating the splits…'));
-  try {
-    const j = await (await fetch('/api/options')).json();
-    p.replaceChildren(renderOptions({
-      title: 'Three ways to award this',
-      cards: j.cards,
-      note: j.authored ? null
-        : 'Issued from the template — none of this was authored in conversation.'}));
-  } catch (e){
-    p.replaceChildren(el('div','empty','Could not build the options: ' + esc(e.message)));
+  // A reload mid-tender lands on a page with no story. Put the round back.
+  if (o.restored){
+    if (ROUND && ROUND.state && ROUND.state !== 'idle'){
+      S.round = box({title:'The round', key:'round'});
+      atEnd(S.round); drawRound(ROUND);
+      collapse(S.round, `${(ROUND.vendors || []).length} replies read`, null);
+    }
+    say('Analyst', `<p>Picking up where this tender left off — the responses are
+      in and read.</p>`);
   }
+  narrate();
+  comparisonCard(STATE.comparison);
+  await summaryCard();
+  await gapsCard();
+  suggest(['Where are you unsure?',
+           'Cheapest per line among vendors who cleared the questionnaire',
+           'Which vendors’ certifications are actually valid?',
+           'If I take that split, does anyone fall below their minimum order?',
+           'Where is the money?']);
 }
-/* ---------------- the pinned artifact ---------------- */
-function renderTable(tb, flash){
-  // #pinTitle went with the header cleanup and this line kept writing to it,
-  // which threw and took enterComparison down with it — so the comparison grid,
-  // the whole point of the screen, rendered as nothing at all. The tab is
-  // already labelled "Comparison"; a title above it was the redundancy that got
-  // the header cut in the first place.
-  $('#pinSub').textContent = `${tb.rows.length} lines · ${tb.columns.length - 3} vendors`;
-  const t = el('table');
+
+/* What every vendor did to make their quote incomparable. "0 of 134 cells were
+   comparable as quoted" is true and reads as a boast nobody can check; this
+   verifies itself against five documents that are one click away. */
+function narrate(){
+  const c = STATE.counts, dq = STATE.vendors.filter(v => !v.qualified);
+  const why = STATE.vendors.map(v => {
+    const bits = [];
+    if (v.currency && v.currency !== 'INR') bits.push('quoted in ' + esc(v.currency));
+    if (v.incoterm && v.incoterm !== (STATE.rfx.required_incoterm || ''))
+      bits.push(esc(String(v.incoterm).replace(/_/g, ' ')));
+    if (v.tax_basis && /incl/i.test(v.tax_basis)) bits.push('tax-inclusive');
+    if (v.payment_days != null &&
+        String(STATE.rfx.required_payment_terms || '').indexOf(String(v.payment_days)) < 0)
+      bits.push(v.payment_days + '-day terms');
+    return bits.length ? `<li><b>${esc(v.name.split(' ')[0])}</b> — ${bits.join(', ')}</li>` : '';
+  }).filter(Boolean).join('');
+  say('Analyst', `<p>${STATE.vendors.length} responses in, in ${
+    new Set(STATE.vendors.map(v => v.reply_format)).size} different formats. Every
+    rate is landed to ₹ per buyer unit, pre-tax, adjusted to the ${
+    esc(STATE.rfx.required_payment_terms)} the RFx asked for.</p>
+    <p><b>Not one of the ${c.cells} cells was comparable as it arrived.</b> Each
+    needed at least one adjustment before it could sit beside another:</p>
+    <ul>${why}</ul>
+    <p>${c.derived} cells came out of that. <b>${c.unresolved} could not be derived
+    at all</b> and are shown as gaps, never as zero — there is a mail below that
+    asks for what is missing.</p>` +
+    (dq.length ? '<p>' + dq.map(v => `<b>${esc(v.name.split(' ')[0])}</b> did not clear
+      the questionnaire — ${esc((v.disqualified_because[0] || '').toLowerCase())}.`)
+      .join(' ') + '</p>' : ''));
+}
+
+/* ---------------- the price table, in the conversation ---------------- */
+function comparisonCard(tb){
+  const b = S.cmp || (S.cmp = atEnd(box({title:'Every quote, landed, per buyer unit', key:'cmp'})));
+  b.body.replaceChildren();
+  b.body.appendChild(el('div', 'legend',
+    `<span><i class="e"></i>extracted</span><span><i class="d"></i>derived</span>
+     <span><i class="u"></i>unresolved</span><span class="sep"></span>
+     <span><i class="b"></i>cheapest on the line</span>
+     <span><i class="r"></i>how far above it</span>`));
+  b.body.appendChild(el('div', 'lead',
+    `Click any number to see the pixels it came from. A red cell is a gap we
+     refused to fill — not a zero, and not a no-quote.`));
+  b.body.appendChild(buildGrid(tb));
+  b.body.appendChild(el('div', 'foots',
+    (tb.footnotes || []).map(esc).join(' &nbsp;·&nbsp; ')));
+  b.setSub(`${tb.rows.length} lines · ${tb.columns.length - 3} vendors`);
+  return b;
+}
+
+function buildGrid(tb){
+  const wrap = el('div', 'gridwrap');
+  const t = el('table', 'cmp');
   const thead = el('thead'); const tr = el('tr');
   tb.columns.forEach(c => { const th = el('th', c.numeric ? 'num' : '');
     th.textContent = c.label; tr.appendChild(th); });
   thead.appendChild(tr); t.appendChild(thead);
   const tbody = el('tbody');
-  // Rank within the LINE, not the column: what a buyer scans for is who is
-  // cheapest on this item and by how much, and a whole-table ramp would just
-  // re-draw the fact that a 7-ply case costs more than a 3-ply box.
-  //
-  // Magnitude is carried by BAR LENGTH, not by a colour ramp, for two reasons.
-  // The cell background is already spoken for by extracted / derived /
-  // unresolved, and those states are the thing a buyer must never misread. And
-  // a green-to-red wash would quietly rank an unresolved gap as "best", which
-  // is the exact error this whole system exists to refuse.
-  const CAP = 0.30;                       // 30% above the best fills the bar
+  /* Rank within the LINE, not the column: what a buyer scans for is who is
+     cheapest on this item and by how much. Magnitude is carried by bar LENGTH,
+     not a colour ramp — the cell background is already spoken for by extracted
+     / derived / unresolved, and a green-to-red wash would quietly rank an
+     unresolved gap as "best", which is the exact error this system refuses. */
+  const CAP = 0.30;
   tb.rows.forEach(row => {
-    const r = el('tr'); if (flash) r.className = 'flash';
+    const r = el('tr');
     const nums = tb.columns.filter(c => c.numeric && c.key !== 'qty' && c.key !== 'line')
       .map(c => (row[c.key] || {}))
       .filter(x => typeof x.value === 'number' && x.state !== 'unresolved')
@@ -1164,292 +1336,253 @@ function renderTable(tb, flash){
       const td = el('td', (c.numeric ? 'num ' : '') + (c.key === 'item' ? 'item ' : '') +
         (cell.state && cell.state !== 'plain' ? 's-' + cell.state + ' ' : '') +
         (isBest ? 'best' : ''));
-      // The unit goes UNDER the quantity, visibly. It was a tooltip, which is
-      // the same as not being there: these thirty lines are priced per piece,
-      // per kilogram, per set and per hundred pieces, and every vendor column
-      // is "landed rupees per one of these". A rate column showing 8.03 above
-      // 1,339.00 with the unit hidden is the exact comparison this project is
-      // about not making.
       if (c.key === 'item' || c.key === 'qty'){
+        // The unit goes UNDER the quantity, visibly. A rate column showing 8.03
+        // above 1,339.00 with the unit hidden is the exact comparison this
+        // project is about not making.
         td.innerHTML = esc(cell.value) + (cell.note ? `<small>${esc(cell.note)}</small>` : '');
       } else {
         td.textContent = cell.value === null || cell.value === undefined ? '—' : cell.value;
         if (priced && best && !isBest){
           const over = (cell.value - best) / best;
-          const bar = el('i','rank'); bar.style.width = Math.min(over / CAP, 1) * 100 + '%';
+          const bar = el('i', 'rank');
+          bar.style.width = Math.min(over / CAP, 1) * 100 + '%';
           bar.title = `+${(over * 100).toFixed(1)}% over the best price on this line`;
           td.appendChild(bar);
         }
         if (cell.note) td.title = cell.note;
-        if (cell.evidence_id){ td.onclick = () => openEvidence(cell.evidence_id); }
-        else if (cell.state === 'unresolved' && cell.note) td.onclick = () => explainGap(cell.note);
+        if (cell.evidence_id) td.onclick = () => openEvidence(cell.evidence_id);
+        else if (cell.state === 'unresolved' && cell.note)
+          td.onclick = () => explainGap(cell.note);
       }
       r.appendChild(td);
     });
     tbody.appendChild(r);
   });
   t.appendChild(tbody);
-  $('#tableWrap').replaceChildren(t);
-  $('#foot').innerHTML = (tb.footnotes || []).map(esc).join(' &nbsp;·&nbsp; ');
+  wrap.appendChild(t);
+  return wrap;
 }
 
-/* ---------------- chat ---------------- */
-function turn(who, cls){ const d = el('div', 'turn ' + (cls || ''));
-  d.appendChild(el('div', 'who', who)); $('#chat').appendChild(d);
-  $('#chat').scrollTop = 1e9; return d; }
-
-async function greet(){
-  // The decision comes first. A table is a means; nobody awards a contract from
-  // one, and leading with it is how a tool ends up being a better spreadsheet.
-  try {
-    const o = await (await fetch('/api/options')).json();
-    if (o.cards && o.cards.length)
-      turn('Analyst').appendChild(renderOptions({title:'Three ways to award this',
-        cards:o.cards, note:'Landed cost per buyer unit, pre-tax, at the terms the '
-          + 'RFx asked for. Lead time is the slowest vendor in the split.'}));
-  } catch(e){ /* options are a bonus; never block the page on them */ }
-  const t = turn('Analyst');
-  const c = STATE.counts, dq = STATE.vendors.filter(v => !v.qualified);
-  t.appendChild(el('div','block',`<p>Five responses in, in five formats. Every rate is
-    landed to ₹ per buyer unit, pre-tax, adjusted to the ${esc(STATE.rfx.required_payment_terms)}
-    the RFx asked for.</p>
-    <p><b>${c.cells} cells. ${c.extracted} were comparable exactly as quoted.</b>
-    ${c.derived} needed at least one assumption; ${c.unresolved} could not be derived at
-    all and are shown as gaps, never as zero.</p>` +
-    (dq.length ? '<p>' + dq.map(v => `<b>${esc(v.name.split(' ')[0])}</b> did not clear the
-      questionnaire — ${esc((v.disqualified_because[0] || '').toLowerCase())}.`).join(' ')
-      + '</p>' : '')));
-  suggest([
-    'Where are you unsure?',
-    'Cheapest per line among vendors who cleared the questionnaire — and what does that cost versus single-sourcing?',
-    'Which vendors’ certifications are actually valid?',
-    'If I take that split, does anyone fall below their minimum order?',
-    'Which vendor is most reliable?']);
+function flashLine(line_no){
+  if (!S.cmp) return;
+  const rows = [...S.cmp.querySelectorAll('table.cmp tbody tr')];
+  const tr = rows.find(r => r.children[0] &&
+    r.children[0].textContent.trim() === String(line_no));
+  if (!tr) return;
+  tr.scrollIntoView({block:'center'});
+  tr.style.transition = 'background .18s'; tr.style.background = 'var(--accent-soft)';
+  setTimeout(() => { tr.style.background = ''; }, 1400);
 }
 
-async function ask(q){
-  turn('You','you').appendChild(el('div','bubble', esc(q)));
-  $('#q').value = '';
-  const t = turn('Analyst');
-  const status = el('div','status','thinking…'); t.appendChild(status);
-  // A model call can legitimately take half a minute. A word that never changes
-  // for half a minute reads as a hang, and the user's first instinct is to
-  // reload — which loses the turn that was about to arrive. Count out loud.
-  const t0 = Date.now(); let statusText = 'thinking…';
-  const tick = setInterval(() => {
-    const secs = Math.round((Date.now() - t0) / 1000);
-    status.textContent = statusText + (secs > 3 ? `   ${secs}s` : '');
-  }, 1000);
-  const res = await fetch('/api/ask', {method:'POST',
-    headers:{'Content-Type':'application/json'}, body: JSON.stringify({question:q})});
+/* ---------------- what it means, and what to do ---------------- */
+async function summaryCard(){
+  const b = S.summary || (S.summary = atEnd(box({title:'What came back, and what to do about it', key:'summary'})));
+  b.body.replaceChildren(el('div', 'status', 'working it out…'));
+  let s;
+  try { s = await jget('/api/summary'); }
+  catch (e){ b.body.replaceChildren(el('div', 'status', 'Not available: ' + esc(e.message)));
+             return; }
+
+  b.body.replaceChildren();
+  b.body.appendChild(renderOptions({cards: s.options,
+    note: 'Landed cost per buyer unit, pre-tax, at the terms the RFx asked for. '
+        + 'Lead time is the slowest vendor in the split.'}));
+
+  if ((s.disqualified || []).length){
+    b.body.appendChild(el('div', 'sechead', 'Out of the running'));
+    s.disqualified.forEach(v => {
+      b.body.appendChild(el('div', 'sug',
+        `<div><b>${esc(v.name)}</b><span>${esc((v.disqualified_because || [])
+          .join('; ') || 'did not clear the questionnaire')}</span></div>`));
+    });
+  }
+
+  const sp = s.spend || {};
+  b.body.appendChild(el('div', 'sechead', 'Where the money is'));
+  b.body.appendChild(el('div', 'lead',
+    `<b>${inr0(sp.total_inr || 0)} a year</b> at the cheapest landed rate on every
+     line. ${sp.lines_for_80pct} lines carry 80% of it` +
+    (sp.widest_spread ? `, and line ${sp.widest_spread.line_no} is the most
+     contested — best and worst are ${sp.widest_spread.spread_pct}% apart.` : '.') +
+    (s.unresolved ? ` ${s.unresolved} cells could not be priced at all.` : '')));
+
+  if ((s.suggestions || []).length){
+    b.body.appendChild(el('div', 'sechead', 'What I would do'));
+    s.suggestions.forEach((x, i) => {
+      b.body.appendChild(el('div', 'sug',
+        `<span class="i">${i + 1}</span><div><b>${esc(x.do)}</b>
+         <span>${esc(x.because)}</span></div>`));
+    });
+  }
+
+  b.setSub(`${(s.options || []).filter(c => !c.unavailable).length} ways to award`);
+  actions(b, [
+    ['Where is the money?', 'alt', () => spendCard()],
+    ['Write the award memo', 'alt', () => showMemo(null)],
+    [STATE.open_reviews ? `Review ${STATE.open_reviews} flagged cells` : 'Review queue',
+     'alt', () => showReviews()],
+  ]);
+  return b;
+}
+
+/* ---------------- round two: the mails that fill the gaps ---------------- */
+async function gapsCard(){
+  let g;
+  try { g = await jget('/api/gaps'); } catch (e){ return; }
+  const live = (g.vendors || []).filter(v => (v.asks || []).length);
+  if (!live.length) return;
+  const b = S.gaps || (S.gaps = atEnd(box({title:'Still missing — who to write to', key:'gaps'})));
+  b.body.replaceChildren();
+  b.body.appendChild(el('div', 'lead',
+    `A gap is not an answer. Each of these is a real question for a real supplier,
+     with what it is worth in units of the schedule — six cells on a crore is a
+     phone call, one cell on forty thousand rupees is not.`));
+
+  live.forEach(v => {
+    const g1 = el('div', 'gap' + (v.already_asked ? ' sent' : ''));
+    g1.innerHTML = `<div class="top"><b>${esc(v.vendor)}</b>` +
+      `<span class="at">${num(v.units_at_stake)} units at stake</span></div>` +
+      `<ul>${v.asks.map(a => `<li>${esc(a.what)}<em>${esc(a.why)}</em></li>`).join('')}</ul>`;
+    const foot = el('div', 'rfoot');
+    if (v.already_asked){
+      foot.appendChild(el('div', 'status', 'Asked — their reply is folded in above.'));
+    } else if (v.can_ask){
+      // Reading it first is the point of this whole product; the button that
+      // opens the text comes before the one that sends it.
+      const show = el('button', 'alt', 'Show the mail');
+      show.onclick = () => showFollowup(v, g1, foot);
+      const send = el('button', 'go', 'Send it');
+      send.onclick = () => sendFollowup(v, g1, foot);
+      foot.append(show, send);
+    } else {
+      foot.appendChild(el('div', 'status',
+        'No reply to expect from them in this dataset — the ask is real, the '
+        + 'answer would not be.'));
+    }
+    g1.appendChild(foot);
+    b.body.appendChild(g1);
+  });
+  b.setSub(`${live.length} vendor${live.length === 1 ? '' : 's'}`);
+  return b;
+}
+
+async function showFollowup(v, host, foot){
+  if (host.querySelector('.mailbody-ro')) return;
+  const m = await jget('/api/followup/' + encodeURIComponent(v.vendor_id));
+  const kv = el('table', 'kvt');
+  kv.innerHTML = `<tr><th>To</th><td>${esc(m.to)}</td></tr>
+    <tr><th>Subject</th><td>${esc(m.subject)}</td></tr>`;
+  host.insertBefore(kv, foot);
+  host.insertBefore(el('div', 'mailbody-ro', esc(m.body)), foot);
+}
+
+async function sendFollowup(v, host, foot){
+  foot.querySelectorAll('button').forEach(x => x.disabled = true);
+  const log = el('div', 'status', 'sending…');
+  foot.appendChild(log);
+  const res = await fetch('/api/followup/' + encodeURIComponent(v.vendor_id),
+    {method:'POST'});
+  if (!res.ok){ log.textContent = 'Could not send: ' + (await res.text()).slice(0, 140);
+                return; }
   const rd = res.body.getReader(); const dec = new TextDecoder(); let buf = '';
-  // A model narrating each tool call often repeats itself verbatim. Say it once.
-  let lastText = '';
-  try {
   while (true){
     const {done, value} = await rd.read(); if (done) break;
     buf += dec.decode(value, {stream:true});
     const parts = buf.split('\n\n'); buf = parts.pop();
     for (const p of parts){
       if (!p.startsWith('data: ')) continue;
-      // One block that will not render must not take the conversation down with
-      // it. Before this, a single missing renderer left "thinking…" on screen
-      // for ever and the only way out was a reload — which is a worse failure
-      // than the bug that caused it.
-      try {
-      const m = JSON.parse(p.slice(6));
-      if (m.kind === 'done'){ status.remove(); break; }
-      if (m.kind === 'status'){ statusText = m.payload; status.textContent = m.payload; continue; }
-      if (m.kind === 'issued'){ await enterComparison(); continue; }
-      status.remove();
-      const blk = m.payload;
-      if (blk.type === 'rfx_draft'){
-        // The draft IS the pinned artifact before quotes arrive — the same slot
-        // the comparison takes afterwards. Putting it in the chat made a
-        // transcript of stale copies, which is the exact thing the pinned
-        // canvas exists to avoid.
-        LASTDRAFT = blk; renderDraftPanel(); refreshDraft();
-        // No "updated above" pointer any more. Either the model's own
-        // sentence says what changed, or the card changed visibly; sending the
-        // buyer to go and look was doing neither.
-        $('#chat').scrollTop = 1e9;
-        continue;
-      }
-      if (blk.type === 'text' && blk.text && blk.text.trim() === lastText) continue;
-      if (blk.type === 'text') lastText = (blk.text || '').trim();
-      t.appendChild(renderBlock(blk));
-      $('#chat').scrollTop = 1e9;
-      } catch (err){
-        console.error('block failed', err);
-        t.appendChild(el('div','block status',
-          'A block did not render: ' + esc(err.message)));
-      }
+      let m; try { m = JSON.parse(p.slice(6)); } catch (e){ continue; }
+      if (m.kind === 'status') log.textContent = m.payload.text;
+      if (m.kind === 'error') log.textContent = m.payload.text;
+      if (m.kind === 'applied') await applyFollowup(v, host, foot, m.payload);
     }
   }
-  } finally { clearInterval(tick); status.remove(); }
 }
 
-function renderBlock(b){
-  if (b.type === 'text') return el('div','block', mdish(b.text));
-  if (b.type === 'query') return renderQuery(b);
-  if (b.type === 'table'){
-    if (b.pin){ renderTable(b, true);
-      return el('div','block status','↑ comparison updated in place'); }
-    return el('div','block', '<em>table</em>');
-  }
-  if (b.type === 'chart') return renderChart(b);
-  if (b.type === 'evidence'){
-    const d = el('div','block');
-    const btn = el('button','', 'Open ' + esc(b.doc_id) + ' · ' + esc(b.locator));
-    btn.className = 'chip warn'; btn.onclick = () => openEvidence(b.evidence_id);
-    d.appendChild(btn); if (b.snippet) d.appendChild(el('div','status', esc(b.snippet)));
-    return d;
-  }
-  if (b.type === 'choice') return renderChoice(b);
-  if (b.type === 'options') return renderOptions(b);
-  if (b.type === 'rfx_draft') return renderDraft(b);
-  if (b.type === 'mail_draft') return renderMail(b);
-  if (b.type === 'review') return renderReviews(b);
-  if (b.type === 'assumptions') return renderAssumptions(b);
-  if (b.type === 'refusal'){
-    const d = el('div','block refusal');
-    d.innerHTML = `<div class="h">Not answerable from this data</div>
-      <div>${esc(b.reason)}</div>` +
-      (b.would_need?.length ? `<ul>${b.would_need.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>` : '');
-    // If the co-pilot cannot run, the visitor is stranded on an empty chat with
-    // no way to reach the half of this build that needs no model at all. Offer
-    // the door rather than leaving them at a blank box.
-    if (STATE && STATE.phase === 'draft'){
-      const b2 = el('button','chip','Issue the template RFx instead');
-      b2.onclick = async () => {
-        b2.disabled = true; b2.textContent = 'reading five responses…';
-        await fetch('/api/issue_default', {method:'POST'});
-        STATE.phase = 'comparison';
-        await enterComparison();
-      };
-      d.appendChild(b2);
-    }
-    return d;
-  }
-  return el('div','block status', esc(JSON.stringify(b).slice(0,200)));
+/* A reply that only updated a display would be the same failure as a review
+   queue that does not change the answer. The whole pipeline runs again, and
+   this says what moved. */
+async function applyFollowup(v, host, foot, p){
+  host.classList.add('sent');
+  foot.replaceChildren();
+  const before = p.before, after = p.after;
+  const moved = el('div', 'moved');
+  const stat = (label, from, to, good) =>
+    `<div>${esc(label)}<b class="${from === to ? '' : good}">${from} → ${to}</b></div>`;
+  moved.innerHTML =
+    stat('unresolved cells', before.unresolved, after.unresolved, 'dn') +
+    stat('qualified vendors', before.qualified, after.qualified, 'up') +
+    stat('cells needing review', before.open_reviews, after.open_reviews, 'dn');
+  const bx = atEnd(box({title: v.vendor + ' replied', key:'moved'}));
+  bx.body.appendChild(el('div', 'lead',
+    (p.changed || []).length
+      ? `They sent back: ${p.changed.map(esc).join(', ')}.` +
+        (p.declined ? ' They declined to revise the rest.' : '')
+      : 'They replied, and nothing in it changed a number.'));
+  bx.body.appendChild(moved);
+  bx.body.appendChild(el('div', 'stub',
+    'Their reply is a document in this repo, read through the same extraction, '
+    + 'matching and normalisation as the first round. Nothing here is a display '
+    + 'update — the whole pipeline ran again.'));
+
+  STATE = await jget('/api/state');
+  headerMeta();
+  comparisonCard(STATE.comparison);
+  const chip = $('#chipReview');
+  if (STATE.open_reviews){ chip.hidden = false;
+    chip.textContent = STATE.open_reviews + ' need review'; chip.onclick = showReviews; }
+  else chip.hidden = true;
+  await summaryCard();
+  await gapsCard();
+  scrollEnd();
 }
 
-const mdish = s => '<p>' + esc(s).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')
-  .replace(/\n\n/g,'</p><p>').replace(/\n/g,'<br>') + '</p>';
-
-function renderChoice(b){
-  // A decision the buyer clicks, with what each option costs written on it.
-  // Single-select fires immediately; multi-select waits for Apply, because
-  // toggling four gates one at a time would re-price the tender four times.
-  const d = el('div','block choice');
-  const picked = new Set(b.options.filter(o => o.selected).map(o => o.value));
-  const list = el('div','opts');
-
-  b.options.forEach(o => {
-    const row = el('button','opt' + (picked.has(o.value) ? ' on' : ''));
-    row.innerHTML = `<span class="mark"></span><span class="txt">${esc(o.label)}` +
-      (o.consequence ? `<em>${esc(o.consequence)}</em>` : '') + `</span>`;
-    row.onclick = () => {
-      if (!b.multi){ send(b, [o.value]); return; }
-      picked.has(o.value) ? picked.delete(o.value) : picked.add(o.value);
-      row.classList.toggle('on');
-      apply.hidden = false;
-      apply.textContent = picked.size ? `Apply ${picked.size} selected` : 'Apply — gate on nothing';
-    };
-    list.appendChild(row);
-  });
-
-  d.innerHTML = `<div class="h">${esc(b.title)}</div>`;
-  d.appendChild(list);
-  if (b.note) d.appendChild(el('div','cnote', esc(b.note)));
-
-  const foot = el('div','foot');
-  const apply = el('button','go'); apply.hidden = !b.multi;
-  apply.textContent = picked.size ? `Apply ${picked.size} selected` : 'Apply';
-  apply.onclick = () => send(b, [...picked]);
-  foot.appendChild(apply);
-
-  if (b.allow_other){
-    const other = el('button','other', 'Something else…');
-    other.onclick = () => { $('#q').focus();
-      if (b.other_hint) $('#q').placeholder = b.other_hint; };
-    foot.appendChild(other);
-  }
-  d.appendChild(foot);
-
-  /* A click writes to the draft FIRST, then tells the co-pilot.
-
-     The obvious shape is to send the sentence and let the model apply it, and
-     it mostly works — but "45 days from GRN" has to survive a round trip
-     through a model before it reaches the field that re-prices 139 cells, and
-     "mostly" is not the word you want on that path. The picker knows exactly
-     which field it edits, so it edits it: the card updates instantly, the draft
-     is right whatever the model does next, and the model's job shrinks to the
-     part it is good at — saying what this changed and what to decide next. */
-  async function send(blk, values){
-    if (blk.key === 'lines' && values[0] === 'pick'){ openTab('items'); return; }
-    const labels = values.map(v =>
-      (blk.options.find(o => o.value === v) || {}).label || v);
-    d.querySelectorAll('button').forEach(x => x.disabled = true);
-    d.classList.add('done');
-
-    const patch = {};
-    if (blk.key === 'payment_terms' && /^\d+$/.test(values[0]))
-      patch.payment_terms_days = Number(values[0]);
-    else if (blk.key === 'gates')
-      patch.gating_q_nos = values.map(Number).filter(n => !isNaN(n));
-    else if (blk.key === 'vendors')
-      patch.vendor_ids = values;
-    else if (blk.key === 'lines' && CATALOGUE){
-      const all = CATALOGUE.lines;
-      if (values[0] === 'all') patch.line_nos = all.map(l => l.line_no);
-      else if (values[0] === '3' || values[0] === '5')
-        patch.line_nos = all.filter(l => String(l.ply) === values[0]).map(l => l.line_no);
-    }
-    if (Object.keys(patch).length){
-      try { await patchDraft(patch); } catch (e){ console.error('draft patch', e); }
-    }
-    ask(`${blk.title}: ${labels.length ? labels.join('; ') : 'none'}`);
-  }
-  return d;
-}
-
-const inr0 = n => '\u20B9' + Math.round(n).toLocaleString('en-IN');
-
+/* ===========================================================================
+   The decision layer
+   ======================================================================== */
 function renderOptions(b){
-  const d = el('div','block options');
-  const base = (b.cards.find(c => c.kind === 'cheapest') || {}).total_inr;
-  d.innerHTML = `<div class="h">${esc(b.title)}</div><div class="cards">` +
-    b.cards.map(c => {
+  const d = el('div', 'block');
+  const cards = b.cards || [];
+  const live = cards.filter(c => !c.unavailable);
+  const base = (live.find(c => c.kind === 'cheapest') || {}).total_inr;
+  // The heading counts what is on screen. It used to say "three ways" over two
+  // cards, which reads as a bug and is actually a finding: the missing card
+  // says why it is missing, in terms of a decision the buyer made.
+  const title = b.title || `${live.length} way${live.length === 1 ? '' : 's'} to award this`;
+  d.innerHTML = `<div class="sechead" style="margin-top:0;padding-top:0;border-top:0">${
+    esc(title)}</div><div class="cards">` +
+    cards.map(c => {
+      if (c.unavailable){
+        return `<div class="ocard off"><div class="lbl">${esc(c.label)}</div>
+          <div class="cost na">not available</div>
+          <div class="why">${esc(c.why)}</div></div>`;
+      }
       const delta = (base != null && c.total_inr !== base)
         ? `<span class="delta">+${inr0(c.total_inr - base)}</span>` : '';
-      return `<div class="card ${c.feasible ? '' : 'bad'}">
+      return `<div class="ocard ${c.feasible ? '' : 'bad'}" data-strategy="${esc(c.strategy || '')}">
         <div class="lbl">${esc(c.label)}</div>
         <div class="cost">${inr0(c.total_inr)} ${delta}</div>
         <div class="facts">
           <span>${c.lead_time_days != null ? c.lead_time_days + ' days' : 'lead time unstated'}</span>
-          <span>${c.vendors.length} vendor${c.vendors.length === 1 ? '' : 's'}</span>
+          <span>${plural(c.vendors.length, 'vendor')}</span>
           <span>${c.lines_covered}/${c.lines_total} lines</span>
         </div>
-        <div class="who">${c.vendor_names.map(esc).join(' · ')}</div>
+        <div class="who2">${c.vendor_names.map(esc).join(' · ')}</div>
         <div class="why">${esc(c.why)}</div>` +
-        (c.violations.length
-          ? `<ul class="viol">${c.violations.slice(0,2).map(v=>`<li>${esc(v)}</li>`).join('')}</ul>`
-          : '') + `</div>`;
+        ((c.violations || []).length
+          ? `<ul class="viol">${c.violations.slice(0, 2).map(v => `<li>${esc(v)}</li>`).join('')}</ul>`
+          : '') +
+        (c.feasible ? `<button class="pick">Award memo for this</button>` : '') +
+        `</div>`;
     }).join('') + '</div>' +
-    (b.note ? `<div class="note">${esc(b.note)}</div>` : '');
-  const btn = el('button','chip','Award memo');
-  btn.onclick = showMemo; d.appendChild(btn);
+    (b.note ? `<div class="why" style="color:var(--dim);font-size:11.5px">${esc(b.note)}</div>` : '');
+  // Each card writes its own memo. Three options the buyer cannot act on
+  // separately are a display, not a choice.
+  d.querySelectorAll('.ocard .pick').forEach(btn => {
+    btn.onclick = () => showMemo(btn.closest('.ocard').dataset.strategy);
+  });
   return d;
-}
-
-async function showMemo(){
-  const r = await (await fetch('/api/memo')).json();
-  const t = turn('Award memo');
-  const d = el('div','block memo');
-  d.innerHTML = '<div class="h">' + esc(r.strategy || 'Recommendation') + '</div>'
-    + '<div class="md">' + mdDoc(r.markdown || '') + '</div>';
-  t.appendChild(d);
 }
 
 /* Deliberately small: headings, bold, bullets, rules. The memo is markdown
@@ -1463,191 +1596,266 @@ const mdDoc = src => esc(src)
   .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
   .replace(/^---$/gm, '<hr>')
   .replace(/\n{2,}/g, '</p><p>');
+const mdish = s => '<p>' + esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+  .replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>') + '</p>';
 
-function renderDraft(b){
-  const d = el('div','block draft');
-  const rows = b.fields.map(f =>
-    `<tr><th>${esc(f.label)}</th><td>${esc(f.value)}` +
-    (f.changes ? `<div class="chg">${esc(f.changes)}</div>` : '') + `</td></tr>`).join('');
-  d.innerHTML = `<div class="h">${esc(b.title)}</div>
-    <table class="draft">${rows}
-      <tr><th>Schedule</th><td>${b.lines_included} of ${b.lines_available} item-master lines</td></tr>
-      <tr><th>Questionnaire</th><td>${b.questions_included} questions` +
-      (b.gating.length
-        ? `<div class="chg">Disqualifying: ${b.gating.map(esc).join(' · ')}</div>`
-        : `<div class="chg">Nothing gated — price decides alone</div>`) + `</td></tr>
-      <tr><th>Invited</th><td>${b.vendors.length ? b.vendors.map(esc).join(', ') : '—'}</td></tr>
-    </table>` +
-    (b.missing.length
-      ? `<div class="gaps">Still to decide: ${b.missing.map(esc).join(' · ')}</div>`
-      : `<div class="ok">Ready to issue</div>`);
-  return d;
+async function showMemo(strategy){
+  const b = atEnd(box({title:'Award memo', key:'memo'}));
+  b.body.appendChild(el('div', 'status', 'writing it…'));
+  try {
+    const r = await jget('/api/memo' +
+      (strategy ? '?strategy=' + encodeURIComponent(strategy) : ''));
+    b.setSub(r.strategy || '');
+    b.body.replaceChildren(el('div', 'md', '<p>' + mdDoc(r.markdown || '') + '</p>'));
+  } catch (e){
+    b.body.replaceChildren(el('div', 'status', 'Could not write it: ' + esc(e.message)));
+  }
+  scrollEnd();
 }
 
-function renderMail(b){
-  const d = el('div','block mail');
-  const n = (b.to || []).length;
-  d.innerHTML = `<div class="h">Covering mail \u2014 exactly what goes out</div>
-    <table class="draft">
-      <tr><th>To</th><td>${(b.to||[]).map(esc).join(', ')}</td></tr>
-      <tr><th>Subject</th><td>${esc(b.subject)}</td></tr>
-      <tr><th>Attached</th><td>${(b.attachments||[]).map(a=>'\uD83D\uDCCE '+esc(a)).join('<br>')}</td></tr>
-    </table>
-    <pre class="mailbody mailfull">${esc(b.body)}</pre>
-    <div class="stub">${esc(b.stub_note || '')}</div>` +
-    (b.verify
-      ? `<div class="verify">Before this goes out, the two things worth checking
-         are the <b>line schedule</b> and the <b>vendor list</b> \u2014 everything
-         else you can change after the quotes land, and those two you cannot.</div>`
-      : '');
+/* ===========================================================================
+   Where the money is
+   ---------------------------------------------------------------------------
+   Two questions the grid cannot answer, because a table sorted by line number
+   hides both. Thirty lines look like thirty equal decisions; one layer-pad line
+   is a quarter of the award. And a line only rewards negotiation if somebody
+   else wanted it — the spread between best and worst is the closest thing an
+   RFx has to a measure of how contested a line was.
+   ======================================================================== */
+const SPENDVIEW = {money:false, spread:false};
 
-  /* Sending is a BUTTON, and the server refuses without the approval it writes.
-     Before this the co-pilot could draft a mail and issue it in the same turn,
-     which made "a covering mail they approve" a sentence in a README rather
-     than a step anybody took. Re-drafting clears the approval, so an edit
-     cannot ride out on the last one. */
-  const foot = el('div','rfoot');
-  const go = el('button','go', n ? `Send to ${n} vendor${n===1?'':'s'}` : 'Send');
-  go.onclick = async () => {
-    [...foot.querySelectorAll('button')].forEach(x => x.disabled = true);
-    go.textContent = 'sending\u2026';
-    await patchDraft({mail_approved: true});
-    await sendRfx(d);
+function tipShow(e, html){
+  const t = $('#tip'); t.innerHTML = html; t.hidden = false;
+  const r = t.getBoundingClientRect();
+  let x = e.clientX + 14, y = e.clientY + 14;
+  if (x + r.width > innerWidth - 8) x = e.clientX - r.width - 14;
+  if (y + r.height > innerHeight - 8) y = e.clientY - r.height - 14;
+  t.style.left = x + 'px'; t.style.top = y + 'px';
+}
+const tipHide = () => { $('#tip').hidden = true; };
+/* There is deliberately no "hide it on any scroll" here. Scroll events are
+   dispatched a frame LATE, so scrolling a bar into view and hovering it fired
+   the hide AFTER the show and the tooltip never appeared — which is the
+   difference between a hover layer and a hover layer that works except when
+   you use it. Entering and leaving the bar is enough: the bar moves out from
+   under the cursor when the page scrolls, and the browser fires the leave. */
+
+function figure(o){
+  const fig = el('div', 'fig');
+  fig.innerHTML = `<h3>${esc(o.title)}</h3><div class="sub">${o.sub}</div>`;
+  const rows = o.rows, n = rows.length;
+  const H = 13, GAP = 2, LW = 34, RW = 84;
+  const W = 760, plot = W - LW - RW;
+  const max = Math.max(...rows.map(r => r.v)) || 1;
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', `0 0 ${W} ${n * (H + GAP) + 6}`);
+  svg.setAttribute('role', 'img');
+  svg.setAttribute('aria-label', o.title + '. ' + o.alt);
+  rows.forEach((r, i) => {
+    const y = i * (H + GAP);
+    const w = Math.max(1.5, (r.v / max) * plot);
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.innerHTML =
+      `<text class="lbl" x="${LW - 6}" y="${y + H - 4}" text-anchor="end">L${r.line_no}</text>` +
+      `<rect class="bar${r.tail ? ' tail' : ''}" x="${LW}" y="${y}" width="${w}" ` +
+      `height="${H - 2}" rx="4" ry="4"></rect>` +
+      (i < o.label_top ? `<text class="val" x="${LW + w + 6}" y="${y + H - 4}">${esc(r.label)}</text>` : '');
+    const hit = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    hit.setAttribute('x', 0); hit.setAttribute('y', y);
+    hit.setAttribute('width', W); hit.setAttribute('height', H + GAP);
+    hit.setAttribute('fill', 'transparent');
+    hit.onmouseenter = ev => tipShow(ev, r.tip);
+    hit.onmousemove = ev => tipShow(ev, r.tip);
+    hit.onmouseleave = tipHide;
+    hit.onclick = () => { tipHide(); flashLine(r.line_no); };
+    g.appendChild(hit);
+    svg.appendChild(g);
+  });
+  fig.appendChild(svg);
+  const foot = el('div', 'foot');
+  foot.appendChild(el('div', 'key',
+    `<span><i class="a"></i>${esc(o.key_a)}</span><span><i class="t"></i>${esc(o.key_t)}</span>`));
+  const toggle = el('button', 'mini', 'Show as a table');
+  const holder = el('div');
+  toggle.onclick = () => {
+    SPENDVIEW[o.key] = !SPENDVIEW[o.key];
+    toggle.textContent = SPENDVIEW[o.key] ? 'Show as a chart' : 'Show as a table';
+    svg.hidden = SPENDVIEW[o.key];
+    holder.replaceChildren(SPENDVIEW[o.key] ? o.table() : document.createComment(''));
   };
-  const items = el('button','other','Check the line items');
-  items.onclick = () => { $('#pinned').classList.remove('folded'); openTab('items'); };
-  const vend = el('button','other','Check the vendors');
-  vend.onclick = () => { $('#pinned').classList.remove('folded'); openTab('vendors'); };
-  const edit = el('button','other','Change the wording');
-  edit.onclick = () => { $('#q').focus();
-    $('#q').placeholder = 'e.g. ask for the drawing revision in the subject line'; };
-  foot.appendChild(go); foot.appendChild(items);
-  foot.appendChild(vend); foot.appendChild(edit);
-  d.appendChild(foot);
-  return d;
+  foot.appendChild(toggle);
+  fig.append(foot, holder);
+  return fig;
 }
 
-function renderQuery(b){
-  // Collapsed and labelled "computed", not "SQL". A buyer does not need to read
-  // a query to trust a number, but a VP challenging one needs it to exist — so
-  // it is one click away and never the headline.
-  const src = b.sql || b.code || '';
-  const typed = /^[a-z_]+\(/.test(src) && !/\bselect\b/i.test(src);
-  const d = el('details','qry');
-  d.appendChild(el('summary','',
-    (typed ? esc(src.replace(/\(.*$/, '')) : 'computed') + ` · ${b.row_count} rows`));
-  d.appendChild(el('pre','', esc(src)));
-  return d;
+function sheet(rows, cols){
+  const t = el('table', 'sheet');
+  t.innerHTML = '<thead><tr>' + cols.map(c =>
+    `<th${c[2] ? ' class="num"' : ''}>${esc(c[0])}</th>`).join('') + '</tr></thead>';
+  const tb = document.createElement('tbody');
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = cols.map(c => `<td${c[2] ? ' class="num"' : ''}>${esc(c[1](r))}</td>`).join('');
+    tb.appendChild(tr);
+  });
+  t.appendChild(tb);
+  return t;
 }
 
-function renderChart(b){
-  const w = 640, h = 210, pad = 44, n = b.categories.length;
-  const all = b.series.flatMap(s => s.values); const max = Math.max(...all, 1);
-  const bw = (w - pad*2) / n * 0.62;
-  let bars = '', labels = '', ticks = '';
-  for (let i=0;i<4;i++){ const v = max*i/3, y = h - pad - (h-pad*1.5)*(i/3);
-    ticks += `<line x1="${pad}" x2="${w-8}" y1="${y}" y2="${y}" stroke="currentColor"
-      stroke-opacity=".12"/><text x="${pad-6}" y="${y+3}" text-anchor="end">${
-      Math.round(v).toLocaleString('en-IN')}</text>`; }
-  b.categories.forEach((c,i) => {
-    const x = pad + (w-pad*2)*(i+0.5)/n;
-    b.series.forEach((s,j) => {
-      const v = s.values[i] ?? 0, hh = (h-pad*1.5)*(v/max);
-      const bx = x - bw/2 + (j*bw/b.series.length);
-      bars += `<rect x="${bx}" y="${h-pad-hh}" width="${bw/b.series.length - 2}"
-        height="${Math.max(hh,1)}" fill="var(--accent)" fill-opacity="${1-j*0.35}"/>`; });
-    labels += `<text x="${x}" y="${h-pad+13}" text-anchor="middle">${esc(c).slice(0,11)}</text>`; });
-  const d = el('div','block');
-  d.innerHTML = `<div class="who">${esc(b.title)}</div>
-    <svg class="chart" viewBox="0 0 ${w} ${h}" style="width:100%;max-width:${w}px;color:var(--ink-soft)">
-    ${ticks}${bars}${labels}</svg>`;
-  return d;
-}
+async function spendCard(){
+  if (S.spend){ S.spend.scrollIntoView({block:'start'}); return; }
+  const b = S.spend = atEnd(box({title:'Where the money is, and where the competition is', key:'spend'}));
+  b.body.appendChild(el('div', 'status', 'adding it up…'));
+  let d;
+  try { d = SPENDDATA = SPENDDATA || await jget('/api/spend'); }
+  catch (e){ b.body.replaceChildren(el('div', 'status', 'Not available.')); return; }
 
-function renderReviews(b){
-  const d = el('div','block');
-  d.appendChild(el('div','who', esc(b.title)));
-
-  /* Twenty-eight cells, three reasons. A buyer can hold three decisions; they
-     cannot hold twenty-eight, so they accept all twenty-eight — which is the
-     failure this queue exists to prevent, arriving by another door. The cells
-     are still all here, one click away, and correcting is still per cell:
-     accepting a group says "this convention is right", which is one judgement
-     about one thing. "Every one of these rates is the same wrong number" never
-     is, so there is no bulk correct. */
-  (b.groups || []).forEach(g => {
-    const box = el('div','rgroup');
-    box.innerHTML =
-      `<div class="top"><b>${esc(g.title)}</b>` +
-      `<span class="n">${g.count} cell${g.count===1?'':'s'}</span>` +
-      `<span class="conf">${(g.confidence_min*100).toFixed(0)}–${(g.confidence_max*100).toFixed(0)}%</span></div>` +
-      `<div class="why">${esc(g.why)}</div>` +
-      `<div class="who2">${g.vendors.map(esc).join(' · ')}</div>`;
-    const foot = el('div','rfoot');
-    const all = el('button','go', `Accept all ${g.count}`);
-    all.onclick = async () => {
-      all.disabled = true; all.textContent = 'accepting…';
-      const r = await (await fetch('/api/reviews/accept', {method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({review_ids: g.cards.map(c => c.review_id)})})).json();
-      box.classList.add('done');
-      foot.replaceChildren(el('div','status',
-        `${g.count} accepted on one judgement — recorded against each cell.`));
-      const chip = $('#chipReview');
-      if (r.open){ chip.textContent = r.open + ' need review'; } else { chip.hidden = true; }
-    };
-    const open = el('button','other', 'Show the cells');
-    let shown = false;
-    const list = el('div','rcells'); list.hidden = true;
-    g.cards.forEach(c => list.appendChild(reviewCard(c)));
-    open.onclick = () => { shown = !shown; list.hidden = !shown;
-      open.textContent = shown ? 'Hide the cells' : 'Show the cells'; };
-    foot.appendChild(all); foot.appendChild(open);
-    box.appendChild(foot); box.appendChild(list);
-    d.appendChild(box);
+  const money = [...d.lines].sort((a, b2) => b2.annual_inr - a.annual_inr);
+  const head = d.lines_for_80pct;
+  const moneyFig = figure({
+    key:'money', title:'Where the money is',
+    sub:`Annual spend per line at the cheapest landed rate. <b>${head} of ${
+      d.lines.length} lines carry 80% of the ${inr0(d.total_inr)}</b> — the rest is
+      a long tail, and a week of negotiation spread evenly across thirty lines is
+      a week spent mostly on the tail.`,
+    alt:`${head} lines account for 80 percent of annual spend`,
+    key_a:`the ${head} that make up 80%`, key_t:'the tail', label_top:6,
+    rows: money.map((x, i) => ({
+      line_no:x.line_no, v:x.annual_inr, tail:i >= head,
+      label:`${x.share_pct.toFixed(1)}%`,
+      tip:`<b>Line ${x.line_no} — ${esc(x.description.slice(0, 58))}</b>`
+        + `<span class="m">${inr0(x.annual_inr)} a year · ${x.share_pct.toFixed(1)}% of spend</span>`
+        + `<span class="m">${num(x.annual_qty)} ${esc(x.uom)} at ${
+            x.best_inr != null ? inr(x.best_inr) : '—'} each</span>`
+        + `<span class="m">priced by ${x.priced_by} of ${STATE.vendors.length} vendors</span>`})),
+    table: () => sheet(money.slice(0, 30), [
+      ['Line', x => x.line_no, true], ['Item', x => x.description.slice(0, 52), false],
+      ['Annual ₹', x => inr0(x.annual_inr), true],
+      ['Share', x => x.share_pct.toFixed(1) + '%', true]]),
   });
 
-  b.cards.forEach(c => d.appendChild(reviewCard(c)));
-  if (b.remaining) d.appendChild(el('div','status', `${b.remaining} more in the queue.`));
-  return d;
+  const spread = d.lines.filter(x => x.spread_pct != null)
+                        .sort((a, b2) => b2.spread_pct - a.spread_pct);
+  const w = d.widest_spread;
+  const spreadFig = figure({
+    key:'spread', title:'Where the competition is',
+    sub:`The gap between the best and the worst landed price on each line, among
+      the vendors who priced it. <b>Line ${w ? w.line_no : '—'} spreads ${
+      w ? w.spread_pct : 0}%</b>. A wide spread is where a second round pays; a
+      narrow one is the market price, and arguing with it wastes the call.`,
+    alt:`price spread per line, widest ${w ? w.spread_pct : 0} percent`,
+    key_a:'spread above 25%', key_t:'below', label_top:6,
+    rows: spread.map(x => ({
+      line_no:x.line_no, v:x.spread_pct, tail:x.spread_pct < 25,
+      label:x.spread_pct.toFixed(0) + '%',
+      tip:`<b>Line ${x.line_no} — ${esc(x.description.slice(0, 58))}</b>`
+        + `<span class="m">best ${inr(x.best_inr)} · worst ${inr(x.worst_inr)} per ${esc(x.uom)}</span>`
+        + `<span class="m">${x.spread_pct.toFixed(1)}% apart, across ${x.priced_by} vendors</span>`
+        + `<span class="m">${inr0(x.annual_inr)} a year at the best rate</span>`})),
+    table: () => sheet(spread, [
+      ['Line', x => x.line_no, true], ['Item', x => x.description.slice(0, 52), false],
+      ['Best ₹', x => inr(x.best_inr), true], ['Worst ₹', x => inr(x.worst_inr), true],
+      ['Spread', x => x.spread_pct.toFixed(1) + '%', true]]),
+  });
+
+  b.body.replaceChildren(moneyFig, spreadFig);
+  b.body.appendChild(el('div', 'stub', esc(d.note) + ' Click any bar to find that '
+    + 'line in the table above.'));
+  scrollEnd();
 }
 
-function reviewCard(c){
-  {
-    const card = el('div','card');
-    card.innerHTML = `<div class="top"><b>${esc(c.vendor_id)}</b>
-      <span class="mono" style="font-size:11px;color:var(--ink-faint)">line ${c.line_no ?? '—'} · ${esc(c.field)}</span>
-      <span class="conf">${(c.confidence*100).toFixed(0)}%</span></div>
-      <div class="mono" style="font-size:12px">${esc(c.proposed_value ?? '—')}</div>
-      <div class="why">${esc(c.reason || 'Below the confidence threshold.')}</div>`;
-    const accept = el('button','','Accept');
-    accept.onclick = () => decide(c.review_id, 'accept', null, card);
-    const fix = el('button','','Correct…');
-    // Inline, not window.prompt. The correction a human types here is the input
-    // to the trust layer — it re-runs normalisation and moves the number on the
-    // grid — so it deserves to look like part of the product rather than a
-    // browser dialog that blocks the page while it is open.
-    fix.onclick = () => {
-      if (card.querySelector('.fixrow')) return;
-      const row = el('div','fixrow');
-      const inp = document.createElement('input');
-      inp.value = c.proposed_value ?? '';
-      inp.setAttribute('aria-label', 'Corrected value');
-      const ok = el('button','go','Save'), no = el('button','','Cancel');
-      ok.onclick = () => { const v = inp.value.trim();
-        if (v) decide(c.review_id, 'correct', v, card); row.remove(); };
-      no.onclick = () => row.remove();
-      inp.onkeydown = e => { if (e.key === 'Enter') ok.onclick();
-                             else if (e.key === 'Escape') no.onclick(); };
-      row.appendChild(inp); row.appendChild(ok); row.appendChild(no);
-      card.appendChild(row); inp.focus(); inp.select();
+/* ===========================================================================
+   The review queue — grouped by cause, because 29 cells are 3 decisions
+   ======================================================================== */
+async function showReviews(){
+  const r = await jget('/api/reviews');
+  const b = S.rev || (S.rev = atEnd(box({title:'Cells the machine is not sure about', key:'reviews'})));
+  b.body.replaceChildren();
+  b.setSub(`${r.open} open · threshold ${r.threshold}`);
+  b.body.appendChild(el('div', 'lead',
+    `${r.open} cells came back below the ${r.threshold} confidence threshold, and
+     they are <b>${plural((r.groups || []).length, 'decision')}</b>, not ${r.open}.
+     Accepting a group says one convention is right. Correcting stays per cell —
+     "every one of these is the same wrong number" never is.`));
+  const toCard = i => ({review_id:i.id, vendor_id:i.vendor_id, line_no:i.line_no,
+    field:i.field, proposed_value:i.proposed_value, confidence:i.confidence,
+    evidence_id:i.evidence_id,
+    reason: i.missing_fact || i.match_rationale || i.unresolved_reason});
+
+  (r.groups || []).forEach(g => {
+    const grp = el('div', 'rgroup');
+    grp.innerHTML = `<div class="top"><b>${esc(g.title)}</b>
+      <span class="n">${plural(g.count, 'cell')}</span>
+      <span class="conf">${(g.confidence_min * 100).toFixed(0)}–${
+        (g.confidence_max * 100).toFixed(0)}%</span></div>
+      <div class="why">${esc(g.why)}</div>
+      <div class="who2">${g.vendors.map(esc).join(' · ')}</div>`;
+    const foot = el('div', 'rfoot');
+    const all = el('button', 'go', `Accept all ${g.count}`);
+    all.onclick = async () => {
+      all.disabled = true; all.textContent = 'accepting…';
+      const res = await (await fetch('/api/reviews/accept', {method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({review_ids: g.items.map(i => i.id)})})).json();
+      grp.classList.add('done');
+      foot.replaceChildren(el('div', 'status',
+        `${g.count} accepted on one judgement — recorded against each cell.`));
+      reviewChip(res.open);
     };
-    const ev = el('button','','Source');
+    const open = el('button', 'alt', 'Show the cells');
+    const list = el('div', 'rcells'); list.hidden = true;
+    g.items.map(toCard).forEach(c => list.appendChild(reviewCell(c)));
+    let shown = false;
+    open.onclick = () => { shown = !shown; list.hidden = !shown;
+      open.textContent = shown ? 'Hide the cells' : 'Show the cells'; };
+    foot.append(all, open);
+    grp.append(foot, list);
+    b.body.appendChild(grp);
+  });
+  scrollEnd();
+}
+
+function reviewChip(open){
+  const chip = $('#chipReview');
+  if (open){ chip.hidden = false; chip.textContent = open + ' need review'; }
+  else chip.hidden = true;
+}
+
+function reviewCell(c){
+  const card = el('div', 'cell');
+  card.innerHTML = `<div class="top"><b>${esc(c.vendor_id)}</b>
+    <span class="mono" style="font-size:11px;color:var(--ink-faint)">line ${
+      c.line_no ?? '—'} · ${esc(c.field)}</span>
+    <span class="conf">${(c.confidence * 100).toFixed(0)}%</span></div>
+    <div class="mono" style="font-size:12px">${esc(c.proposed_value ?? '—')}</div>
+    <div class="why">${esc(c.reason || 'Below the confidence threshold.')}</div>`;
+  const accept = el('button', '', 'Accept');
+  accept.onclick = () => decide(c.review_id, 'accept', null, card);
+  // Inline, not window.prompt: the correction re-runs normalisation and moves
+  // the number in the table, so it deserves to look like part of the product.
+  const fix = el('button', '', 'Correct…');
+  fix.onclick = () => {
+    if (card.querySelector('.fixrow')) return;
+    const row = el('div', 'fixrow');
+    const inp = document.createElement('input');
+    inp.value = c.proposed_value ?? '';
+    inp.setAttribute('aria-label', 'Corrected value');
+    const ok = el('button', 'go', 'Save'), no = el('button', '', 'Cancel');
+    ok.onclick = () => { const v = inp.value.trim();
+      if (v) decide(c.review_id, 'correct', v, card); row.remove(); };
+    no.onclick = () => row.remove();
+    inp.onkeydown = e => { if (e.key === 'Enter') ok.onclick();
+                           else if (e.key === 'Escape') no.onclick(); };
+    row.append(inp, ok, no);
+    card.appendChild(row); inp.focus(); inp.select();
+  };
+  card.append(accept, fix);
+  if (c.evidence_id){
+    const ev = el('button', '', 'Source');
     ev.onclick = () => openEvidence(c.evidence_id);
-    card.appendChild(accept); card.appendChild(fix);
-    if (c.evidence_id) card.appendChild(ev);
-    return card;
+    card.appendChild(ev);
   }
+  return card;
 }
 
 async function decide(id, action, value, card){
@@ -1656,91 +1864,312 @@ async function decide(id, action, value, card){
     body: JSON.stringify({action, value})})).json();
   card.style.opacity = .45;
   card.querySelectorAll('button').forEach(b => b.disabled = true);
-  card.appendChild(el('div','status', action === 'accept' ? 'accepted' : 'corrected'));
-  const chip = $('#chipReview');
-  if (r.open){ chip.textContent = r.open + ' need review'; } else { chip.hidden = true; }
+  card.appendChild(el('div', 'status', action === 'accept' ? 'accepted' : 'corrected'));
+  reviewChip(r.open);
+  if (action === 'correct'){
+    STATE = await jget('/api/state');
+    comparisonCard(STATE.comparison);
+    headerMeta();
+  }
 }
 
-function renderAssumptions(b){
-  const d = el('div','block');
-  d.appendChild(el('div','who', esc(b.title)));
-  const t = el('table','asm');
-  b.rows.forEach(r => {
-    const tr = el('tr');
-    tr.innerHTML = `<td>${esc(r.label)}</td>
-      <td class="mono">${esc(r.value)}${r.unit ? ' ' + esc(r.unit) : ''}</td>
-      <td style="color:var(--ink-faint);font-size:11px">${esc(r.source)}</td>`;
-    t.appendChild(tr);
-  });
-  d.appendChild(t);
-  if (b.note) d.appendChild(el('div','status', esc(b.note)));
-  return d;
-}
-
-async function showReviews(){
-  const r = await (await fetch('/api/reviews')).json();
-  const t = turn('Review queue');
-  const card = i => ({review_id:i.id, vendor_id:i.vendor_id, line_no:i.line_no,
-    field:i.field, proposed_value:i.proposed_value, confidence:i.confidence,
-    evidence_id:i.evidence_id,
-    reason: i.missing_fact || i.match_rationale || i.unresolved_reason});
-  t.appendChild(renderReviews({
-    title: `${r.open} cells below the ${r.threshold} threshold — `
-         + `${(r.groups||[]).length} decision${(r.groups||[]).length===1?'':'s'}`,
-    groups: (r.groups || []).map(g => ({...g, cards: g.items.map(card)})),
-    cards: []}));
-  $('#chat').scrollTop = 1e9;
-}
-
+/* ---------------- assumptions and provenance ---------------- */
 async function showAssumptions(){
-  const r = await (await fetch('/api/assumptions')).json();
-  const t = turn('Assumptions');
-  t.appendChild(renderAssumptions({title:'Assumptions in force',
-    rows: r.rows, note:'Every derived number rests on these.'}));
+  const b = S.asm || (S.asm = atEnd(box({title:'Assumptions in force', key:'asm'})));
+  b.body.replaceChildren();
+  try {
+    const r = await jget('/api/assumptions');
+    const t = el('table', 'asm');
+    r.rows.forEach(x => {
+      const tr = el('tr');
+      tr.innerHTML = `<td>${esc(x.label)}</td>
+        <td class="mono">${esc(x.value)}${x.unit ? ' ' + esc(x.unit) : ''}</td>
+        <td style="color:var(--ink-faint);font-size:11px">${esc(x.source)}</td>`;
+      t.appendChild(tr);
+    });
+    b.body.appendChild(t);
+    b.body.appendChild(el('div', 'stub', 'Every derived number rests on these.'));
+  } catch (e){
+    b.body.appendChild(el('div', 'status', 'Not available yet.'));
+  }
   // Provenance lives here rather than in the header. A viewer who assumes a
   // model read these documents when a fixture did has been misled by omission —
-  // so it is still disclosed, and still one click away, but it no longer
-  // shouts a warning at everyone who opens the page.
-  if (STATE && STATE.provenance) showProvenanceInto(t, STATE.provenance);
-}
-
-function showProvenanceInto(t, prov){
-  const runs = (prov.runs || []).map(r =>
-    `<tr><td class="mono">${esc(r.vendor_id)}</td><td class="mono">${esc(r.extractor)}</td>
-     <td class="mono">${esc(r.model)}</td><td class="mono">${r.lines} lines</td>
-     <td class="mono">${esc(r.recorded_at)}</td></tr>`).join('');
-  t.appendChild(el('div','block derivation',
-    `<h4>Where these numbers came from</h4><div>${esc(prov.detail)}</div>` +
-    (runs ? `<table class="prov"><thead><tr><th>vendor</th><th>parser</th>
-             <th>model</th><th>read</th><th>recorded</th></tr></thead>
-             <tbody>${runs}</tbody></table>` : '')));
+  // so it is disclosed, one click away, without shouting at everyone who opens
+  // the page.
+  if (STATE && STATE.provenance){
+    const p = STATE.provenance;
+    const runs = (p.runs || []).map(r =>
+      `<tr><td class="mono">${esc(r.vendor_id)}</td><td class="mono">${esc(r.extractor)}</td>
+       <td class="mono">${esc(r.model)}</td><td class="mono">${r.lines} lines</td>
+       <td class="mono">${esc(r.recorded_at)}</td></tr>`).join('');
+    b.body.appendChild(el('div', 'derivation',
+      `<h4>Where these numbers came from</h4><div>${esc(p.detail)}</div>` +
+      (runs ? `<table class="prov"><thead><tr><th>vendor</th><th>parser</th><th>model</th>
+        <th>read</th><th>recorded</th></tr></thead><tbody>${runs}</tbody></table>` : '')));
+  }
+  scrollEnd();
 }
 
 function explainGap(note){
   const t = turn('Analyst');
-  t.appendChild(el('div','block refusal',
+  t.appendChild(el('div', 'refusal',
     `<div class="h">This cell is empty on purpose</div><div>${esc(note)}</div>`));
+  scrollEnd();
 }
 
-/* ---------------- evidence drawer ---------------- */
+/* ===========================================================================
+   THE CONVERSATION
+   ---------------------------------------------------------------------------
+   The co-pilot can do any of the four steps in a sentence, and after the quotes
+   land the analyst answers questions about them. Every number in every answer
+   came from a tool call; the model does no arithmetic.
+   ======================================================================== */
+async function refreshSteps(){
+  await reloadDraft();
+  if (S.items && !S.items.classList.contains('done')) drawItems();
+  if (S.vendors && !S.vendors.classList.contains('done')) drawVendors();
+  if (S.questions && !S.questions.classList.contains('done')) drawQuestions();
+  if (S.mail && !S.mail.dataset.sent && !S.mail.classList.contains('done')) drawMail();
+  [S.items, S.vendors, S.questions].forEach(resummarise);
+}
+
+async function ask(q){
+  turn('You', 'you').appendChild(el('div', 'bubble', esc(q)));
+  $('#q').value = '';
+  const t = turn('Analyst');
+  const status = el('div', 'status', 'thinking…');
+  t.appendChild(status);
+  // A model call can legitimately take half a minute. A word that never changes
+  // for half a minute reads as a hang, and the first instinct is to reload —
+  // which loses the turn that was about to arrive. Count out loud.
+  const t0 = Date.now(); let statusText = 'thinking…';
+  const tick = setInterval(() => {
+    const secs = Math.round((Date.now() - t0) / 1000);
+    status.textContent = statusText + (secs > 3 ? `   ${secs}s` : '');
+  }, 1000);
+  let lastText = '';
+  try {
+    const res = await fetch('/api/ask', {method:'POST',
+      headers:{'Content-Type':'application/json'}, body: JSON.stringify({question:q})});
+    const rd = res.body.getReader(); const dec = new TextDecoder(); let buf = '';
+    while (true){
+      const {done, value} = await rd.read(); if (done) break;
+      buf += dec.decode(value, {stream:true});
+      const parts = buf.split('\n\n'); buf = parts.pop();
+      for (const p of parts){
+        if (!p.startsWith('data: ')) continue;
+        // One block that will not render must not take the conversation down
+        // with it. Before this, a single missing renderer left "thinking…" on
+        // screen for ever and the only way out was a reload.
+        try {
+          const m = JSON.parse(p.slice(6));
+          if (m.kind === 'done'){ status.remove(); break; }
+          if (m.kind === 'status'){ statusText = m.payload;
+            status.textContent = m.payload; continue; }
+          if (m.kind === 'issued'){ await enterResults({}); continue; }
+          status.remove();
+          const blk = m.payload;
+          if (blk.type === 'rfx_draft'){ await refreshSteps(); continue; }
+          if (blk.type === 'mail_draft'){
+            if (S.mail && !S.mail.dataset.sent){ expand(S.mail); await drawMail(); }
+            else { await reloadDraft(); stepMail(); }
+            continue;
+          }
+          if (blk.type === 'text' && (blk.text || '').trim() === lastText) continue;
+          if (blk.type === 'text') lastText = (blk.text || '').trim();
+          t.appendChild(renderBlock(blk));
+          scrollEnd();
+        } catch (err){
+          console.error('block failed', err);
+          t.appendChild(el('div', 'status', 'A block did not render: ' + esc(err.message)));
+        }
+      }
+    }
+  } finally { clearInterval(tick); status.remove(); }
+}
+
+function renderBlock(b){
+  if (b.type === 'text') return el('div', 'block', mdish(b.text));
+  if (b.type === 'query') return renderQuery(b);
+  if (b.type === 'table'){
+    // The table is a card in this column, not a thing that appears twice. An
+    // answer that produced a new one updates it in place and says so.
+    comparisonCard(b);
+    return el('div', 'status', '\u2191 the table above is now this answer');
+  }
+  if (b.type === 'chart') return renderChart(b);
+  if (b.type === 'evidence'){
+    const d = el('div', 'block');
+    const btn = el('button', 'chip warn',
+      'Open ' + esc(b.doc_id) + ' · ' + esc(b.locator));
+    btn.onclick = () => openEvidence(b.evidence_id);
+    d.appendChild(btn);
+    if (b.snippet) d.appendChild(el('div', 'status', esc(b.snippet)));
+    return d;
+  }
+  if (b.type === 'choice') return renderChoice(b);
+  if (b.type === 'options') return renderOptions(b);
+  if (b.type === 'review'){
+    const d = el('div', 'block');
+    const go = el('button', 'alt', 'Open the review queue');
+    go.onclick = showReviews; d.appendChild(go); return d;
+  }
+  if (b.type === 'assumptions'){
+    const d = el('div', 'block');
+    const go = el('button', 'alt', 'Show the assumptions');
+    go.onclick = showAssumptions; d.appendChild(go); return d;
+  }
+  if (b.type === 'refusal'){
+    const d = el('div', 'refusal');
+    d.innerHTML = `<div class="h">Not answerable from this data</div>
+      <div>${esc(b.reason)}</div>` +
+      ((b.would_need || []).length
+        ? `<ul>${b.would_need.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : '');
+    // If the co-pilot cannot run, the visitor is stranded with no way to reach
+    // the half of this build that needs no model at all. Offer the door.
+    if (PHASE === 'draft'){
+      const b2 = el('button', 'alt', 'Issue the template RFx instead');
+      b2.style.marginTop = '9px';
+      b2.onclick = async () => {
+        b2.disabled = true; b2.textContent = 'reading five responses…';
+        await fetch('/api/issue_default', {method:'POST'});
+        await enterResults({});
+      };
+      d.appendChild(b2);
+    }
+    return d;
+  }
+  return el('div', 'status', esc(JSON.stringify(b).slice(0, 200)));
+}
+
+function renderQuery(b){
+  // Collapsed and labelled "computed", not "SQL". A buyer does not need to read
+  // a query to trust a number, but a VP challenging one needs it to exist — so
+  // it is one click away and never the headline.
+  const src = b.sql || b.code || '';
+  const typed = /^[a-z_]+\(/.test(src) && !/\bselect\b/i.test(src);
+  const d = el('details', 'qry');
+  d.appendChild(el('summary', '',
+    (typed ? esc(src.replace(/\(.*$/, '')) : 'computed') + ` · ${b.row_count} rows`));
+  d.appendChild(el('pre', '', esc(src)));
+  return d;
+}
+
+function renderChart(b){
+  const w = 640, h = 210, pad = 44, n = b.categories.length;
+  const all = b.series.flatMap(s => s.values); const max = Math.max(...all, 1);
+  const bw = (w - pad * 2) / n * 0.62;
+  let bars = '', labels = '', ticks = '';
+  for (let i = 0; i < 4; i++){
+    const v = max * i / 3, y = h - pad - (h - pad * 1.5) * (i / 3);
+    ticks += `<line x1="${pad}" x2="${w - 8}" y1="${y}" y2="${y}" stroke="currentColor"
+      stroke-opacity=".12"/><text x="${pad - 6}" y="${y + 3}" text-anchor="end"
+      font-size="9" fill="currentColor">${Math.round(v).toLocaleString('en-IN')}</text>`;
+  }
+  b.categories.forEach((c, i) => {
+    const x = pad + (w - pad * 2) * (i + 0.5) / n;
+    b.series.forEach((s, j) => {
+      const v = s.values[i] ?? 0, hh = (h - pad * 1.5) * (v / max);
+      const bx = x - bw / 2 + (j * bw / b.series.length);
+      bars += `<rect x="${bx}" y="${h - pad - hh}" width="${bw / b.series.length - 2}"
+        height="${Math.max(hh, 1)}" fill="var(--accent)" fill-opacity="${1 - j * 0.35}"/>`;
+    });
+    labels += `<text x="${x}" y="${h - pad + 13}" text-anchor="middle" font-size="9"
+      fill="currentColor">${esc(c).slice(0, 11)}</text>`;
+  });
+  const d = el('div', 'block');
+  d.innerHTML = `<div class="who">${esc(b.title)}</div>
+    <svg viewBox="0 0 ${w} ${h}" style="width:100%;max-width:${w}px;color:var(--ink-soft);
+      font-family:'IBM Plex Mono',monospace">${ticks}${bars}${labels}</svg>`;
+  return d;
+}
+
+/* A decision the buyer clicks, with what each option costs written on it.
+   A click writes to the draft FIRST and tells the co-pilot second: the picker
+   knows exactly which field it edits, so "45 days from GRN" never has to
+   survive a round trip through a model before it reaches the field that
+   re-prices 139 cells. */
+function renderChoice(b){
+  const d = el('div', 'choice');
+  const picked = new Set(b.options.filter(o => o.selected).map(o => o.value));
+  const list = el('div', 'opts');
+  b.options.forEach(o => {
+    const row = el('button', 'opt' + (picked.has(o.value) ? ' on' : ''));
+    row.innerHTML = `<span class="mark"></span><span class="txt">${esc(o.label)}` +
+      (o.consequence ? `<em>${esc(o.consequence)}</em>` : '') + `</span>`;
+    row.onclick = () => {
+      if (!b.multi){ send(b, [o.value]); return; }
+      picked.has(o.value) ? picked.delete(o.value) : picked.add(o.value);
+      row.classList.toggle('on');
+      apply.hidden = false;
+      apply.textContent = picked.size ? `Apply ${picked.size} selected` : 'Apply — gate on nothing';
+    };
+    list.appendChild(row);
+  });
+  d.innerHTML = `<div class="h">${esc(b.title)}</div>`;
+  d.appendChild(list);
+  if (b.note) d.appendChild(el('div', 'cnote', esc(b.note)));
+  const foot = el('div', 'foot');
+  const apply = el('button', 'go'); apply.hidden = !b.multi;
+  apply.textContent = picked.size ? `Apply ${picked.size} selected` : 'Apply';
+  apply.onclick = () => send(b, [...picked]);
+  foot.appendChild(apply);
+  if (b.allow_other){
+    const other = el('button', 'alt', 'Something else…');
+    other.onclick = () => { $('#q').focus();
+      if (b.other_hint) $('#q').placeholder = b.other_hint; };
+    foot.appendChild(other);
+  }
+  d.appendChild(foot);
+
+  async function send(blk, values){
+    if (blk.key === 'lines' && values[0] === 'pick'){ stepItems(); return; }
+    const labels = values.map(v =>
+      (blk.options.find(o => o.value === v) || {}).label || v);
+    d.querySelectorAll('button').forEach(x => x.disabled = true);
+    d.classList.add('done');
+    const patch = {};
+    if (blk.key === 'payment_terms' && /^\d+$/.test(values[0]))
+      patch.payment_terms_days = Number(values[0]);
+    else if (blk.key === 'gates')
+      patch.gating_q_nos = values.map(Number).filter(n => !isNaN(n));
+    else if (blk.key === 'vendors') patch.vendor_ids = values;
+    else if (blk.key === 'lines' && CAT){
+      const all = CAT.lines;
+      if (values[0] === 'all') patch.line_nos = all.map(l => l.line_no);
+      else if (values[0] === '3' || values[0] === '5')
+        patch.line_nos = all.filter(l => String(l.ply) === values[0]).map(l => l.line_no);
+    }
+    if (Object.keys(patch).length){
+      try { await patchDraft(patch); await refreshSteps(); }
+      catch (e){ console.error('draft patch', e); }
+    }
+    ask(`${blk.title}: ${labels.length ? labels.join('; ') : 'none'}`);
+  }
+  return d;
+}
+
+/* ===========================================================================
+   Evidence drawer — the one thing that is not in the column, because it is a
+   source document rather than a step in the work.
+   ======================================================================== */
 async function openEvidence(id){
   if (!id) return;
   const res = await fetch('/api/evidence/' + id);
   if (!res.ok){
     $('#dTitle').textContent = 'No source on file';
-    $('#dBody').replaceChildren(el('div','derivation',
+    $('#dBody').replaceChildren(el('div', 'derivation',
       `<h4>Nothing to open</h4><div>This cell has no evidence record
        (<span class="mono">${esc(id)}</span>). That happens when a value was
        supplied by a human correction rather than read from a document — the
-       correction is recorded in the review log instead.</div>`));
+       correction is in the review log instead.</div>`));
     $('#drawer').classList.add('open'); $('#scrim').classList.add('on');
     return;
   }
   const e = await res.json();
   $('#dTitle').textContent = e.doc_id;
   const b = $('#dBody'); b.replaceChildren();
-
-  const kv = el('div','kv');
+  const kv = el('div', 'kv');
   const cell = e.cell || {}, q = e.quote || {};
   kv.innerHTML =
     `<div><span>Locator</span><b class="mono">${esc(e.locator)}</b></div>` +
@@ -1748,42 +2177,34 @@ async function openEvidence(id){
     (cell.as_quoted ? `<div><span>As quoted</span><b class="mono">${esc(cell.as_quoted)}</b></div>` : '') +
     (cell.landed_inr != null ? `<div><span>Landed</span><b class="mono">${inr(cell.landed_inr)}</b></div>` : '') +
     (cell.state ? `<div><span>State</span><b>${esc(cell.state)}</b></div>` : '') +
-    (cell.extraction_confidence != null ?
-      `<div><span>Confidence</span><b class="mono">extract ${(cell.extraction_confidence*100).toFixed(0)}% ·
-       match ${(cell.match_confidence*100).toFixed(0)}%</b></div>` : '');
+    (cell.extraction_confidence != null
+      ? `<div><span>Confidence</span><b class="mono">extract ${
+          (cell.extraction_confidence * 100).toFixed(0)}% · match ${
+          (cell.match_confidence * 100).toFixed(0)}%</b></div>` : '');
   b.appendChild(kv);
-
-  if (q.match_rationale){
-    const d = el('div','derivation');
-    d.innerHTML = `<h4>Why this line</h4><div>${esc(q.match_rationale)}</div>`;
-    b.appendChild(d);
-  }
-  if (cell.caveats?.length){
-    const d = el('div','derivation');
-    d.innerHTML = `<h4>How it was derived</h4><ul>${
-      cell.caveats.map(c => `<li>${esc(c)}</li>`).join('')}</ul>`;
-    b.appendChild(d);
-  }
-  if (cell.missing_fact){
-    const d = el('div','derivation');
-    d.innerHTML = `<h4>Why it is empty</h4><div>${esc(cell.unresolved_reason || '')}</div>
-      <div style="margin-top:6px"><b>Needs:</b> <span class="mono">${esc(cell.missing_fact)}</span></div>`;
-    b.appendChild(d);
-  }
-
-  b.appendChild(el('div','who','Source document'));
+  if (q.match_rationale)
+    b.appendChild(el('div', 'derivation',
+      `<h4>Why this line</h4><div>${esc(q.match_rationale)}</div>`));
+  if ((cell.caveats || []).length)
+    b.appendChild(el('div', 'derivation',
+      `<h4>How it was derived</h4><ul>${cell.caveats.map(c => `<li>${esc(c)}</li>`).join('')}</ul>`));
+  if (cell.missing_fact)
+    b.appendChild(el('div', 'derivation',
+      `<h4>Why it is empty</h4><div>${esc(cell.unresolved_reason || '')}</div>
+       <div style="margin-top:6px"><b>Needs:</b> <span class="mono">${
+         esc(cell.missing_fact)}</span></div>`));
+  b.appendChild(el('div', 'who', 'Source document'));
   if (e.kind === 'image'){
     const img = el('img'); img.src = e.url; img.alt = e.doc_id; b.appendChild(img);
     const m = /crop:([\d.]+),([\d.]+),([\d.]+),([\d.]+)/.exec(e.locator);
-    if (m) b.appendChild(el('div','status',
-      `Region ${(+m[2]*100).toFixed(0)}% down the page, ${(+m[4]*100).toFixed(1)}% tall.`));
+    if (m) b.appendChild(el('div', 'status',
+      `Region ${(+m[2] * 100).toFixed(0)}% down the page, ${(+m[4] * 100).toFixed(1)}% tall.`));
   } else if (e.kind === 'pdf'){
-    const f = el('iframe'); f.src = e.url + '#page=' +
-      (/^p(\d+)/.exec(e.locator)?.[1] || 1); b.appendChild(f);
+    const f = el('iframe');
+    f.src = e.url + '#page=' + (/^p(\d+)/.exec(e.locator)?.[1] || 1);
+    b.appendChild(f);
   } else {
-    // Everything else renders in place too. A download link here was the last
-    // point where checking a number meant leaving the screen.
-    const ph = el('div','status','reading ' + esc(e.doc_id) + '…');
+    const ph = el('div', 'status', 'reading ' + esc(e.doc_id) + '…');
     b.appendChild(ph);
     fetch('/api/doc/' + encodeURIComponent(e.doc_id) + '/preview?locator='
           + encodeURIComponent(e.locator || ''))
@@ -1792,29 +2213,29 @@ async function openEvidence(id){
       .catch(() => ph.textContent = 'Could not read ' + e.doc_id);
   }
   $('#drawer').classList.add('open'); $('#scrim').classList.add('on');
-  $('#drawer').setAttribute('aria-hidden','false');
+  $('#drawer').setAttribute('aria-hidden', 'false');
 }
+
 function renderSource(d){
-  const wrap = el('div','src');
+  const wrap = el('div', 'src');
   if (d.kind === 'mail'){
     wrap.innerHTML =
-      '<table class="draft">' + (d.headers||[]).map(([k,v]) =>
+      '<table class="kvt">' + (d.headers || []).map(([k, v]) =>
         `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join('') + '</table>' +
-      `<pre class="mailbody">${esc(d.body || '')}</pre>` +
-      ((d.attachments||[]).length
-        ? `<div class="attach">${d.attachments.map(a=>'📎 '+esc(a)).join('  ')}</div>` : '');
+      `<div class="mailbody-ro">${esc(d.body || '')}</div>` +
+      ((d.attachments || []).length
+        ? `<div class="attach">${d.attachments.map(a => '📎 ' + esc(a)).join('  ')}</div>` : '');
     return wrap;
   }
   if (d.kind === 'sheet'){
-    (d.sheets||[]).forEach(sh => {
+    (d.sheets || []).forEach(sh => {
       const focused = sh.name === d.focus_sheet;
-      const det = el('details','sheet'); det.open = focused;
+      const det = el('details', 'sheet'); det.open = focused;
       const hid = sh.hidden_rows && sh.hidden_rows.length
-        ? ` · ${sh.hidden_rows.length} hidden row${sh.hidden_rows.length>1?'s':''}` : '';
-      det.appendChild(el('summary','', esc(sh.name) + hid +
-        (focused ? ' · cited here' : '')));
-      const t = el('table','grid');
-      (sh.rows||[]).forEach(r => {
+        ? ` · ${plural(sh.hidden_rows.length, 'hidden row')}` : '';
+      det.appendChild(el('summary', '', esc(sh.name) + hid + (focused ? ' · cited here' : '')));
+      const t = el('table', 'grid');
+      (sh.rows || []).forEach(r => {
         const tr = el('tr');
         r.forEach(c => {
           const td = el('td', (c.hidden ? 'hid ' : '') +
@@ -1824,7 +2245,7 @@ function renderSource(d){
         t.appendChild(tr);
       });
       det.appendChild(t);
-      if (hid) det.appendChild(el('div','status',
+      if (hid) det.appendChild(el('div', 'status',
         'Hidden rows are shown greyed. Superseded lines get hidden rather than '
         + 'deleted, which is why they are worth seeing.'));
       wrap.appendChild(det);
@@ -1832,11 +2253,11 @@ function renderSource(d){
     return wrap;
   }
   if (d.kind === 'prose'){
-    wrap.innerHTML = (d.paragraphs||[]).map(x =>
+    wrap.innerHTML = (d.paragraphs || []).map(x =>
       x.type === 'h' ? `<h5>${esc(x.text)}</h5>` : `<p>${esc(x.text)}</p>`).join('');
-    (d.tables||[]).forEach(rows => {
-      const t = el('table','grid');
-      rows.forEach((r,i) => {
+    (d.tables || []).forEach(rows => {
+      const t = el('table', 'grid');
+      rows.forEach((r, i) => {
         const tr = el('tr');
         if (d.focus_row != null && i === d.focus_row) tr.className = 'hit';
         r.forEach(c => { const td = el('td'); td.textContent = c; tr.appendChild(td); });
@@ -1846,17 +2267,15 @@ function renderSource(d){
     });
     return wrap;
   }
-  wrap.appendChild(el('div','status', d.message || 'No preview for this file type.'));
+  wrap.appendChild(el('div', 'status', d.message || 'No preview for this file type.'));
   return wrap;
 }
 
-function closeDrawer(){ $('#drawer').classList.remove('open');
-  $('#scrim').classList.remove('on'); $('#drawer').setAttribute('aria-hidden','true'); }
-$('#dClose').onclick = closeDrawer; $('#scrim').onclick = closeDrawer;
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
-
-$('#f').onsubmit = e => { e.preventDefault();
-  const v = $('#q').value.trim(); if (v) ask(v); };
+function closeDrawer(){
+  $('#drawer').classList.remove('open');
+  $('#scrim').classList.remove('on');
+  $('#drawer').setAttribute('aria-hidden', 'true');
+}
 
 boot();
 </script>

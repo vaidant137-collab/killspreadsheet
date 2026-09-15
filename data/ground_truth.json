@@ -3125,5 +3125,98 @@
         "Rs 42/kg for the 5-ply, 38 for the 3-ply, rest same as last year, freight extra."
       ]
     }
+  ],
+  "clarifications": [
+    {
+      "vendor_id": "apex",
+      "asked_for": [
+        "finished weight per piece for lines 11, 12, 13, 15, 20, 21"
+      ],
+      "reply_text": "Rakesh here.\n\nWeights as per our production standard, finished and glued, average of last three runs:\n\n  Line 11  CB-0201-5P-550380320  1497 g\n  Line 12  CB-0201-5P-300300300  838 g\n  Line 13  CB-0201-5P-480320280  1181 g\n  Line 15  CB-0201-5P-650450450  2642 g\n  Line 20  CB-0427-3P-300220100  272 g\n  Line 21  CB-0427-5P-350250120  766 g\n\nRates per kg as quoted earlier. Freight extra as before.\n\nRegards\nRakesh Shetty\nApex Packwell",
+      "received_at": "2026-09-05",
+      "unit_weights_g": {
+        "11": 1496.8,
+        "12": 837.6,
+        "13": 1180.8,
+        "15": 2641.6,
+        "20": 272.1,
+        "21": 766.4
+      },
+      "questionnaire": [],
+      "moq_pieces": null,
+      "line_quotes": [],
+      "attachments": [],
+      "declined": null
+    },
+    {
+      "vendor_id": "nova",
+      "asked_for": [
+        "a current ISO 9001 certificate \u2014 the one attached to your reply expired on 31 March 2026"
+      ],
+      "reply_text": "Dear Sir,\n\nApologies \u2014 the certificate attached earlier was the previous cycle. Our recertification completed in April. Current certificate NC/QMS/2219-R3 is valid to 12 April 2029, copy attached.\n\nAll other terms stand.\n\nRegards\nPriya Menon\nNova Corrugators",
+      "received_at": "2026-09-05",
+      "unit_weights_g": {},
+      "questionnaire": [
+        {
+          "q_no": 1,
+          "answer": "Yes - ISO 9001:2015, cert. NC/QMS/2219-R3, valid to 12 Apr 2029",
+          "evidence_file": "nova_iso9001_certificate_r3.pdf",
+          "contradicted_by_evidence": false
+        }
+      ],
+      "moq_pieces": null,
+      "line_quotes": [],
+      "attachments": [
+        {
+          "filename": "nova_iso9001_certificate_r3.pdf",
+          "kind": "iso9001",
+          "valid_until": "2029-04-12",
+          "summary": "ISO 9001:2015 certificate, recertified April 2026, NC/QMS/2219-R3"
+        }
+      ],
+      "declined": null
+    },
+    {
+      "vendor_id": "ganesh",
+      "asked_for": [
+        "ISO 9001 certification status",
+        "the test method behind your 22 BF figure"
+      ],
+      "reply_text": "Sir,\n\nWe are not ISO certified. We have applied, audit is expected March 2027.\n\n22 BF is as per IS 2771, tested at Ambernath by our supplier's lab.\n\nGanesh Boxes\n",
+      "received_at": "2026-09-06",
+      "unit_weights_g": {},
+      "questionnaire": [
+        {
+          "q_no": 1,
+          "answer": "Not certified - applied, audit expected Mar 2027",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        },
+        {
+          "q_no": 8,
+          "answer": "22 BF as per IS 2771 (supplier lab, Ambernath)",
+          "evidence_file": null,
+          "contradicted_by_evidence": false
+        }
+      ],
+      "moq_pieces": null,
+      "line_quotes": [],
+      "attachments": [],
+      "declined": "ISO 9001 certification \u2014 not held, and not expected before March 2027"
+    },
+    {
+      "vendor_id": "meridian",
+      "asked_for": [
+        "a rate for the lines below your 50,000-piece minimum"
+      ],
+      "reply_text": "Dear Team,\n\nWe can supply below our standard 50,000 pc minimum at a small-lot surcharge. Revised minimum 9,000 pc. Rates as quoted plus 13.5% on the affected lines, which is our short-run set-up recovery.\n\nBest regards\nS. Rajagopal\nMeridian Packaging International",
+      "received_at": "2026-09-07",
+      "unit_weights_g": {},
+      "questionnaire": [],
+      "moq_pieces": 9000,
+      "line_quotes": [],
+      "attachments": [],
+      "declined": null
+    }
   ]
 }

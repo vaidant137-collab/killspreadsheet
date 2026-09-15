@@ -179,7 +179,19 @@ class RfxDraft(BaseModel):
     response_due: str | None = None
 
     line_nos: list[int] = Field(default_factory=list)
+    # The item master is what the buyer HAS bought, not what they are buying
+    # this year. A tender where the quantities cannot move, and where a line
+    # bought for the first time cannot be added, is a picker rather than an RFx.
+    # Overrides are per line and the master is never edited: next year's buyer
+    # starts from the same catalogue.
+    qty_overrides: dict[int, int] = Field(default_factory=dict)
+    extra_lines: list[dict] = Field(default_factory=list)
     question_nos: list[int] = Field(default_factory=list)
+    # The buyer has been through the questionnaire, whatever they kept. Without
+    # this the server cannot tell "not decided yet" from "decided on four", and
+    # a buyer who removed five questions had all nine put back for them — which
+    # is what the mail then said was going out.
+    questions_chosen: bool = False
     gating_q_nos: list[int] = Field(default_factory=list)
     vendor_ids: list[str] = Field(default_factory=list)
 
@@ -205,6 +217,6 @@ class RfxDraft(BaseModel):
             gaps.append("a vendor list")
         if self.payment_terms_days is None:
             gaps.append("payment terms")
-        if not self.question_nos:
+        if not self.question_nos and not self.questions_chosen:
             gaps.append("a questionnaire")
         return gaps

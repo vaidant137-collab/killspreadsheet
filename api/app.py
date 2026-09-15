@@ -16,6 +16,9 @@ import os
 import queue
 import threading
 import time
+import uuid
+from contextvars import ContextVar
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
@@ -47,15 +50,64 @@ def _within_budget() -> tuple[bool, int]:
     return len(_asks) < MAX_PER_HOUR, MAX_PER_HOUR - len(_asks)
 
 
-# --- the two halves of the product -----------------------------------------
+# --- one session per visitor -------------------------------------------------
 # "draft": no RFx exists yet; the co-pilot has authoring tools and the screen is
 # an empty chat. "comparison": responses are in and the analyst takes over.
 #
-# One process-wide session, like the rate limiter above, because this is a demo
-# on a single free instance. A real deployment keys this per buyer; the shape of
-# the code does not change, only where the dict lives.
-SESSION = {"phase": "draft", "draft": RfxDraft(),
-           "round": {"state": "idle", "vendors": []}}
+# This was one process-wide dict, which is fine until two people open the link.
+# The second one arrived into the first one's half-written tender, and anybody
+# opening the URL cold landed in the middle of a session they had not started —
+# which for a demo link that gets shared is the difference between a product and
+# an embarrassment.
+#
+# So: a cookie, a session per browser, and a DATABASE per session, because
+# issuing an RFx rebuilds the store and two buyers issuing different schedules
+# would otherwise overwrite each other's comparison. SESSION stays a dict-shaped
+# name resolved per request, so every call site below is unchanged.
+_SESSIONS: dict[str, dict] = {}
+_SESSION_ORDER: list[str] = []
+_CURRENT_SID: ContextVar[str] = ContextVar("ks_sid", default="local")
+SID_COOKIE = "ks_sid"
+MAX_SESSIONS = int(os.getenv("MAX_SESSIONS", "40"))
+
+
+def _new_session(sid: str) -> dict:
+    return {"phase": "draft", "draft": RfxDraft(),
+            "round": {"state": "idle", "vendors": []},
+            "db": DATA / "sessions" / f"{sid}.db"}
+
+
+def _session() -> dict:
+    sid = _CURRENT_SID.get()
+    s = _SESSIONS.get(sid)
+    if s is None:
+        s = _SESSIONS[sid] = _new_session(sid)
+        _SESSION_ORDER.append(sid)
+        # A free instance has a small disk. Keep the newest few and delete the
+        # rest, oldest first — a demo nobody has touched in an hour is not worth
+        # a megabyte.
+        while len(_SESSION_ORDER) > MAX_SESSIONS:
+            old = _SESSION_ORDER.pop(0)
+            dead = _SESSIONS.pop(old, None)
+            if dead and isinstance(dead.get("db"), Path):
+                dead["db"].unlink(missing_ok=True)
+    return s
+
+
+class _SessionView:
+    """Dict-shaped access to whichever session this request belongs to."""
+
+    def __getitem__(self, k):
+        return _session()[k]
+
+    def __setitem__(self, k, v):
+        _session()[k] = v
+
+    def get(self, k, default=None):
+        return _session().get(k, default)
+
+
+SESSION = _SessionView()
 
 
 def _catalogue() -> dict:
@@ -180,8 +232,8 @@ def _blank_round(draft: RfxDraft) -> dict:
     }
 
 
-def _round_step(vendor_id: str, **fields) -> None:
-    for v in SESSION["round"]["vendors"]:
+def _round_step(round_: dict, vendor_id: str, **fields) -> None:
+    for v in round_["vendors"]:
         if v["vendor_id"] == vendor_id:
             v.update(fields)
             return
@@ -213,33 +265,62 @@ def _compose_mail(d: RfxDraft) -> dict:
     if d.mail_body:
         body = d.mail_body
     else:
+        # A real covering note asks for the things that decide the comparison.
+        # The first version asked for a rate and nothing else — no minimum
+        # order, no price break, no freight basis, no validity, no lead time —
+        # and then the landed cost quietly added freight the vendor had never
+        # been asked about. It also told the vendor "we would rather normalise
+        # your number than guess at it", which invites the exact ambiguity the
+        # rest of this system exists to clean up. Ask for the unit you want,
+        # and for the conversion if they cannot give it.
         gate_text = ("\n".join(f"    Q{n}. {qs[n]}" for n in gates)
-                     if gates else "    (none — price decides alone)")
+                     if gates else "    (none — every answer is for information only)")
+        n_q = len(d.question_nos or [])
+        others = [n for n in (d.question_nos or []) if n not in gates]
+        others_text = ("\n".join(f"    Q{n}. {qs[n]}" for n in others if n in qs)
+                       if others else "    (none)")
         body = f"""Dear Supplier,
 
 {dflt.get('buyer_org', 'We')} invite you to quote for our annual \
 {str(dflt.get('category', '')).lower()} requirement.
+The line schedule and the questionnaire are attached.
 
-  Schedule          {len(lines)} line items, attached
-  Delivery          {d.delivery_point or dflt.get('delivery_point', '')}
-  Incoterm          {d.required_incoterm or dflt.get('required_incoterm', '')}
+  Schedule          {len(lines)} line items
+  Deliver to        {d.delivery_point or dflt.get('delivery_point', '')}
+  Incoterm required {d.required_incoterm or dflt.get('required_incoterm', '')}
   Payment terms     {d.payment_terms_days} days from GRN
-  Responses due     {d.response_due or ''}
+  Responses due     {d.response_due or '(to be confirmed)'}
 
-Please quote a rate per line against the units stated in the schedule. Where \
-your rate is on a different basis — per kilogram, per hundred, per set — say \
-so plainly rather than converting it; we will normalise, and we would rather \
-normalise your number than guess at it.
+WHAT TO QUOTE
 
-The attached questionnaire has {len(d.question_nos or [])} questions and all \
-of them must be answered. These are disqualifying — an unsatisfactory answer \
-ends the submission regardless of price:
+  1. A rate against EVERY line, in the unit stated on that line — per piece,
+     per kilogram, per set or per 100, as the schedule says. If you cannot
+     quote in that unit, give us your unit AND the conversion factor you used
+     (for example "Rs 42/kg, 1 box = 480 g"). Do not convert it yourself
+     without telling us what you converted by.
+  2. Your minimum order quantity per line, and any price break or slab — if a
+     rate only holds above a volume, say so against the line it applies to. A
+     rate we cannot buy at is not a rate.
+  3. Freight. Quote {d.required_incoterm or dflt.get('required_incoterm', 'delivered')}. If you quote ex-works or freight-extra instead, state the freight per
+     shipment and your shipments per year, because we will add it to compare
+     you against a delivered quote and we would rather use your number.
+  4. Taxes EXCLUSIVE. If your quote is tax-inclusive, say so and state the rate.
+  5. Quote validity in days — 60 or more preferred.
+  6. Your standard production lead time in days, PO to despatch.
+
+  If any line is outside what you make, leave it blank. A blank is useful to
+  us; a substitution is not.
+
+QUESTIONNAIRE — {n_q} question{'' if n_q == 1 else 's'}, all to be answered
+
+  {len(gates)} of them {'is' if len(gates) == 1 else 'are'} DISQUALIFYING \u2014 an unsatisfactory answer
+  ends the submission regardless of price:
 
 {gate_text}
 
-Quote validity of at least 60 days is preferred. If any part of the schedule \
-is outside what you make, leave it blank rather than substituting; a blank is \
-useful to us and a substitution is not.
+  The remainder are for information and do not disqualify:
+
+{others_text}
 
 Regards,
 Procurement
@@ -273,7 +354,7 @@ def round_state() -> dict:
     return SESSION["round"]
 
 
-def _issue(draft: RfxDraft) -> None:
+def _issue(draft: RfxDraft, sess: dict | None = None) -> None:
     """Run the whole pipeline against the RFx the buyer just authored.
 
     Lives here rather than in analyst/author.py because this module is a
@@ -281,11 +362,19 @@ def _issue(draft: RfxDraft) -> None:
     quietly invert the dependency the whole architecture rests on.
     """
     import pipeline
-    pipeline.run(fresh=True, verbose=False, draft=draft)
-    SESSION["phase"] = "comparison"
+    sess = sess if sess is not None else _session()
+    p = sess.get("db")
+    if p is not None:
+        p.parent.mkdir(parents=True, exist_ok=True)
+    pipeline.run(fresh=True, verbose=False, draft=draft, db_path=p)
+    sess["phase"] = "comparison"
 
 
 def db():
+    """This visitor's store. Falls back to the shared one for a local run."""
+    p = SESSION.get("db")
+    if p is not None and p.exists():
+        return repo.connect(p)
     if not DB_PATH.exists():
         raise HTTPException(503, "Database not built. Run `python -m pipeline` first.")
     return repo.connect(DB_PATH)
@@ -303,6 +392,20 @@ def _require_issued(what: str) -> None:
         raise HTTPException(
             409, f"No {what} yet — the RFx has not been issued. "
                  f"Nothing has come back from any vendor.")
+
+
+@app.middleware("http")
+async def _per_visitor_session(request, call_next):
+    """A cookie, so two people opening the same link get two tenders."""
+    sid = request.cookies.get(SID_COOKIE) or uuid.uuid4().hex
+    token = _CURRENT_SID.set(sid)
+    try:
+        response = await call_next(request)
+    finally:
+        _CURRENT_SID.reset(token)
+    response.set_cookie(SID_COOKIE, sid, max_age=86400, samesite="lax",
+                        httponly=True)
+    return response
 
 
 @app.get("/healthz")
@@ -634,6 +737,7 @@ def ask(a: Ask):
     """Server-sent events. Blocks reach the UI as they are produced, so a
     multi-step answer shows its working rather than appearing all at once."""
     conn = db()
+    sess = _session()               # same reason as /api/issue: see below
     ok, left = _within_budget()
     if not ok:
         def refuse():
@@ -653,9 +757,9 @@ def ask(a: Ask):
 
     # Which agent answers depends on whether an RFx exists yet. Same loop, same
     # Block contract to the screen; different tools and a different brief.
-    drafting = SESSION["phase"] == "draft"
+    drafting = sess["phase"] == "draft"
     if drafting:
-        tools = AuthorTools(SESSION["draft"], _catalogue())
+        tools = AuthorTools(sess["draft"], _catalogue())
         agent = Analyst(conn, tools=tools, specs=AUTHOR_TOOL_SPECS,
                         system=AUTHOR_SYSTEM)
     else:
@@ -667,7 +771,7 @@ def ask(a: Ask):
             body = (payload if isinstance(payload, str)
                     else json.loads(payload.model_dump_json()))
             yield f"data: {json.dumps({'kind': kind, 'payload': body})}\n\n"
-            if drafting and SESSION["draft"].issued and not issued:
+            if drafting and sess["draft"].issued and not issued:
                 issued = True
         if issued:
             # The vendors "reply". Extraction, matching, normalisation and
@@ -675,10 +779,10 @@ def ask(a: Ask):
             yield ("data: " + json.dumps({"kind": "status",
                                           "payload": "reading five responses…"}) + "\n\n")
             try:
-                _issue(SESSION["draft"])
+                _issue(sess["draft"], sess)
                 yield "data: " + json.dumps({"kind": "issued"}) + "\n\n"
             except Exception as e:                            # noqa: BLE001
-                SESSION["draft"].issued = False
+                sess["draft"].issued = False
                 body = {"type": "refusal", "question": a.question,
                         "reason": f"The RFx went out but reading the responses "
                                   f"failed: {type(e).__name__}: {e}",
@@ -702,7 +806,12 @@ def issue_round():
     says so on its face. Everything after it is real work on real documents,
     which is why it is worth watching.
     """
-    d = SESSION["draft"]
+    # Bind the session HERE. The generator below runs while the response is
+    # streaming, which is after the middleware has reset the per-request
+    # context — so SESSION inside it would resolve to the wrong visitor, and in
+    # testing resolved to the fallback and wrote its database there.
+    sess = _session()
+    d = sess["draft"]
     gaps = d.missing()
     if gaps:
         raise HTTPException(409, f"Still missing {', '.join(gaps)}.")
@@ -718,8 +827,8 @@ def issue_round():
     if not d.mail_approved:
         raise HTTPException(409, "The covering mail has not been approved.")
 
-    SESSION["round"] = _blank_round(d)
-    r = SESSION["round"]
+    sess["round"] = _blank_round(d)
+    r = sess["round"]
     r["state"] = "sending"
     r["started_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
 
@@ -748,8 +857,11 @@ def issue_round():
 
             def work():
                 try:
+                    dbp = sess.get("db")
+                    if dbp is not None:
+                        dbp.parent.mkdir(parents=True, exist_ok=True)
                     pipeline.run(fresh=True, verbose=False, draft=d,
-                                 on_progress=q.put)
+                                 on_progress=q.put, db_path=dbp)
                 except Exception as exc:                      # noqa: BLE001
                     q.put(exc)
                 finally:
@@ -766,7 +878,7 @@ def issue_round():
                     failure = e
                     continue
                 if e["state"] == "reading":
-                    _round_step(e["vendor_id"], state="reply received",
+                    _round_step(r, e["vendor_id"], state="reply received",
                                 format=e.get("format"),
                                 note=f"replied by {e.get('format')}")
                 else:
@@ -778,7 +890,7 @@ def issue_round():
                         note += " \u00b7 fell back to the fixture path"
                     if e.get("injection"):
                         note += " \u00b7 instructions found in the document, logged"
-                    _round_step(e["vendor_id"], state="quote read",
+                    _round_step(r, e["vendor_id"], state="quote read",
                                 lines=e.get("lines"), note=note)
                 yield ev("round", r)
             th.join(timeout=5)
@@ -786,7 +898,7 @@ def issue_round():
                 raise failure
             r["state"] = "complete"
             r["finished_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
-            SESSION["phase"] = "comparison"
+            sess["phase"] = "comparison"
             yield ev("round", r)
             yield ev("done", {"phase": "comparison"})
         except Exception as exc:                              # noqa: BLE001
@@ -838,9 +950,15 @@ def issue_default() -> dict:
 class DraftEdit(BaseModel):
     line_nos: list[int] | None = None
     vendor_ids: list[str] | None = None
+    question_nos: list[int] | None = None
     gating_q_nos: list[int] | None = None
     payment_terms_days: int | None = None
+    response_due: str | None = None
+    mail_subject: str | None = None
+    mail_body: str | None = None
     mail_approved: bool | None = None
+    qty_overrides: dict[int, int] | None = None
+    extra_lines: list[dict] | None = None
 
 
 @app.post("/api/draft")
@@ -853,13 +971,23 @@ def edit_draft(e: DraftEdit) -> dict:
     to the draft itself.
     """
     d = SESSION["draft"]
-    for field in ("line_nos", "vendor_ids", "gating_q_nos", "payment_terms_days",
-                  "mail_approved"):
+    for field in ("line_nos", "vendor_ids", "question_nos", "gating_q_nos",
+                  "payment_terms_days", "response_due", "mail_subject",
+                  "mail_body", "mail_approved", "qty_overrides", "extra_lines"):
         v = getattr(e, field)
         if v is not None:
             setattr(d, field, v)
-    if not d.question_nos:
+    if e.question_nos is not None:
+        # An explicit choice, including an empty one. Gates can only be a subset
+        # of what is actually asked.
+        d.questions_chosen = True
+        d.gating_q_nos = [n for n in d.gating_q_nos if n in d.question_nos]
+    elif not d.question_nos and not d.questions_chosen:
         d.question_nos = [q["q_no"] for q in _catalogue()["questions"]]
+    # Editing the wording un-approves it. Approval is approval of THIS text.
+    if (e.mail_body is not None or e.mail_subject is not None) \
+            and e.mail_approved is None:
+        d.mail_approved = False
     return {"ok": True, "draft": json.loads(d.model_dump_json()),
             "missing": d.missing()}
 
@@ -878,6 +1006,9 @@ def reset() -> dict:
     SESSION["phase"] = "draft"
     SESSION["draft"] = RfxDraft()
     SESSION["round"] = {"state": "idle", "vendors": []}
+    p = SESSION.get("db")
+    if p is not None:
+        p.unlink(missing_ok=True)
     return {"ok": True, "phase": "draft"}
 
 
@@ -976,9 +1107,236 @@ def spend() -> dict:
                     "the spread is best against worst among vendors who priced it."}
 
 
+# ---------------------------------------------------------------------------
+# Round two, and the summary that sends you into it
+# ---------------------------------------------------------------------------
+
+def _rows_from_db(conn) -> list:
+    from contracts.normalized import CellState, NormalisedLine
+    from contracts.rfx import Uom
+    return [NormalisedLine(
+        vendor_id=r["vendor_id"], line_no=r["line_no"], buyer_uom=Uom(r["buyer_uom"]),
+        as_quoted=r["as_quoted"], landed_inr=r["landed_inr"],
+        state=CellState(r["state"]), freight_inr=r["freight_inr"],
+        missing_fact=r["missing_fact"], unresolved_reason=r["unresolved_reason"])
+        for r in conn.execute("SELECT * FROM normalised_line").fetchall()]
+
+
+def _session_gt():
+    """This session's ground truth: the authored RFx, plus any round-two replies
+    already folded in. Everything downstream re-derives from it."""
+    import pipeline
+    gt = pipeline.load_gt()
+    d = SESSION["draft"]
+    if d.issued:
+        gt = pipeline.apply_draft(gt, d)
+    done = SESSION.get("clarified") or []
+    if done:
+        gt, _ = pipeline.apply_clarifications(gt, done)
+    return gt
+
+
+@app.get("/api/gaps")
+def gaps() -> dict:
+    """What is still missing from each vendor, and what asking would be worth."""
+    _require_issued("gap analysis")
+    from analyst.gaps import gaps_for
+    conn = db()
+    gt = _session_gt()
+    done = set(SESSION.get("clarified") or [])
+    have = {c.vendor_id for c in gt.clarifications}
+    out = []
+    for e in gaps_for(gt, _rows_from_db(conn)):
+        e["already_asked"] = e["vendor_id"] in done
+        # Only offer to write to a vendor who would actually write back. A
+        # button that sends a mail into a void is worse than no button.
+        e["can_ask"] = e["vendor_id"] in have and e["vendor_id"] not in done
+        out.append(e)
+    return {"vendors": out, "asked": sorted(done)}
+
+
+@app.get("/api/followup/{vendor_id}")
+def followup(vendor_id: str) -> dict:
+    """The follow-up mail, composed from the gaps rather than written."""
+    _require_issued("follow-up")
+    from analyst.gaps import compose_followup, gaps_for
+    conn = db()
+    gt = _session_gt()
+    entry = next((e for e in gaps_for(gt, _rows_from_db(conn))
+                  if e["vendor_id"] == vendor_id), None)
+    if entry is None:
+        raise HTTPException(404, f"Nothing to ask {vendor_id}.")
+    m = compose_followup(gt, entry)
+    m["stub_note"] = ("Sending is stubbed. Their reply is a document that "
+                      "already exists in this repo, and reading it is the part "
+                      "that is real.")
+    return m
+
+
+@app.post("/api/followup/{vendor_id}")
+def send_followup(vendor_id: str):
+    """Send it, read what comes back, and re-derive everything from it.
+
+    The second half of the loop this project's one-pager calls the moat, and
+    shipped for a week as a bullet in "what I would build next". A reply that
+    only updated a display would be the same failure as a review queue that does
+    not change the answer — so the whole pipeline runs again, and the screen
+    says what moved.
+    """
+    sess = _session()
+    if sess["phase"] != "comparison":
+        raise HTTPException(409, "No round has been issued.")
+    import pipeline
+    gt0 = pipeline.load_gt()
+    if not any(c.vendor_id == vendor_id for c in gt0.clarifications):
+        raise HTTPException(404, f"{vendor_id} has nothing to send back.")
+
+    def ev(kind, payload):
+        return f"data: {json.dumps({'kind': kind, 'payload': payload})}\n\n"
+
+    def stream():
+        try:
+            yield ev("status", {"state": "sent",
+                                "text": f"Follow-up sent to {vendor_id}."})
+            done = list(sess.get("clarified") or [])
+            if vendor_id not in done:
+                done.append(vendor_id)
+            sess["clarified"] = done
+
+            gt = pipeline.apply_draft(gt0, sess["draft"]) if sess["draft"].issued else gt0
+            gt, applied = pipeline.apply_clarifications(gt, done)
+            mine = next((a for a in applied if a["vendor_id"] == vendor_id), {})
+            yield ev("status", {"state": "replied",
+                                "text": f"{vendor_id} replied.",
+                                "changed": mine.get("changed", []),
+                                "declined": mine.get("declined")})
+
+            before = _snapshot(db())
+            dbp = sess.get("db")
+            if dbp is not None:
+                dbp.parent.mkdir(parents=True, exist_ok=True)
+            pipeline.run(fresh=True, verbose=False, gt=gt, db_path=dbp)
+            after = _snapshot(db())
+            yield ev("applied", {"vendor_id": vendor_id,
+                                 "changed": mine.get("changed", []),
+                                 "declined": mine.get("declined"),
+                                 "before": before, "after": after})
+            yield ev("done", {})
+        except Exception as exc:                              # noqa: BLE001
+            yield ev("error", {"text": f"{type(exc).__name__}: {exc}"})
+            yield ev("done", {})
+
+    return StreamingResponse(stream(), media_type="text/event-stream")
+
+
+def _snapshot(conn) -> dict:
+    """The three numbers a clarification can move."""
+    n = dict(conn.execute(
+        "SELECT COUNT(*) AS cells, SUM(state='unresolved') AS unresolved "
+        "FROM normalised_line").fetchone())
+    q = conn.execute("SELECT COUNT(*) c FROM vendor WHERE qualified=1").fetchone()["c"]
+    r = conn.execute(
+        "SELECT COUNT(*) c FROM review_item WHERE status='open'").fetchone()["c"]
+    return {"cells": n["cells"], "unresolved": n["unresolved"] or 0,
+            "qualified": q, "open_reviews": r}
+
+
+def _inr(n: float) -> str:
+    """Rupees, grouped the way every other number on this screen is.
+
+    `f"{n:,.0f}"` gives 7,514,446 where the table, the memo and the charts all
+    say 75,14,446. One screen, two grouping conventions, both for money, is the
+    kind of detail a buyer notices and a demo does not.
+    """
+    s_ = f"{abs(int(round(n)))}"
+    if len(s_) > 3:
+        head, tail = s_[:-3], s_[-3:]
+        parts = []
+        while len(head) > 2:
+            parts.insert(0, head[-2:])
+            head = head[:-2]
+        if head:
+            parts.insert(0, head)
+        s_ = ",".join(parts) + "," + tail
+    return ("-" if n < 0 else "") + "\u20b9" + s_
+
+
+@app.get("/api/summary")
+def summary() -> dict:
+    """What came back, and what to do about it.
+
+    A buyer does not want a table, they want to know what to do on Monday. The
+    table is the evidence for the answer, not the answer.
+    """
+    _require_issued("summary")
+    from allocate.subsets import options as build_options
+    from analyst.gaps import gaps_for
+    conn = db()
+    gt = _session_gt()
+    rows = _rows_from_db(conn)
+    cards = build_options(gt, rows)
+    live = [c for c in cards if not c.get("unavailable")]
+    sp = spend()
+    gaps_ = gaps_for(gt, rows)
+    vendors = [dict(r) for r in conn.execute(
+        "SELECT vendor_id, name, qualified, disqualified_because FROM vendor").fetchall()]
+    for v in vendors:
+        v["disqualified_because"] = json.loads(v["disqualified_because"] or "[]")
+    out_v = [v for v in vendors if not v["qualified"]]
+    unresolved = sum(1 for r in rows if str(r.state) .endswith("unresolved"))
+
+    suggestions = []
+    if len(live) > 1:
+        gap = live[-1]["total_inr"] - live[0]["total_inr"]
+        suggestions.append({
+            "do": f"Split rather than single-source, unless one throat to choke "
+                  f"is worth {_inr(gap)} a year.",
+            "because": f"{live[0]['label']} is {_inr(live[0]['total_inr'])} "
+                       f"across {len(live[0]['vendors'])} vendors; the "
+                       f"single-vendor option is {_inr(live[-1]['total_inr'])}."})
+    if sp["lines_for_80pct"]:
+        suggestions.append({
+            "do": f"Negotiate the top {sp['lines_for_80pct']} lines and leave "
+                  f"the rest alone.",
+            "because": f"They are 80% of the {_inr(sp['total_inr'])}. The "
+                       f"other {len(sp['lines']) - sp['lines_for_80pct']} lines "
+                       f"together are the remaining fifth."})
+    w = sp.get("widest_spread")
+    if w and w.get("spread_pct", 0) > 25:
+        suggestions.append({
+            "do": f"Run a second round on line {w['line_no']} first.",
+            "because": f"Best and worst are {w['spread_pct']:.0f}% apart on it, "
+                       f"which is as contested as this schedule gets."})
+    askable = [g for g in gaps_ if g["units_at_stake"] > 0]
+    if askable:
+        suggestions.append({
+            "do": f"Write back to {askable[0]['vendor'].split()[0]} before you "
+                  f"decide anything.",
+            "because": f"{askable[0]['asks'][0]['what'].capitalize()} — "
+                       f"{askable[0]['units_at_stake']:,} units of the schedule "
+                       f"hang on it."})
+    if unresolved:
+        suggestions.append({
+            "do": f"Do not treat the {unresolved} empty cells as zero.",
+            "because": "They are lines nobody priced in a way we can compare. "
+                       "The follow-up above is how they get filled."})
+
+    return {"options": cards, "spend": {k: sp[k] for k in
+                                        ("total_inr", "lines_for_80pct",
+                                         "widest_spread")},
+            "disqualified": out_v, "unresolved": unresolved,
+            "gaps": gaps_, "suggestions": suggestions}
+
+
 @app.get("/api/memo")
-def memo() -> dict:
-    """The decision record. The artifact that actually leaves the tool."""
+def memo(strategy: str | None = None) -> dict:
+    """The decision record, for the option the buyer actually picked.
+
+    It used to write the memo for the cheapest split whatever card the buyer was
+    looking at, which makes the three options a display rather than a choice —
+    and the single-vendor card exists precisely because a buyer sometimes takes
+    the more expensive one on purpose.
+    """
     _require_issued("award memo")
     conn = db()
     from allocate.subsets import allocate
@@ -996,7 +1354,11 @@ def memo() -> dict:
     allocs = [a for a in allocate(gt, normalised) if a.feasible]
     if not allocs:
         raise HTTPException(409, "No feasible split to recommend.")
-    return {"markdown": memo_mod.build(conn, allocs[0]), "strategy": allocs[0].strategy}
+    chosen = allocs[0]
+    if strategy:
+        chosen = next((a for a in allocs if a.strategy == strategy), chosen)
+    return {"markdown": memo_mod.build(conn, chosen), "strategy": chosen.strategy,
+            "was_cheapest": chosen.strategy == allocs[0].strategy}
 
 
 @app.get("/api/assumptions")

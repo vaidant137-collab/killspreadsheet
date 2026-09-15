@@ -130,7 +130,6 @@ def score(raw: RawLine, line: RfxLine) -> tuple[float, list[str]]:
             why.append(f"vendor calls it '{st.value}', the RFx line is "
                        f"'{line.style.value}' — dimensions and ply agree")
 
-    s = 0.0
     d = _dims_mm(raw.vendor_label, raw.dimension_system)
     if d:
         possible += 0.40

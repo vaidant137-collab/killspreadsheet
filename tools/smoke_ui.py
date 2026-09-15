@@ -120,37 +120,42 @@ async def run(port: int, c: Checks) -> None:
     url = f"http://127.0.0.1:{port}/"
     problems: list[str] = []
 
+    def card(pg, key):
+        return pg.locator(f'[data-card="{key}"]')
+
     async with async_playwright() as pw:
         b = await pw.chromium.launch()
         pg = await b.new_page()
         pg.on("pageerror", lambda e: problems.append(f"uncaught: {e}"))
         # A 404 is reported by the console as "Failed to load resource" with no
-        # URL attached, which is useless. Name the request.
-        # Only same-origin failures are this page's problem. A blocked webfont
-        # host (a sandbox, a corporate proxy) is a fact about the network, and
-        # the stylesheet names a real fallback stack for exactly that case.
+        # URL attached, which is useless. Name the request. Only same-origin
+        # failures are this page's problem: a blocked webfont host is a fact
+        # about the network, and the stylesheet names a real fallback stack.
         pg.on("requestfailed", lambda r: problems.append(f"request failed: {r.url}")
               if r.url.startswith(url) else None)
         # 409 is this app saying "the RFx has not been issued", which is the
-        # behaviour two checks below deliberately provoke. Every other 4xx/5xx
-        # is a bug.
+        # behaviour a check below deliberately provokes. Every other 4xx/5xx is
+        # a bug.
         pg.on("response", lambda r: problems.append(
             f"HTTP {r.status}: {r.url}  [after {len(c.rows)} checks]")
               if r.status >= 400 and r.status != 409 and r.url.startswith(url)
               else None)
 
-        # ---- drafting half -------------------------------------------------
+        async def draft():
+            return (await pg.evaluate("fetch('/api/draft').then(r => r.json())"))["draft"]
+
+        # ---- the empty page ------------------------------------------------
         import httpx
         httpx.post(f"{url}api/reset", timeout=10)
         await pg.goto(url, wait_until="networkidle")
-        await pg.wait_for_timeout(700)
+        await pg.wait_for_timeout(800)
 
-        # Every element the script reaches for must exist. This is exactly
-        # the shape of the bug that blanked the comparison grid: renderTable
-        # kept writing to a header element a redesign had removed, threw, and
-        # took enterComparison down with it. Cheap, and it covers the whole
-        # file rather than only the paths this harness happens to walk.
-        dangling = await pg.evaluate(r'''() => {
+        # Every element the script reaches for must exist. This is exactly the
+        # shape of the bug that blanked the comparison grid: a renderer kept
+        # writing to a header element a redesign had removed, threw, and took
+        # the whole comparison half down with it. Cheap, and it covers the file
+        # rather than only the paths this harness happens to walk.
+        dangling = await pg.evaluate(r"""() => {
           const html = document.documentElement.outerHTML;
           const script = html.slice(html.indexOf("<scr" + "ipt"));
           const used = new Set();
@@ -159,11 +164,13 @@ async def run(port: int, c: Checks) -> None:
           for (const re of res)
             for (const m of script.matchAll(re)) used.add(m[1]);
           return [...used].filter(id => !document.getElementById(id));
-        }''')
+        }""")
         c.is_(not dangling, "every element the script reaches for exists",
               ", ".join(dangling))
+        c.eq(await pg.locator("nav.tabs").count(), 0,
+             "nothing is behind a tab — there are no tabs")
 
-        # Nothing the vendors have not sent may reach the drafting screen — and
+        # Nothing the vendors have not sent may reach the drafting screen, and
         # not just the pixels. The payload used to carry the finished
         # comparison, every qualification and the injection log while the buyer
         # was still writing the RFx; the page drew none of it, which made the
@@ -190,101 +197,164 @@ async def run(port: int, c: Checks) -> None:
         codes = await pg.evaluate(r"""async () => {
           const out = {};
           for (const p of ["comparison", "options", "memo", "reviews",
-                           "assumptions"])
+                           "assumptions", "summary", "gaps", "spend"])
             out[p] = (await fetch("/api/" + p)).status;
           return out;
         }""")
         c.is_(all(v == 409 for v in codes.values()),
               "endpoints that describe responses refuse before the RFx is issued",
               str(codes))
-
         c.at_least(await pg.locator("#suggest button").count(), 3,
-                   "the empty chat offers openers")
-        c.is_(not await pg.locator("#panelDraft").is_hidden(),
-              "the draft panel is the pinned slot before quotes arrive")
+                   "the empty page offers openers")
 
-        for tab, panel in (("items", "#panelItems"), ("vendors", "#panelVendors")):
-            await pg.click(f'#tabs button[data-tab="{tab}"]')
-            await pg.wait_for_timeout(350)
-            c.is_(not await pg.locator(panel).is_hidden(), f"the {tab} tab opens")
-
-        await pg.click('#tabs button[data-tab="items"]')
-        await pg.wait_for_timeout(300)
-        c.eq(await pg.locator("#panelItems select.catsel option").count(), 5,
-             "five categories, four of them honestly empty")
-        c.eq(await pg.locator("#panelItems table.pick tbody tr").count(), 30,
+        # ---- step 1: the line schedule -------------------------------------
+        c.eq(await pg.locator("#col .box").count(), 1,
+             "one step is open at a time — the schedule comes first")
+        c.eq(await card(pg, "items").locator("table.pick tbody tr").count(), 30,
              "thirty lines in the item master")
-        await pg.locator("#panelItems table.pick tbody tr").first.click()
-        await pg.wait_for_timeout(500)
-        d = (await pg.evaluate("fetch('/api/draft').then(r=>r.json())"))["draft"]
-        c.eq(len(d["line_nos"]), 1, "a click writes to the draft, with no model call")
-        await pg.locator("#panelItems .pfoot button",
-                         has_text="Select all").click()
-        await pg.wait_for_timeout(700)
-        d = (await pg.evaluate("fetch('/api/draft').then(r=>r.json())"))["draft"]
-        c.eq(len(d["line_nos"]), 30, "and so does scheduling the whole category")
+        c.eq(await card(pg, "items").locator("select.catsel option").count(), 5,
+             "five categories, four of them honestly empty")
+        d = await draft()
+        c.eq(len(d["line_nos"]), 30,
+             "an annual tender starts from the whole item master")
 
-        await pg.click('#tabs button[data-tab="vendors"]')
-        await pg.wait_for_timeout(300)
-        c.eq(await pg.locator("#panelVendors .vcard").count(), 5,
-             "five approved vendors")
-        await pg.locator("#panelVendors .pfoot button",
-                         has_text="Invite all").click()
+        row = card(pg, "items").locator("table.pick tbody tr").first
+        await row.click(); await pg.wait_for_timeout(450)
+        c.eq(len((await draft())["line_nos"]), 29,
+             "unticking a line writes the draft, with no model call")
+        await row.click(); await pg.wait_for_timeout(450)
+
+        qty = card(pg, "items").locator("table.pick tbody input.qty").first
+        await qty.fill("12345"); await qty.press("Enter")
+        await pg.wait_for_timeout(600)
+        c.eq((await draft())["qty_overrides"].get("1")
+             or (await draft())["qty_overrides"].get(1), 12345,
+             "a changed quantity is an override on the line, not an edit to the master")
+
+        await card(pg, "items").locator(".bf button", has_text="Add a line").click()
+        await card(pg, "items").locator(".addrow input.d").fill("Shelf-ready tray, 3-ply")
+        await card(pg, "items").locator(".addrow input.q").fill("50000")
+        await card(pg, "items").locator(".addrow button", has_text="Add").click()
         await pg.wait_for_timeout(700)
-        d = (await pg.evaluate("fetch('/api/draft').then(r => r.json())"))["draft"]
-        c.eq(len(d["vendor_ids"]), 5, "inviting them all writes the vendor list")
+        d = await draft()
+        c.eq(len(d["extra_lines"]), 1,
+             "a line the buyer adds this year goes on the schedule")
+        c.is_(await card(pg, "items").locator("table.pick tr.new").count() == 1,
+              "and is marked as having no price history")
+
+        await card(pg, "items").locator(".bf button", has_text="Continue").click()
+        await pg.wait_for_timeout(600)
+        c.is_("done" in (await card(pg, "items").get_attribute("class")),
+              "finishing a step collapses it to one line")
+        c.is_("31 lines" in await card(pg, "items").locator(".done-line").inner_text(),
+              "and that line counts what is actually on the schedule",
+              await card(pg, "items").locator(".done-line").inner_text())
+
+        # ---- step 2: the vendors -------------------------------------------
+        c.eq(await card(pg, "vendors").locator(".vcard").count(), 5,
+             "five approved vendors")
+        c.eq(len((await draft())["vendor_ids"]), 5, "all of them invited to start")
+        await card(pg, "vendors").locator(".vcard").first.click()
+        await pg.wait_for_timeout(450)
+        c.eq(len((await draft())["vendor_ids"]), 4, "un-inviting one writes the list")
+        await card(pg, "vendors").locator(".bf button", has_text="Invite all").click()
+        await pg.wait_for_timeout(500)
+        await card(pg, "vendors").locator(".bf button", has_text="Continue").click()
+        await pg.wait_for_timeout(600)
+
+        # ---- step 3: the questionnaire and the terms ------------------------
+        qs = card(pg, "questions")
+        c.eq(await qs.locator(".qrow").count(), 9, "nine questions on file")
+        d = await draft()
+        c.eq(sorted(d["gating_q_nos"]), [1, 7, 8],
+             "the gates the template already had are carried over, not invented")
+        await qs.locator(".qrow").nth(1).click(); await pg.wait_for_timeout(450)
+        d = await draft()
+        c.eq(len(d["question_nos"]), 8,
+             "dropping a question sticks — it is not quietly put back")
+        await qs.locator(".qrow").nth(7).click(); await pg.wait_for_timeout(450)
+        d = await draft()
+        c.is_(8 not in d["gating_q_nos"],
+              "and a question you are not asking cannot disqualify anyone",
+              str(d["gating_q_nos"]))
+        await qs.locator(".qrow").nth(7).click(); await pg.wait_for_timeout(450)
+        await qs.locator(".qrow").nth(7).locator(".gate").click()
+        await pg.wait_for_timeout(450)
+
+        await qs.locator(".terms button", has_text="30 days").click()
+        await pg.wait_for_timeout(500)
+        d = await draft()
+        c.eq(d["payment_terms_days"], 30,
+             "picking terms writes the field that re-prices every cell")
+        c.is_("working capital" in await qs.locator(".consq").inner_text(),
+              "and the card says what those terms cost, from last year's spend",
+              await qs.locator(".consq").inner_text())
+        c.is_((d["response_due"] or "") > time.strftime("%Y-%m-%d"),
+              "responses are due in the future, not on the template's old date",
+              str(d["response_due"]))
+        await qs.locator(".bf button", has_text="Continue").click()
+        await pg.wait_for_timeout(1200)
+
+        # ---- step 4: the covering mail -------------------------------------
+        # The buyer is about to write to five companies. What has to be in front
+        # of them is the text that goes out and the list it goes to — not a note
+        # saying a mail exists somewhere above.
+        mail = card(pg, "mail")
+        body = await mail.locator("textarea.mailbody").input_value()
+        c.at_least(len(body), 400, "it is the whole mail, not a summary of it")
+        n_q = len((await draft())["question_nos"])
+        c.is_(f"{n_q} question" in body,
+              "it asks for exactly the questions the buyer kept",
+              f"expected {n_q} in the body")
+        c.is_("disqualif" in body.lower(),
+              "and says which answers end the submission")
+        c.is_("minimum order" in body.lower() and "freight" in body.lower(),
+              "and asks for the things the comparison actually needs")
+        c.is_("to be confirmed" not in body,
+              "with a real date on it")
+        c.eq(await mail.locator(".stub").count(), 1,
+             "the card says on its face that the send is stubbed")
+
+        await mail.locator("textarea.mailbody").fill(body + "\n\nP.S. drawing rev C.")
+        await mail.locator("textarea.mailbody").press("Tab")
+        await pg.wait_for_timeout(600)
+        d = await draft()
+        c.is_("drawing rev C" in (d["mail_body"] or "") and not d["mail_approved"],
+              "the buyer's own wording is what goes out, and it is not pre-approved")
+        await mail.locator(".bf button", has_text="Recompose").click()
+        await pg.wait_for_timeout(800)
+        c.is_("drawing rev C" not in
+              await mail.locator("textarea.mailbody").input_value(),
+              "and they can get the composed version back")
 
         # ---- the co-pilot's turn, against a stubbed stream ------------------
         await pg.evaluate(STUB)
         await pg.fill("#q", "annual corrugated, back in two weeks")
         await pg.press("#q", "Enter")
-        await pg.wait_for_timeout(1200)
-        c.eq(await pg.locator("#chat .status", has_text="thinking").count(), 0,
+        await pg.wait_for_timeout(1400)
+        c.eq(await pg.locator(".turn .status", has_text="thinking").count(), 0,
              "the turn ends — it does not sit on 'thinking' for ever")
-        c.at_least(await pg.locator(".block.choice .opt").count(), 2,
-                   "the decision renders as options you click")
-        c.is_("2 vendors move up" in await pg.locator(".block.choice").inner_text(),
+        c.at_least(await pg.locator(".choice .opt").count(), 2,
+                   "a decision renders as options you click")
+        c.is_("2 vendors move up" in await pg.locator(".choice").inner_text(),
               "each option carries its computed consequence")
-
-        await pg.locator(".block.choice .opt", has_text="30 days").first.click()
+        await pg.locator(".choice .opt", has_text="30 days").first.click()
         await pg.wait_for_timeout(900)
-        d = (await pg.evaluate("fetch('/api/draft').then(r=>r.json())"))["draft"]
-        c.eq(d["payment_terms_days"], 30,
-             "picking terms writes the field that re-prices 139 cells")
+        c.eq((await draft())["payment_terms_days"], 30,
+             "and a click writes the field itself, not a sentence about it")
 
-        # ---- the mail, and sending it --------------------------------------
-        # The buyer is about to write to five companies. What has to be in front
-        # of them is the text that goes out and the list it goes to — not a note
-        # saying a mail exists somewhere above.
-        await pg.wait_for_timeout(900)
-        mail = pg.locator("#chat .block.mail").last
-        c.eq(await pg.locator("#chat .block.mail").count(), 1,
-             "the covering mail appears once the RFx is complete")
-        body = await mail.locator(".mailbody").inner_text()
-        c.at_least(len(body), 400, "it is the whole mail, not a summary of it")
-        c.is_("disqualif" in body.lower(),
-              "and it tells the vendor which answers end their submission")
-        c.eq(await mail.locator(".stub").count(), 1,
-             "the card says on its face that the send is stubbed")
-        c.is_(await mail.locator(".verify").count() == 1,
-              "and asks the buyer to check the schedule and the vendor list")
-
-        before = await pg.evaluate(
-            "fetch('/api/draft').then(r => r.json()).then(j => j.draft.mail_approved)")
-        await mail.locator(".rfoot button", has_text="Send to").click()
-
-        # The round is the part a buyer lives in: mail out, replies landing one
-        # at a time. Every row here is real work on a real document.
+        # ---- sending, and the round ----------------------------------------
+        before = (await draft())["mail_approved"]
+        await card(pg, "mail").locator(".bf button", has_text="Send to").click()
         rows, states = 0, set()
-        for _ in range(60):
+        for _ in range(80):
             await pg.wait_for_timeout(400)
-            rows = max(rows, await pg.locator("#panelRound table.round tbody tr").count())
-            for t in await pg.locator("#panelRound table.round td.s").all_inner_texts():
+            rows = max(rows, await card(pg, "round").locator("tbody tr").count())
+            for t in await card(pg, "round").locator("td.s").all_inner_texts():
                 states.add(t.strip().lower())
-            if await pg.locator("#tableWrap table tbody tr").count():
+            if await card(pg, "cmp").locator("table.cmp tbody tr").count():
                 break
-        after = await pg.evaluate(
-            "fetch('/api/draft').then(r => r.json()).then(j => j.draft.mail_approved)")
+        after = (await draft())["mail_approved"]
         c.is_(before is False and after is True,
               "sending is a button, and it writes the approval the server checks",
               f"{before} -> {after}")
@@ -295,111 +365,154 @@ async def run(port: int, c: Checks) -> None:
         r = await pg.evaluate("fetch('/api/round').then(r => r.json())")
         c.eq(r.get("state"), "complete",
              "the round finishes, and says so to anyone who opens the page")
+        c.is_("done" in (await card(pg, "mail").get_attribute("class")),
+              "the mail card closes once it has gone")
 
-        # ---- the comparison half -------------------------------------------
-        await pg.goto(url, wait_until="networkidle")
-        await pg.wait_for_timeout(900)
-        scheduled = len((await pg.evaluate(
-            "fetch('/api/draft').then(r => r.json())"))["draft"]["line_nos"])
-        c.eq(await pg.locator("#tableWrap table tbody tr").count(), scheduled,
-             "the comparison covers exactly the lines the buyer scheduled")
-        c.at_least(await pg.locator("#chat .options .card").count(), 3,
-                   "the decision leads, before the table")
+        # ---- the table, in the conversation --------------------------------
+        scheduled = len((await draft())["line_nos"])
+        c.eq(await card(pg, "cmp").locator("table.cmp tbody tr").count(), scheduled,
+             "the table covers exactly the lines the buyer scheduled")
+        c.eq(await card(pg, "cmp").locator(".legend").count(), 1,
+             "with the legend that says what a coloured cell means")
+        c.at_least(await card(pg, "cmp").locator("td.s-unresolved").count(), 1,
+                   "gaps are shown as gaps, never as zero")
 
-        await pg.click('#tabs button[data-tab="options"]')
-        await pg.wait_for_timeout(1200)
-        c.at_least(await pg.locator("#panelOptions .card").count(), 3,
-                   "the options tab rebuilds them from the store")
-        # Two questions a table sorted by line number cannot answer: which lines
-        # are the money, and which lines anyone competed for.
-        await pg.click('#tabs button[data-tab="spend"]')
-        await pg.wait_for_timeout(2200)
-        c.eq(await pg.locator("#panelSpend .fig").count(), 2,
-             "spend concentration and price spread both render")
-        c.at_least(await pg.locator("#panelSpend .fig .bar").count(), 40,
-                   "a bar per line in each")
-        c.at_least(await pg.locator("#panelSpend .fig .bar.tail").count(), 1,
-                   "the tail is de-emphasised rather than recoloured")
-        await pg.locator("#panelSpend .fig svg g rect[fill='transparent']").first.hover()
-        await pg.wait_for_timeout(400)
-        c.is_(not await pg.locator("#tip").is_hidden(),
-              "every bar has a hover layer")
-        c.is_("%" in await pg.locator("#tip").inner_text(),
-              "and it names the line, the spend and the share")
-        await pg.locator("#panelSpend .fig .foot button").first.click()
-        await pg.wait_for_timeout(400)
-        c.at_least(await pg.locator("#panelSpend .fig table.sheet tbody tr").count(), 20,
-                   "and a table view exists for anyone the chart does not serve")
+        # ---- what it means, and what to do ---------------------------------
+        summ = card(pg, "summary")
+        c.at_least(await summ.locator(".ocard").count(), 2,
+                   "the ways to award are cards you can compare")
+        c.at_least(await summ.locator(".ocard .pick").count(), 2,
+                   "and each one can be taken, not just read")
+        c.at_least(await summ.locator(".sug").count(), 2,
+                   "with what to do about it in words")
+        c.is_("80%" in await summ.inner_text(),
+              "including where the money actually is")
 
-        await pg.click('#tabs button[data-tab="items"]')
-        await pg.wait_for_timeout(400)
-        c.eq(await pg.locator("#panelItems table.pick tbody tr").count(), 30,
-             "the item master still loads AFTER the quotes arrive")
-        await pg.click('#tabs button[data-tab="main"]')
-        await pg.wait_for_timeout(400)
+        # ---- round two: the mails that fill the gaps ------------------------
+        gaps = card(pg, "gaps")
+        c.at_least(await gaps.locator(".gap").count(), 2,
+                   "every vendor with something missing gets an ask")
+        c.is_("units at stake" in await gaps.inner_text(),
+              "and the ask says what answering it is worth")
+        await gaps.locator(".gap .rfoot button", has_text="Show the mail").first.click()
+        await pg.wait_for_timeout(700)
+        c.at_least(len(await gaps.locator(".mailbody-ro").first.inner_text()), 200,
+                   "the follow-up is a real mail, composed from the gaps")
 
-        # evidence: the claim that every number opens its source
-        cells = pg.locator("#tableWrap table tbody td")
-        opened = 0
-        for i in range(3, min(await cells.count(), 30)):
-            await cells.nth(i).click()
+        unresolved_before = (await pg.evaluate(
+            "fetch('/api/state').then(r => r.json())"))["counts"]["unresolved"]
+        await gaps.locator(".gap .rfoot button", has_text="Send it").first.click()
+        for _ in range(60):
             await pg.wait_for_timeout(500)
+            if await card(pg, "moved").count():
+                break
+        c.eq(await card(pg, "moved").count(), 1,
+             "a reply comes back and says what it changed")
+        unresolved_after = (await pg.evaluate(
+            "fetch('/api/state').then(r => r.json())"))["counts"]["unresolved"]
+        c.is_(unresolved_after < unresolved_before,
+              "and the whole pipeline re-runs on it — cells that were gaps resolve",
+              f"{unresolved_before} -> {unresolved_after}")
+        c.eq(await card(pg, "cmp").locator("table.cmp tbody tr").count(), scheduled,
+             "the table above is the one that changed, not a second copy")
+
+        # ---- evidence: every number opens its source -----------------------
+        cells = card(pg, "cmp").locator("table.cmp tbody td.num")
+        opened = 0
+        for i in range(2, min(await cells.count(), 30)):
+            await cells.nth(i).click()
+            await pg.wait_for_timeout(400)
             if await pg.locator("#drawer.open").count():
                 opened += 1
                 await pg.keyboard.press("Escape")
-                await pg.wait_for_timeout(200)
+                await pg.wait_for_timeout(150)
             if opened >= 2:
                 break
         c.at_least(opened, 2, "cells open their source document in the drawer")
 
-        # the trust layer: a human verdict is an input, not a comment
-        if await pg.locator("#chipReview").count() and not await pg.locator("#chipReview").is_hidden():
-            await pg.click("#chipReview")
-            await pg.wait_for_timeout(1000)
+        # ---- where the money is --------------------------------------------
+        await summ.locator(".bf button", has_text="Where is the money").click()
+        for _ in range(25):
+            await pg.wait_for_timeout(400)
+            if await card(pg, "spend").locator(".fig").count() >= 2:
+                break
+        c.eq(await card(pg, "spend").locator(".fig").count(), 2,
+             "spend concentration and price spread both render")
+        c.at_least(await card(pg, "spend").locator(".fig .bar").count(), 40,
+                   "a bar per line in each")
+        c.at_least(await card(pg, "spend").locator(".fig .bar.tail").count(), 1,
+                   "the tail is de-emphasised rather than recoloured")
+        await card(pg, "spend").locator(
+            ".fig svg g rect[fill='transparent']").first.hover()
+        await pg.wait_for_timeout(400)
+        c.is_(not await pg.locator("#tip").is_hidden(), "every bar has a hover layer")
+        c.is_("%" in await pg.locator("#tip").inner_text(),
+              "and it names the line, the spend and the share")
+        await card(pg, "spend").locator(".fig .foot button").first.click()
+        await pg.wait_for_timeout(400)
+        c.at_least(await card(pg, "spend").locator(".fig table.sheet tbody tr").count(),
+                   20, "and a table view exists for anyone the chart does not serve")
 
-            # The queue is DECISIONS, not cells: twenty-eight of the latter,
-            # three of the former. The length of this queue is the known
-            # weakness of the build, and grouping is the fix that does not work
-            # by hiding errors.
-            c.at_least(await pg.locator("#chat .rgroup").count(), 2,
+        # ---- the memo ------------------------------------------------------
+        await summ.locator(".ocard .pick").last.click()
+        for _ in range(25):
+            await pg.wait_for_timeout(400)
+            if await card(pg, "memo").locator(".md").count():
+                break
+        c.at_least(len(await card(pg, "memo").inner_text()), 800,
+                   "each option writes its own award memo")
+
+        # ---- the trust layer: a human verdict is an input, not a comment ----
+        if not await pg.locator("#chipReview").is_hidden():
+            await pg.click("#chipReview")
+            await pg.wait_for_timeout(1200)
+            rev = card(pg, "reviews")
+            # The queue is DECISIONS, not cells: twenty-nine of the latter,
+            # three of the former. Its length is the known weakness of this
+            # build, and grouping is the fix that does not work by hiding.
+            c.at_least(await rev.locator(".rgroup").count(), 2,
                        "the review queue groups its cells by cause")
             in_groups = await pg.evaluate(
-                "() => [...document.querySelectorAll('#chat .rgroup .n')]"
+                "() => [...document.querySelectorAll('.rgroup .n')]"
                 ".reduce((a, e) => a + parseInt(e.textContent), 0)")
             c.at_least(in_groups, 10, "every open cell sits inside a group")
-            c.is_(await pg.locator("#chat .rgroup .rcells").first.is_hidden(),
+            c.is_(await rev.locator(".rgroup .rcells").first.is_hidden(),
                   "the cells start folded behind the decision")
-            await pg.locator("#chat .rgroup .rfoot button",
-                             has_text="Show the cells").first.click()
+            await rev.locator(".rgroup .rfoot button",
+                              has_text="Show the cells").first.click()
             await pg.wait_for_timeout(500)
-            c.is_(not await pg.locator("#chat .rgroup .rcells").first.is_hidden(),
+            c.is_(not await rev.locator(".rgroup .rcells").first.is_hidden(),
                   "and open on request")
-            # Scope to the review card itself. `#chat .card` also matches the
-            # three option cards, and asserting against the wrong one passes or
-            # fails for reasons that have nothing to do with corrections.
-            card = pg.locator("#chat .rgroup .rcells .card", has=pg.locator(
+            cell = rev.locator(".rgroup .rcells .cell", has=pg.locator(
                 "button:text-is('Correct…')")).first
-            await card.locator("button", has_text="Correct").click()
+            await cell.locator("button", has_text="Correct").click()
             await pg.wait_for_timeout(300)
-            c.eq(await card.locator(".fixrow").count(), 1,
+            c.eq(await cell.locator(".fixrow").count(), 1,
                  "the correction box is inline, not a browser dialog")
-            await card.locator(".fixrow input").fill("10.28")
-            await card.locator(".fixrow button", has_text="Save").click()
-            await pg.wait_for_timeout(900)
-            c.is_("corrected" in await card.inner_text(),
+            await cell.locator(".fixrow input").fill("10.28")
+            await cell.locator(".fixrow button", has_text="Save").click()
+            await pg.wait_for_timeout(1100)
+            c.is_("corrected" in await cell.inner_text(),
                   "a correction is accepted and re-normalised",
-                  (await card.inner_text()).replace("\n", " / ")[-70:])
+                  (await cell.inner_text()).replace("\n", " / ")[-70:])
 
-            # Accepting a whole cause is one judgement about one thing, and it
-            # has to actually clear those cells rather than just grey a card.
-            before = int((await pg.locator("#chipReview").inner_text()).split()[0])
-            g2 = pg.locator("#chat .rgroup").nth(1)
+            open_before = int((await pg.locator("#chipReview").inner_text()).split()[0])
+            g2 = rev.locator(".rgroup").nth(1)
             n2 = int((await g2.locator(".n").inner_text()).split()[0])
             await g2.locator(".rfoot button", has_text="Accept all").click()
-            await pg.wait_for_timeout(1400)
-            after = await pg.evaluate(
+            await pg.wait_for_timeout(1500)
+            open_after = await pg.evaluate(
                 "fetch('/api/reviews').then(r => r.json()).then(j => j.open)")
-            c.eq(after, before - n2, "accepting a cause clears exactly its cells")
+            c.eq(open_after, open_before - n2,
+                 "accepting a cause clears exactly its cells")
+
+        # ---- and it survives a reload --------------------------------------
+        await pg.goto(url, wait_until="networkidle")
+        await pg.wait_for_timeout(2600)
+        c.at_least(await card(pg, "cmp").locator("table.cmp tbody tr").count(), 20,
+                   "a reload mid-tender lands on the table, not on an empty page")
+        c.eq(await card(pg, "summary").count(), 1,
+             "with what it means still under it")
 
         await b.close()
 

@@ -165,6 +165,18 @@ def evaluate(gt: GroundTruth, rows: list[NormalisedLine], subset: tuple[str, ...
     uncovered: list[int] = []
     caveats: list[str] = []
 
+    # Lines NOBODY priced — a line the buyer added this year, or one every
+    # vendor left blank. It is missing from every split equally, so counting it
+    # against this one makes all 25 infeasible and the buyer is told their own
+    # new line broke the tender. It is a coverage caveat, not a violation.
+    nobody: set[int] = {
+        ln.line_no for ln in gt.rfx.lines
+        if not any((idx.get((s_.vendor.vendor_id, ln.line_no)) is not None
+                    and idx[(s_.vendor.vendor_id, ln.line_no)].state
+                    != CellState.UNRESOLVED
+                    and _ex_freight(idx[(s_.vendor.vendor_id, ln.line_no)]) is not None)
+                   for s_ in gt.submissions)}
+
     for ln in gt.rfx.lines:
         best_v, best_unit = None, None
         for v in subset:
@@ -188,8 +200,11 @@ def evaluate(gt: GroundTruth, rows: list[NormalisedLine], subset: tuple[str, ...
             uncovered.append(ln.line_no)
             awards.append(LineAward(line_no=ln.line_no, vendor_id=None, unit_inr=None,
                                     annual_qty=ln.annual_qty, annual_inr=None,
-                                    uncovered_reason="No qualified vendor in this split "
-                                                     "has a resolved price for this line"))
+                                    uncovered_reason=(
+                                        "Nobody quoted this line at all"
+                                        if ln.line_no in nobody else
+                                        "No qualified vendor in this split "
+                                        "has a resolved price for this line")))
             continue
 
         annual = best_unit * ln.annual_qty
@@ -213,9 +228,19 @@ def evaluate(gt: GroundTruth, rows: list[NormalisedLine], subset: tuple[str, ...
                     f"{prof.name} wins line {ln_no} at {lines[ln_no].annual_qty:,} units, "
                     f"below their {prof.moq_pieces:,} minimum order")
 
-    if uncovered:
-        violations.append(f"{len(uncovered)} lines have no price in this split: "
-                          f"{', '.join(str(x) for x in uncovered)}")
+    blind = [n for n in uncovered if n in nobody]
+    losable = [n for n in uncovered if n not in nobody]
+    if losable:
+        violations.append(f"{len(losable)} lines have no price in this split: "
+                          f"{', '.join(str(x) for x in losable)} — somebody else "
+                          f"quoted them")
+    if blind:
+        caveats.append(f"{len(blind)} line{'' if len(blind) == 1 else 's'} "
+                       f"({', '.join(str(x) for x in blind)}) "
+                       f"{'is' if len(blind) == 1 else 'are'} unpriced by every "
+                       f"vendor, so {'it sits' if len(blind) == 1 else 'they sit'} "
+                       f"outside this split and every other one. Not counted in "
+                       f"the total.")
 
     if len(used) > 1:
         caveats.append(f"{len(used)} vendors means {len(used)} inbound lanes, "
@@ -401,6 +426,21 @@ def options(gt: GroundTruth, rows: list[NormalisedLine]) -> list[dict]:
                         "questionnaire gate."))
 
     timed = [a for a in feasible if _span(a, lt) is not None]
+    if not timed:
+        # Not a failure of the search. The buyer's own questionnaire decided
+        # this: lead time is question 9, and if they did not send question 9
+        # nobody stated one, so nothing here can be ranked on speed. Saying
+        # which of their decisions removed the option is more useful than
+        # quietly showing two cards under a heading that promises three.
+        asked = {q.q_no for q in gt.rfx.questionnaire}
+        out.append({"kind": "fastest_unavailable", "label": "Fastest",
+                    "unavailable": True,
+                    "why": ("Nobody stated a lead time, so nothing here can be "
+                            "ranked on speed." + (
+                                " Question 9 asks for it and this RFx did not "
+                                "include it — add it and re-issue to get this "
+                                "option back." if 9 not in asked else
+                                " Question 9 asked for it and no vendor answered."))})
     if timed:
         fastest = min(timed, key=lambda a: (_span(a, lt), a.total_inr))
         if not cheapest or fastest.strategy != cheapest.strategy:

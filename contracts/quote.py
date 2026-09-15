@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from enum import Enum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from contracts.rfx import PriorContractLine, Rfx, Uom
 
@@ -124,10 +124,46 @@ class VendorSubmission(BaseModel):
     freeform_terms: list[str] = []
 
 
+class Clarification(BaseModel):
+    """Round two: what a vendor sends back when the buyer writes again.
+
+    A tender is not a batch job. Five replies arrive, three of them are missing
+    something the comparison needs, and what a buyer actually does is write
+    back. This is that second reply — a real document with real content, so the
+    cells it resolves are resolved by a vendor rather than by a guess.
+
+    Each field answers a specific kind of gap:
+      unit_weights_g   a per-kilogram quote cannot become a per-piece price
+                       without the weight of the piece
+      questionnaire    a corrected or evidenced answer — an expired certificate
+                       replaced by a current one re-qualifies a vendor
+      moq_pieces       a revised minimum order, when the first one blocked lines
+      line_quotes      rates for lines they did not price the first time
+    """
+
+    vendor_id: str
+    asked_for: list[str] = Field(default_factory=list)
+    reply_text: str = ""
+    received_at: str = ""
+    unit_weights_g: dict[int, float] = Field(default_factory=dict)
+    questionnaire: list[QuestionnaireAnswer] = Field(default_factory=list)
+    moq_pieces: int | None = None
+    line_quotes: list[VendorLineQuote] = Field(default_factory=list)
+    # A replacement document. Re-answering a question is not the same as
+    # sending the certificate: the gate reads the attachment, so a vendor whose
+    # paperwork has been renewed has to send the paperwork.
+    attachments: list[Attachment] = Field(default_factory=list)
+    declined: str | None = None
+
+
 class GroundTruth(BaseModel):
     rfx: Rfx
     prior_contract: list[PriorContractLine]
     submissions: list[VendorSubmission]
+    # Keyed by vendor. Absent means that vendor has nothing to clarify, which is
+    # itself information: Shakti quoted on the buyer's own basis and there is
+    # nothing to ask them.
+    clarifications: list[Clarification] = Field(default_factory=list)
 
     def line(self, line_no: int):
         return next(l for l in self.rfx.lines if l.line_no == line_no)

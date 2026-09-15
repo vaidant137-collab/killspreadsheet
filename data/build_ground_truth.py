@@ -402,7 +402,6 @@ FREEFORM_TERMS = {
 def build() -> GroundTruth:
     rng = random.Random(SEED)
     lines = build_lines()
-    by_no = {l.line_no: l for l in lines}
 
     rfx = Rfx(
         rfx_id="RFX-2026-CORR-011",
@@ -500,7 +499,124 @@ def build() -> GroundTruth:
             attachments=ATTACHMENTS.get(v.vendor_id, []),
             freeform_terms=FREEFORM_TERMS[v.vendor_id]))
 
-    return GroundTruth(rfx=rfx, prior_contract=prior, submissions=submissions)
+    return GroundTruth(rfx=rfx, prior_contract=prior, submissions=submissions,
+                       clarifications=build_clarifications(lines, rng))
+
+
+# ---------------------------------------------------------------------------
+# Round two
+# ---------------------------------------------------------------------------
+# A tender is not a batch job. Five replies arrive, three of them are missing
+# something the comparison needs, and what a buyer does is write back. These are
+# the second replies — real content, so that the cells they resolve are resolved
+# by a vendor rather than by a guess.
+#
+# What each one does downstream is the point:
+#
+#   apex      supplies the box weights for six lines quoted per kilogram. Those
+#             six cells are the system's seven unresolved ones; five of them
+#             become real prices. Without the weight there is no price, and no
+#             amount of cleverness makes one.
+#   nova      sends a RENEWED ISO certificate. Their first answer said "yes" and
+#             the attached certificate had expired in March, which disqualified
+#             them. A current certificate puts them back in the running — a
+#             follow-up that CHANGES WHO CAN WIN, which is the whole argument for
+#             doing a second round at all.
+#   ganesh    confirms they are not certified. No miracle: the gap was real, the
+#             answer is no, and they stay out. A loop where every follow-up
+#             rescues the vendor would be a sales demo.
+#   meridian  offers a small-lot rate above their 50,000 minimum, with a
+#             surcharge — which is what a real exporter says.
+#   shakti    is absent from this list, because they quoted on the buyer's own
+#             basis and answered everything. Nothing to ask.
+
+def build_clarifications(lines, rng) -> list:
+    from contracts.quote import Clarification
+    by_no = {l.line_no: l for l in lines}
+
+    # The six lines Apex priced per kilogram and the buyer has no weight for.
+    no_weight = [l.line_no for l in lines
+                 if l.unit_weight_g is None and l.uom != Uom.KG
+                 and l.line_no not in NO_QUOTE["apex"]]
+    apex_weights = {}
+    for n in no_weight:
+        l = by_no[n]
+        # Their production weights, close to but not identical with the
+        # buyer's own estimate — which is the point of asking them.
+        apex_weights[n] = round(piece_weight_g(l) * (1.0 + rng.uniform(-0.03, 0.05)), 1)
+
+    out = [
+        Clarification(
+            vendor_id="apex",
+            asked_for=[f"finished weight per piece for lines "
+                       f"{', '.join(str(n) for n in no_weight)}"],
+            received_at="2026-09-05",
+            reply_text=(
+                "Rakesh here.\n\n"
+                "Weights as per our production standard, finished and glued, "
+                "average of last three runs:\n\n"
+                + "\n".join(f"  Line {n}  {by_no[n].code}  {w:.0f} g"
+                             for n, w in apex_weights.items())
+                + "\n\nRates per kg as quoted earlier. Freight extra as before.\n\n"
+                  "Regards\nRakesh Shetty\nApex Packwell"),
+            unit_weights_g=apex_weights),
+
+        Clarification(
+            vendor_id="nova",
+            asked_for=["a current ISO 9001 certificate — the one attached to "
+                       "your reply expired on 31 March 2026"],
+            received_at="2026-09-05",
+            reply_text=(
+                "Dear Sir,\n\n"
+                "Apologies — the certificate attached earlier was the previous "
+                "cycle. Our recertification completed in April. Current "
+                "certificate NC/QMS/2219-R3 is valid to 12 April 2029, copy "
+                "attached.\n\n"
+                "All other terms stand.\n\n"
+                "Regards\nPriya Menon\nNova Corrugators"),
+            questionnaire=[QuestionnaireAnswer(
+                q_no=1,
+                answer=("Yes - ISO 9001:2015, cert. NC/QMS/2219-R3, "
+                        "valid to 12 Apr 2029"),
+                evidence_file="nova_iso9001_certificate_r3.pdf",
+                contradicted_by_evidence=False)],
+            attachments=[Attachment(
+                filename="nova_iso9001_certificate_r3.pdf", kind="iso9001",
+                valid_until="2029-04-12",
+                summary="ISO 9001:2015 certificate, recertified April 2026, "
+                        "NC/QMS/2219-R3")]),
+
+        Clarification(
+            vendor_id="ganesh",
+            asked_for=["ISO 9001 certification status",
+                       "the test method behind your 22 BF figure"],
+            received_at="2026-09-06",
+            reply_text=(
+                "Sir,\n\n"
+                "We are not ISO certified. We have applied, audit is expected "
+                "March 2027.\n\n"
+                "22 BF is as per IS 2771, tested at Ambernath by our supplier's "
+                "lab.\n\n"
+                "Ganesh Boxes\n"),
+            questionnaire=[
+                QuestionnaireAnswer(q_no=1, answer="Not certified - applied, audit expected Mar 2027"),
+                QuestionnaireAnswer(q_no=8, answer="22 BF as per IS 2771 (supplier lab, Ambernath)")],
+            declined="ISO 9001 certification — not held, and not expected before March 2027"),
+
+        Clarification(
+            vendor_id="meridian",
+            asked_for=["a rate for the lines below your 50,000-piece minimum"],
+            received_at="2026-09-07",
+            reply_text=(
+                "Dear Team,\n\n"
+                "We can supply below our standard 50,000 pc minimum at a "
+                "small-lot surcharge. Revised minimum 9,000 pc. Rates as "
+                "quoted plus 13.5% on the affected lines, which is our "
+                "short-run set-up recovery.\n\n"
+                "Best regards\nS. Rajagopal\nMeridian Packaging International"),
+            moq_pieces=9000),
+    ]
+    return out
 
 
 def main() -> None:
@@ -519,6 +635,18 @@ def main() -> None:
     unresolvable = [l.line_no for l in gt.rfx.lines
                     if l.unit_weight_g is None and l.uom != Uom.KG]
     print(f"  lines with no weight on file (block Apex's per-kg quote): {unresolvable}")
+    print(f"\n  round two — {len(gt.clarifications)} vendors have something to clarify")
+    for c in gt.clarifications:
+        what = []
+        if c.unit_weights_g:
+            what.append(f"{len(c.unit_weights_g)} box weights")
+        if c.questionnaire:
+            what.append(f"{len(c.questionnaire)} corrected answer(s)")
+        if c.moq_pieces:
+            what.append(f"minimum order down to {c.moq_pieces:,}")
+        if c.declined:
+            what.append("declines one ask")
+        print(f"    {c.vendor_id:10s} {', '.join(what)}")
 
 
 if __name__ == "__main__":

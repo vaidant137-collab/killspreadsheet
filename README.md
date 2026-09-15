@@ -21,8 +21,18 @@ answer to *"where are you unsure"* — because unsureness is a column, not a vib
 
 The second decision: **the conversation is the entire product surface.** A
 comparison grid with a chat panel bolted on is a better spreadsheet, which is the
-one thing the title rules out. The comparison renders once, pinned, and each turn
-mutates it in place; clicking any cell slides an evidence drawer over the source.
+one thing the title rules out. So there is one column, top to bottom, in the
+order the work happens: choosing the line items is a card, the covering mail is a
+card you edit and send, the round fills in as replies land, and the comparison is
+a card in the conversation — not behind a tab. Each turn mutates that card in
+place rather than printing a second copy, and clicking any cell slides an
+evidence drawer over the source.
+
+The first build had the grid pinned above the chat with six tabs inside it.
+Everything a buyer needed was on screen and none of it was where they were
+looking: the table they had just waited for was behind a tab, the item master was
+a place you went rather than a step you took, and the conversation scrolled
+underneath all of it.
 
 ---
 
@@ -239,9 +249,11 @@ defined, and a fourth writing to an element a redesign had removed. Two
 exceptions, and between them the tabs, the draft card, the co-pilot's first
 reply and the comparison grid all rendered as nothing, while every endpoint
 behind them returned the right answer. So that check starts the real server and
-drives the real page, and fails on any uncaught exception. It needs playwright
-(`pip install playwright && playwright install chromium`) and skips itself
-politely without one.
+drives the real page through the whole tender — thirty line items, five vendors,
+nine questions, the mail, the round, the table, the follow-up that resolves six
+gaps, the review queue — and fails on any uncaught exception. 73 checks. It needs
+playwright (`pip install playwright && playwright install chromium`) and skips
+itself politely without one.
 
 ## Where it stands
 

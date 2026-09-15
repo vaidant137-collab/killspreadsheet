@@ -10,3 +10,4 @@ data/wild/*
 !data/wild/IMAGES.md
 !data/wild/MANIFEST.md
 !data/wild/labels.json
+data/sessions/

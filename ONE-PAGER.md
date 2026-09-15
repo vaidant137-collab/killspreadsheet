@@ -22,14 +22,26 @@ today. **The moat isn't the parser; it's the reconciliation graph it builds.**
 ## Decisions
 
 - **The conversation is the product.** A grid with a chat panel is a better
-  spreadsheet; a chat stream is a transcript of stale copies. So the comparison
-  renders once, **pinned**, and each turn mutates it in place. Any cell opens its
-  source in a drawer — the workbook, the mail, the photograph — never a download.
-- **The buyer authors the RFx, and it is not theatre.** Scope, terms, gates — in
-  conversation, then a mail they approve, with `issue_rfx` refusing until the
-  Approve button has actually been pressed and re-drafting clearing the approval. Every choice runs downstream: 45-day
-  terms to 30 re-prices all 139 cells; un-gating ISO returns a vendor disqualified
-  by an expired certificate to contention. Only the send is stubbed, and it says so.
+  spreadsheet; a chat stream is a transcript of stale copies. So there is **one
+  column**, in the order the work happens — items, vendors, questions, the mail,
+  the round, the table, what to do about it — and each artifact is a card that
+  mutates in place rather than printing a second copy. Nothing is behind a tab.
+  Any cell opens its source in a drawer — the workbook, the mail, the photograph
+  — never a download.
+- **The buyer authors the RFx, and it is not theatre.** Four editable steps —
+  the schedule, the vendor list, the questionnaire and its gates, then the actual
+  covering mail — each one a card, each click writing straight to the draft with
+  no model call, and `issue_rfx` refusing until Send has been pressed on a mail
+  the buyer has read. Editing the wording clears the approval. Every choice runs
+  downstream: 45-day terms to 30 re-prices all 139 cells; un-gating ISO returns a
+  vendor disqualified by an expired certificate to contention. Only the send is
+  stubbed, and it says so.
+- **A gap is not an answer; it is a mail.** Seven cells nobody can price are the
+  honest output of the first round and half a product. So the screen says what is
+  missing from each vendor and what answering is worth in units of the schedule,
+  composes the follow-up from the gaps, and — when it comes back — re-runs the
+  whole pipeline on the reply and says what moved. Six cells resolve, and a
+  vendor's minimum order drops from 50,000 to 9,000.
 - **Extraction writes to a relational store; the analyst queries it with typed
   tools.** Deterministic arithmetic, provenance as a foreign key, and an honest
   "where are you unsure" — because unsureness is a column. Free-form SQL is an

@@ -51,6 +51,34 @@ def apply_draft(gt: GroundTruth, draft) -> GroundTruth:
         gt.rfx.lines = [l for l in gt.rfx.lines if l.line_no in keep]
         for sub in gt.submissions:
             sub.line_quotes = [q for q in sub.line_quotes if q.line_no in keep]
+    # A changed quantity is not cosmetic: it moves the line past or below a
+    # vendor's minimum order and their slab boundaries, so the allocator has to
+    # see it before it decides anything.
+    for line_no, qty in (getattr(draft, "qty_overrides", None) or {}).items():
+        for l in gt.rfx.lines:
+            if l.line_no == int(line_no) and int(qty) > 0:
+                l.annual_qty = int(qty)
+    # A line nobody has bought before has no history and no quotes. It goes into
+    # the schedule that is sent, and comes back empty in the comparison, which is
+    # the honest result: it is a gap, not a zero, and the screen already knows
+    # how to say that.
+    for extra in (getattr(draft, "extra_lines", None) or []):
+        try:
+            from contracts.rfx import BoxStyle, Dimensions, RfxLine, Uom
+            gt.rfx.lines.append(RfxLine(
+                line_no=int(extra["line_no"]),
+                code=str(extra.get("code") or f"NEW-{extra['line_no']}"),
+                description=str(extra.get("description") or "New line"),
+                style=BoxStyle(extra.get("style") or "sheet"),
+                dims=Dimensions(length_mm=int(extra.get("length_mm") or 0),
+                                width_mm=int(extra.get("width_mm") or 0)),
+                annual_qty=int(extra.get("annual_qty") or 0),
+                uom=Uom(extra.get("uom") or "piece"),
+                introduced_this_year=True))
+        except Exception:                                     # noqa: BLE001
+            continue
+    gt.rfx.lines.sort(key=lambda l: l.line_no)
+
     if draft.vendor_ids:
         want = set(draft.vendor_ids)
         gt.submissions = [s for s in gt.submissions if s.vendor.vendor_id in want]
@@ -90,7 +118,7 @@ def _has_recordings() -> bool:
 
 
 def run(*, fresh: bool = True, verbose: bool = True, mode: str | None = None,
-        draft=None, on_progress=None) -> dict:
+        draft=None, on_progress=None, db_path=None, gt=None) -> dict:
     """Extract, match, normalise, allocate, store.
 
     `on_progress(event: dict)` is called as each vendor's reply is read. A
@@ -99,7 +127,7 @@ def run(*, fresh: bool = True, verbose: bool = True, mode: str | None = None,
     is per vendor and really does take time, so the screen can show the true
     state of the round rather than a spinner with a story attached.
     """
-    gt = load_gt()
+    gt = gt if gt is not None else load_gt()
     if draft is not None:
         gt = apply_draft(gt, draft)
     lines = {l.line_no: l for l in gt.rfx.lines}
@@ -191,7 +219,8 @@ def run(*, fresh: bool = True, verbose: bool = True, mode: str | None = None,
         normalised.append(n)
 
     # 4. store
-    conn = repo.init(DB_PATH, fresh=fresh)
+    out_db = db_path or DB_PATH
+    conn = repo.init(out_db, fresh=fresh)
     repo.load_rfx(conn, gt)
     repo.load_vendors(conn, gt, qual)
     repo.load_documents(conn, gt)
@@ -227,7 +256,7 @@ def run(*, fresh: bool = True, verbose: bool = True, mode: str | None = None,
         if feasible:
             b = feasible[0]
             print(f"  best feasible    {b.strategy}  Rs {b.total_inr:,.0f}")
-        print(f"  database         {DB_PATH.name}\n")
+        print(f"  database         {out_db.name}\n")
 
     return {"extracted": len(extracted), "normalised": len(normalised),
             "queued": queued, "allocations": allocs, "conn": conn,
@@ -257,3 +286,66 @@ if __name__ == "__main__":
                          "model: call now · record: call now and save it")
     a = ap.parse_args()
     run(mode=a.extractor)
+
+
+def apply_clarifications(gt, vendor_ids: list[str]):
+    """Fold round two into the ground truth, for the vendors who answered.
+
+    The buyer wrote back, the vendor replied, and what came back changes real
+    things: a box weight turns six unpriceable cells into prices, a current
+    certificate puts a disqualified vendor back in contention, a revised minimum
+    order unblocks lines that were never buyable at the rate quoted.
+
+    Applied here rather than in the store because everything downstream —
+    normalisation, the gate, the allocator, the review queue — has to re-derive
+    from it. A clarification that only updated a display would be the same
+    failure as a review queue that does not change the answer.
+    """
+    gt = gt.model_copy(deep=True)
+    want = set(vendor_ids)
+    applied: list[dict] = []
+    for c in gt.clarifications:
+        if c.vendor_id not in want:
+            continue
+        changed: list[str] = []
+
+        for line_no, grams in (c.unit_weights_g or {}).items():
+            for l in gt.rfx.lines:
+                if l.line_no == int(line_no):
+                    l.unit_weight_g = float(grams)
+                    changed.append(f"line {l.line_no} weight {grams:.0f} g")
+
+        sub = next((s for s in gt.submissions
+                    if s.vendor.vendor_id == c.vendor_id), None)
+        if sub is not None:
+            for a in c.questionnaire:
+                prev = next((x for x in sub.questionnaire if x.q_no == a.q_no), None)
+                if prev is not None:
+                    sub.questionnaire.remove(prev)
+                sub.questionnaire.append(a)
+                changed.append(f"question {a.q_no} answered again")
+            sub.questionnaire.sort(key=lambda x: x.q_no)
+
+            for att in (c.attachments or []):
+                # Replace the document of the same kind rather than appending:
+                # the whole point is that the expired one no longer governs.
+                sub.attachments = [x for x in sub.attachments if x.kind != att.kind]
+                sub.attachments.append(att)
+                changed.append(f"{att.kind} document replaced "
+                               f"(valid to {att.valid_until})")
+
+            if c.moq_pieces is not None:
+                changed.append(f"minimum order {sub.vendor.moq_pieces:,} "
+                               f"→ {c.moq_pieces:,}")
+                sub.vendor.moq_pieces = c.moq_pieces
+
+            for q in c.line_quotes:
+                sub.line_quotes = [x for x in sub.line_quotes
+                                   if x.line_no != q.line_no]
+                sub.line_quotes.append(q)
+                changed.append(f"line {q.line_no} now priced")
+            sub.line_quotes.sort(key=lambda x: x.line_no)
+
+        applied.append({"vendor_id": c.vendor_id, "changed": changed,
+                        "declined": c.declined, "received_at": c.received_at})
+    return gt, applied

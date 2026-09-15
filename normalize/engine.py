@@ -23,7 +23,6 @@ from __future__ import annotations
 
 import argparse
 import json
-from pathlib import Path
 
 from config import COST_OF_CAPITAL_PCT, DATA, GST_PCT
 from contracts.normalized import Assumption, CellState, NormalisedLine
@@ -290,7 +289,6 @@ def _self_test() -> int:
     gt = GroundTruth.model_validate(
         json.loads((DATA / "ground_truth.json").read_text(encoding="utf-8")))
     rows = normalise_all(gt)
-    lines = {l.line_no: l for l in gt.rfx.lines}
 
     by_state: dict[str, int] = {}
     for r in rows:
