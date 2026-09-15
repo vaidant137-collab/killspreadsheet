@@ -33,6 +33,9 @@ fixture, deletes the recordings, and the header says so.
 | `python -m match.matcher --self-test` | vendor label → buyer line |
 | `python -m allocate.subsets --self-test` | 25 splits, questionnaire gate |
 | `python -m tools.estimate_cost` | prices the real token load |
+| `python -m llm.test_seam` | every provider satisfies the LLMClient seam |
+| `python -m data.build_adversarial` | renders the five adversarial documents |
+| `python -m eval.adversarial` | scores the five attacks |
 
 ## Rules this codebase holds to
 
@@ -42,8 +45,10 @@ becomes a refactor instead of a config change.
 
 **`config.py` names the active implementation of each seam**, so a swap shows up
 in a single diff. Seams: model provider, extraction, matching, allocation,
-analyst, UI. Four model providers have been added so far; the fourth cost four
-lines.
+analyst, UI. Four model providers have been added so far. That claim was
+half-false until a deploy caught it: `structured()` lived on GeminiClient, so two
+of the four had no implementation at all. `python -m llm.test_seam` now asserts
+every provider satisfies the seam, because a seam nobody checks is a diagram.
 
 **`normalize/` contains zero AI, deliberately.** The moment a model does the
 arithmetic, nothing on screen is auditable.

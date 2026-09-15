@@ -66,6 +66,52 @@ class OpenAIClient:
         self._c = OpenAI(**kw)
         self.model = model
 
+    def structured(self, *, system, user, schema: type[T], images=None,
+                   max_tokens: int = 8000) -> T:
+        """One schema-constrained call over the OpenAI wire format.
+
+        This lives HERE, on the base class, rather than on one subclass. It used
+        to live on GeminiClient, which meant OpenAIClient and OpenRouterClient
+        silently had no `structured` at all — and the seam's whole claim, that a
+        new provider costs four lines, was only true because Gemini happened to
+        be carrying the implementation for everyone. A deploy found it: real
+        extraction had never run on OpenRouter, and the honest fallback said so
+        rather than hiding it.
+
+        Not every OpenAI-compatible endpoint supports `json_schema`. Rather than
+        require one, try it and fall back to plain JSON mode with the schema in
+        the prompt. The output is validated by pydantic either way, so a model
+        that ignores the schema fails loudly at the boundary instead of leaking
+        a half-shaped object downstream.
+        """
+        content: list[dict] = [{"type": "text", "text": user}]
+        for img in images or []:
+            b64 = base64.b64encode(img).decode()
+            content.append({"type": "image_url",
+                            "image_url": {"url": f"data:image/jpeg;base64,{b64}"}})
+        msgs = [{"role": "system", "content": system},
+                {"role": "user", "content": content}]
+
+        try:
+            r = self._c.chat.completions.create(
+                model=self.model, max_tokens=max_tokens, messages=msgs,
+                response_format={"type": "json_schema", "json_schema": {
+                    "name": schema.__name__, "strict": False,
+                    "schema": schema.model_json_schema()}})
+        except Exception:                                    # noqa: BLE001
+            msgs[0] = {"role": "system", "content": system +
+                       "\n\nReturn ONLY a JSON object matching this schema, with "
+                       "no prose and no code fence:\n" +
+                       json.dumps(schema.model_json_schema())}
+            r = self._c.chat.completions.create(
+                model=self.model, max_tokens=max_tokens, messages=msgs,
+                response_format={"type": "json_object"})
+
+        text = (r.choices[0].message.content or "").strip()
+        if text.startswith("```"):
+            text = text.split("```")[1].lstrip("json").strip()
+        return schema.model_validate(json.loads(text))
+
 
 class GeminiClient(OpenAIClient):
     """Gemini through its OpenAI-compatible endpoint.
@@ -85,23 +131,6 @@ class GeminiClient(OpenAIClient):
 
     def __init__(self, model: str = "gemini-3.5-flash"):
         super().__init__(model=model)
-
-    def structured(self, *, system, user, schema: type[T], images=None,
-                   max_tokens: int = 8000) -> T:
-        content: list[dict] = [{"type": "text", "text": user}]
-        for img in images or []:
-            b64 = base64.b64encode(img).decode()
-            content.append({"type": "image_url",
-                            "image_url": {"url": f"data:image/jpeg;base64,{b64}"}})
-        r = self._c.chat.completions.create(
-            model=self.model, max_tokens=max_tokens,
-            messages=[{"role": "system", "content": system},
-                      {"role": "user", "content": content}],
-            response_format={"type": "json_schema", "json_schema": {
-                "name": schema.__name__, "strict": False,
-                "schema": schema.model_json_schema()}},
-        )
-        return schema.model_validate(json.loads(r.choices[0].message.content))
 
 
 class OpenRouterClient(OpenAIClient):
