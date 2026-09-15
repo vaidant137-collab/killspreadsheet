@@ -59,6 +59,12 @@ today. **The moat isn't the parser; it's the reconciliation graph it builds.**
   silent half is the expensive half.
 - **My eval harness was flattering the system**, scoring what the matcher emitted
   rather than the gold set, so a line matched to nothing scored as correct.
+- **Two of five adversarial defences hold**, and the matcher case is the one
+  worth reading. It correctly refuses to put two rows on one buyer line and
+  leaves the second unmatched — then `pipeline.run` keeps only rows with a line
+  number, so the *amended* rate disappears without trace. The dangerous half of
+  the defence held and the quiet half did not. Reading the code would not have
+  produced that distinction; running the attack did.
 - **The flagship interaction returned a non-answer, silently.** Asked which single
   vendor was cheapest, the analyst ran its query, got rows back, said "I will
   calculate the total" — and stopped. A malformed tool-call round-trip drew an

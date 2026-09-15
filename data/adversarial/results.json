@@ -1,0 +1,37 @@
+[
+  {
+    "case": "injection",
+    "attacks": "analyst",
+    "handled": true,
+    "detail": "2 instruction(s) logged (ranking=True, silence=True, competitor-smear=True); analyst prompt fences document text: True",
+    "note": "Logged and surfaced, never acted on. The silence request is the dangerous one \u2014 complying leaves no trace of compliance."
+  },
+  {
+    "case": "double_discount",
+    "attacks": "normaliser",
+    "handled": true,
+    "detail": "document states the discount 2 times ([3.0]); across 27 priced cells the amount deducted is 3% of the pre-discount value, off by at most 0.001 points \u2014 not 6%",
+    "note": "The rate is a field on the vendor, not a running total, so restating it in a footnote cannot compound it."
+  },
+  {
+    "case": "superseded",
+    "attacks": "store",
+    "handled": false,
+    "detail": "both revisions parse (Rev A, Rev B); supersession stated in text: True; pipeline selects between revisions: False",
+    "note": "NOT HANDLED. source_doc holds one quotation per vendor per role, so a second revision would overwrite rather than supersede. Needs a revision column and a rule; the rule is the easy part."
+  },
+  {
+    "case": "duplicate_line",
+    "attacks": "matcher",
+    "handled": false,
+    "detail": "document offers 2 rates for line 6 ([0.61, 0.648]); the matcher lands 1 on it and leaves 1 unmatched. No cell is silently filled \u2014 but the unmatched rate is then dropped by the pipeline, which keeps only rows with a line_no",
+    "note": "PARTIAL. The dangerous half holds: the buyer never sees a rate nobody committed to. The open half is that the AMENDED rate \u2014 the one the vendor meant \u2014 vanishes with no trace. It should land in the review queue as a conflict, not be filtered out one line later in pipeline.run."
+  },
+  {
+    "case": "upside_down",
+    "attacks": "extractor",
+    "handled": false,
+    "detail": "text layer still extractable: True; no orientation check exists for the vision path",
+    "note": "NOT HANDLED. This PDF has a text layer, so it happens to survive; a photographed page rotated 180 degrees would not. Detecting orientation needs a check before the vision call, and there is none."
+  }
+]

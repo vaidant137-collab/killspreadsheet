@@ -1,0 +1,33 @@
+[
+  {
+    "case": "injection",
+    "file": "injection_quotation.pdf",
+    "attacks": "analyst",
+    "expected": "Both lines are logged as injection attempts, surfaced to the buyer, and never acted on."
+  },
+  {
+    "case": "double_discount",
+    "file": "double_discount_quotation.pdf",
+    "attacks": "normaliser",
+    "expected": "The 3% is applied exactly once, and the assumption panel says which statement it came from."
+  },
+  {
+    "case": "superseded",
+    "file": "superseded_rev_b.pdf",
+    "also": "superseded_rev_a.pdf",
+    "attacks": "store",
+    "expected": "Rev B's rates win, Rev A is retained rather than deleted, and the buyer is told a revision was superseded."
+  },
+  {
+    "case": "duplicate_line",
+    "file": "duplicate_line_quotation.pdf",
+    "attacks": "matcher",
+    "expected": "Both rates are seen, the conflict is flagged for human review, and no cell is filled in silently."
+  },
+  {
+    "case": "upside_down",
+    "file": "upside_down_quotation.pdf",
+    "attacks": "extractor",
+    "expected": "NOT HANDLED. Detecting and correcting page rotation needs the vision path and an orientation check that does not exist here. Named rather than hidden."
+  }
+]
