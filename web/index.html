@@ -84,6 +84,13 @@ nav.tabs button.on{color:var(--ink);border-bottom-color:var(--accent)}
   color:var(--ink);border:1px solid var(--rule);border-radius:4px;padding:5px 8px}
 .pcount{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--dim)}
 .pfoot{display:flex;gap:8px;margin-top:12px}
+.fixrow{display:flex;gap:6px;margin-top:8px;align-items:center}
+.fixrow input{font:inherit;font-size:12px;flex:1;min-width:0;padding:5px 8px;
+  border:1px solid var(--accent);border-radius:4px;background:var(--surface);
+  color:var(--ink)}
+.fixrow button{font:inherit;font-size:11px;cursor:pointer;border-radius:4px;
+  padding:5px 10px;border:1px solid var(--rule);background:none;color:var(--ink-soft)}
+.fixrow button.go{background:var(--accent);border-color:var(--accent);color:#fff}
 .pfoot .go,.pfoot .other{font:inherit;font-size:11px;cursor:pointer;border-radius:4px;
   padding:5px 11px;border:1px solid var(--rule);background:none;color:var(--ink-soft)}
 .pfoot .go{background:var(--accent);border-color:var(--accent);color:#fff}
@@ -406,7 +413,16 @@ let STATE = null, CATALOGUE = null, DRAFT = null, LASTDRAFT = null,
 
 /* ---------------- boot ---------------- */
 async function boot(){
-  STATE = await (await fetch('/api/state')).json();
+  // The item master and the vendor list are needed in BOTH halves of the
+  // product, so they load here rather than in enterDraft. They used to load
+  // only while drafting, which meant that after the quotes arrived — the exact
+  // moment a buyer wants to check what was actually asked for — those two tabs
+  // opened on nothing at all.
+  const [st, cat] = await Promise.all([
+    fetch('/api/state').then(r => r.json()),
+    fetch('/api/catalogue').then(r => r.json())]);
+  STATE = st; CATALOGUE = cat;
+  await refreshDraft();
   $('#chipAsm').onclick = showAssumptions;
   $('#tabs').querySelectorAll('button').forEach(
     b => b.onclick = () => openTab(b.dataset.tab));
@@ -417,12 +433,8 @@ async function boot(){
    exists there is nothing to pin, so the canvas is empty and the conversation
    is the whole surface — which is the honest shape of that half of the job. */
 async function enterDraft(){
-  const cat = await (await fetch('/api/catalogue')).json();
-  CATALOGUE = cat;
-  await refreshDraft();
   $('#tabMain').textContent = 'RFx draft';
   $('#tabOptions').hidden = true;
-  $('#pinTitle') && ($('#pinTitle').textContent = '');
   $('#meta').innerHTML = '<span>Drafting</span>';
   $('#chipAsm').hidden = true;
   $('#q').placeholder = 'Tell me what you need to buy…';
@@ -467,9 +479,268 @@ function suggest(list){
     b.title = x; b.onclick = () => ask(x); s.appendChild(b); });
 }
 
+
+/* ---------------- the panels behind the tabs ----------------
+
+   Four tabs, one artifact. The comparison and the draft share a slot because
+   they are the same object at two ages — before quotes and after. The item
+   master and the approved-vendor list sit beside them rather than in the chat,
+   because picking a line is EDITING the RFx, not asking a question about it.
+
+   Every click in here writes straight to /api/draft with no model call. Ticking
+   twelve line items is data entry, and a co-pilot that occasionally mis-ticks
+   one is strictly worse than a checkbox. The model is for the decisions. */
+
+function openTab(name){
+  const drafting = !STATE || STATE.phase === 'draft';
+  $('#tabs').querySelectorAll('button').forEach(
+    b => b.classList.toggle('on', b.dataset.tab === name));
+  $('#tableWrap').hidden    = !(name === 'main' && !drafting);
+  $('#panelDraft').hidden   = !(name === 'main' && drafting);
+  $('#panelOptions').hidden = name !== 'options';
+  $('#panelItems').hidden   = name !== 'items';
+  $('#panelVendors').hidden = name !== 'vendors';
+  // The legend explains cell states in the comparison grid. On any other tab it
+  // is labelling something that is not on screen.
+  $('#legend').style.visibility = (name === 'main' && !drafting) ? '' : 'hidden';
+  if (name === 'items')   renderItems();
+  if (name === 'vendors') renderVendors();
+  if (name === 'options') renderOptionsPanel();
+}
+
+/* The draft is read back from the server, never tracked here. Two copies of the
+   RFx — one in the browser, one in SESSION — is exactly how a picker and a
+   co-pilot end up disagreeing about what is going out to vendors. */
+async function refreshDraft(){
+  const j = await (await fetch('/api/draft')).json();
+  DRAFT = j.draft; DRAFT.missing = j.missing;
+  renderDraftPanel();
+  if ($('#panelItems')   && !$('#panelItems').hidden)   renderItems();
+  if ($('#panelVendors') && !$('#panelVendors').hidden) renderVendors();
+  return DRAFT;
+}
+
+async function patchDraft(patch){
+  const j = await (await fetch('/api/draft', {method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(patch)})).json();
+  DRAFT = j.draft; DRAFT.missing = j.missing;
+  renderDraftPanel();
+  return DRAFT;
+}
+
+function renderDraftPanel(){
+  const p = $('#panelDraft');
+  if (!p) return;
+  if (!DRAFT || !CATALOGUE){
+    p.replaceChildren(el('div','empty',
+      'No RFx yet. Say what you need to buy and I will draft the whole thing — '
+      + 'or open the item master and pick the lines yourself.'));
+    return;
+  }
+  const c = CATALOGUE, d = DRAFT;
+  const def = c.defaults || {};
+  const vname = id => (c.vendors.find(v => v.vendor_id === id) || {}).name || id;
+  const qtext = n => {
+    const q = c.questions.find(x => x.q_no === n);
+    return q ? 'Q' + n + ' · ' + q.question : 'Q' + n;
+  };
+  const nLines = (d.line_nos || []).length;
+  const nQs    = (d.question_nos || []).length;
+  const gate   = d.gating_q_nos || [];
+  const inv    = d.vendor_ids || [];
+  const row = (k, v, extra) =>
+    `<tr><th>${esc(k)}</th><td>${v}` +
+    (extra ? `<div class="chg">${extra}</div>` : '') + `</td></tr>`;
+
+  const box = el('div','block draft');
+  box.innerHTML =
+    `<div class="h">RFx draft${d.issued ? ' · issued' : ''}</div>
+     <table class="draft">
+      ${row('Buyer', esc(d.buyer_org || def.buyer_org || '—'))}
+      ${row('Category', esc(d.category || def.category || '—'))}
+      ${row('Deliver to', esc(d.delivery_point || def.delivery_point || '—'),
+            esc(d.required_incoterm || def.required_incoterm || ''))}
+      ${row('Payment terms', d.payment_terms_days != null
+            ? esc(d.payment_terms_days + ' days from GRN')
+            : '<span style="color:var(--warn)">not decided</span>',
+            d.payment_terms_days != null
+              ? 'Every landed cost is NPV-adjusted to this, so it decides who looks cheapest'
+              : '')}
+      ${row('Responses due', d.response_due ? esc(d.response_due)
+            : '<span style="color:var(--warn)">not decided</span>')}
+      ${row('Schedule', nLines
+            ? esc(nLines + ' of ' + c.lines.length + ' item-master lines')
+            : '<span style="color:var(--warn)">nothing scheduled yet</span>')}
+      ${row('Questionnaire', esc(nQs + ' question' + (nQs === 1 ? '' : 's')),
+            gate.length
+              ? 'Disqualifying: ' + gate.map(n => esc(qtext(n))).join('<br>')
+              : 'Nothing gated — price decides alone')}
+      ${row('Invited', inv.length ? inv.map(id => esc(vname(id))).join(', ')
+            : '<span style="color:var(--warn)">no vendors chosen</span>')}
+     </table>` +
+    ((d.missing || []).length
+      ? `<div class="gaps">Still to decide: ${d.missing.map(esc).join(' · ')}</div>`
+      : `<div class="ok">Ready to issue — say "send it" and the five vendors reply</div>`);
+
+  const foot = el('div','pfoot');
+  const toItems = el('button','other','Choose line items');
+  toItems.onclick = () => openTab('items');
+  const toVend = el('button','other','Choose vendors');
+  toVend.onclick = () => openTab('vendors');
+  foot.appendChild(toItems); foot.appendChild(toVend);
+  box.appendChild(foot);
+
+  p.replaceChildren(box);
+  $('#pinSub').textContent = nLines
+    ? `${nLines} line${nLines === 1 ? '' : 's'} · ${inv.length} vendor${inv.length === 1 ? '' : 's'}`
+    : 'nothing scheduled yet';
+}
+
+/* ---------------- item master ----------------
+   Five categories, one of them loaded. The four empty ones are not padding:
+   they say this is one category in a buyer's catalogue rather than a demo with
+   the answer hardcoded, and they say "no data" instead of inventing some. */
+function renderItems(){
+  const p = $('#panelItems');
+  if (!CATALOGUE){ p.replaceChildren(el('div','empty','Loading the item master…')); return; }
+  const cats = CATALOGUE.categories || [{key:'corrugated', name:'Corrugated packaging',
+                                         lines: CATALOGUE.lines.length, note:null}];
+  const cat = cats.find(c => c.key === ITEMCAT) || cats[0];
+  ITEMCAT = cat.key;
+  const lines = CATALOGUE.lines.filter(l => (l.category || 'corrugated') === cat.key);
+  const chosen = new Set(DRAFT ? (DRAFT.line_nos || []) : []);
+
+  const head = el('div','phead');
+  const sel = el('select','catsel');
+  cats.forEach(c => {
+    const o = document.createElement('option');
+    o.value = c.key;
+    o.textContent = c.name + (c.lines ? ` (${c.lines})` : ' — empty');
+    if (c.key === ITEMCAT) o.selected = true;
+    sel.appendChild(o);
+  });
+  sel.onchange = () => { ITEMCAT = sel.value; renderItems(); };
+  head.appendChild(sel);
+  head.appendChild(el('span','pcount',
+    lines.length ? `${chosen.size} of ${lines.length} selected` : ''));
+  p.replaceChildren(head);
+
+  if (!lines.length){
+    p.appendChild(el('div','empty', esc(cat.note || 'No data available.')));
+    return;
+  }
+
+  const body = el('div','pbody');
+  const t = el('table','pick');
+  t.innerHTML = `<thead><tr><th style="width:18px"></th><th style="width:34px">#</th>
+    <th>Item</th><th class="num">Annual qty</th><th>UOM</th></tr></thead>`;
+  const tb = document.createElement('tbody');
+  lines.forEach(l => {
+    const tr = document.createElement('tr');
+    if (chosen.has(l.line_no)) tr.className = 'on';
+    const tags = [l.ply ? l.ply + '-ply' : null,
+                  l.food_contact ? 'food contact' : null,
+                  l.requires_tooling ? 'tooling' : null].filter(Boolean).join(' · ');
+    tr.innerHTML = `<td><span class="mark"></span></td>
+      <td>${l.line_no}</td>
+      <td>${esc(l.description)}<small>${esc(l.code)}${tags ? ' · ' + esc(tags) : ''}</small></td>
+      <td class="num">${Number(l.annual_qty).toLocaleString('en-IN')}</td>
+      <td>${esc(l.uom)}</td>`;
+    tr.onclick = async () => {
+      const next = new Set(DRAFT ? (DRAFT.line_nos || []) : []);
+      next.has(l.line_no) ? next.delete(l.line_no) : next.add(l.line_no);
+      tr.classList.toggle('on');                       // optimistic, so it feels instant
+      await patchDraft({line_nos: [...next].sort((a,b) => a - b)});
+      renderItems();
+    };
+    tb.appendChild(tr);
+  });
+  t.appendChild(tb); body.appendChild(t); p.appendChild(body);
+
+  const foot = el('div','pfoot');
+  const all = el('button','other','Select all ' + lines.length);
+  all.onclick = async () => {
+    const keep = (DRAFT.line_nos || []).filter(
+      n => !lines.some(l => l.line_no === n));
+    await patchDraft({line_nos: [...new Set([...keep, ...lines.map(l => l.line_no)])]
+      .sort((a,b) => a - b)});
+    renderItems();
+  };
+  const none = el('button','other','Clear');
+  none.onclick = async () => {
+    await patchDraft({line_nos: (DRAFT.line_nos || []).filter(
+      n => !lines.some(l => l.line_no === n))});
+    renderItems();
+  };
+  const back = el('button','go','Back to the draft');
+  back.onclick = () => openTab('main');
+  foot.appendChild(all); foot.appendChild(none); foot.appendChild(back);
+  p.appendChild(foot);
+}
+
+/* ---------------- approved vendors ---------------- */
+function renderVendors(){
+  const p = $('#panelVendors');
+  if (!CATALOGUE){ p.replaceChildren(el('div','empty','Loading the vendor list…')); return; }
+  const vs = CATALOGUE.vendors || [];
+  const chosen = new Set(DRAFT ? (DRAFT.vendor_ids || []) : []);
+
+  const head = el('div','phead');
+  head.appendChild(el('span','pcount',
+    `Approved vendors · ${chosen.size} of ${vs.length} invited`));
+  p.replaceChildren(head);
+
+  const grid = el('div','pbody vendors');
+  vs.forEach(v => {
+    const b = el('button', 'vcard' + (chosen.has(v.vendor_id) ? ' on' : ''));
+    b.innerHTML = `<span class="mark"></span><b>${esc(v.name)}</b>
+      <em>${esc(v.city || 'city not on file')}${v.incumbent ? ' · incumbent' : ''}</em>`;
+    b.onclick = async () => {
+      const next = new Set(DRAFT ? (DRAFT.vendor_ids || []) : []);
+      next.has(v.vendor_id) ? next.delete(v.vendor_id) : next.add(v.vendor_id);
+      b.classList.toggle('on');
+      await patchDraft({vendor_ids: [...next]});
+      renderVendors();
+    };
+    grid.appendChild(b);
+  });
+  p.appendChild(grid);
+
+  const foot = el('div','pfoot');
+  const all = el('button','other','Invite all ' + vs.length);
+  all.onclick = async () => {
+    await patchDraft({vendor_ids: vs.map(v => v.vendor_id)}); renderVendors(); };
+  const back = el('button','go','Back to the draft');
+  back.onclick = () => openTab('main');
+  foot.appendChild(all); foot.appendChild(back);
+  p.appendChild(foot);
+}
+
+/* ---------------- the decision layer, as a tab ----------------
+   Served from the store with no model call, so it cannot disagree with the
+   table it sits next to. */
+async function renderOptionsPanel(){
+  const p = $('#panelOptions');
+  p.replaceChildren(el('div','empty','Enumerating the splits…'));
+  try {
+    const j = await (await fetch('/api/options')).json();
+    p.replaceChildren(renderOptions({
+      title: 'Three ways to award this',
+      cards: j.cards,
+      note: j.authored ? null
+        : 'Issued from the template — none of this was authored in conversation.'}));
+  } catch (e){
+    p.replaceChildren(el('div','empty','Could not build the options: ' + esc(e.message)));
+  }
+}
 /* ---------------- the pinned artifact ---------------- */
 function renderTable(tb, flash){
-  $('#pinTitle').textContent = tb.title || 'Side-by-side comparison';
+  // #pinTitle went with the header cleanup and this line kept writing to it,
+  // which threw and took enterComparison down with it — so the comparison grid,
+  // the whole point of the screen, rendered as nothing at all. The tab is
+  // already labelled "Comparison"; a title above it was the redundancy that got
+  // the header cut in the first place.
   $('#pinSub').textContent = `${tb.rows.length} lines · ${tb.columns.length - 3} vendors`;
   const t = el('table');
   const thead = el('thead'); const tr = el('tr');
@@ -564,20 +835,34 @@ async function ask(q){
   $('#q').value = '';
   const t = turn('Analyst');
   const status = el('div','status','thinking…'); t.appendChild(status);
+  // A model call can legitimately take half a minute. A word that never changes
+  // for half a minute reads as a hang, and the user's first instinct is to
+  // reload — which loses the turn that was about to arrive. Count out loud.
+  const t0 = Date.now(); let statusText = 'thinking…';
+  const tick = setInterval(() => {
+    const secs = Math.round((Date.now() - t0) / 1000);
+    status.textContent = statusText + (secs > 3 ? `   ${secs}s` : '');
+  }, 1000);
   const res = await fetch('/api/ask', {method:'POST',
     headers:{'Content-Type':'application/json'}, body: JSON.stringify({question:q})});
   const rd = res.body.getReader(); const dec = new TextDecoder(); let buf = '';
   // A model narrating each tool call often repeats itself verbatim. Say it once.
   let lastText = '', draftNoted = false;
+  try {
   while (true){
     const {done, value} = await rd.read(); if (done) break;
     buf += dec.decode(value, {stream:true});
     const parts = buf.split('\n\n'); buf = parts.pop();
     for (const p of parts){
       if (!p.startsWith('data: ')) continue;
+      // One block that will not render must not take the conversation down with
+      // it. Before this, a single missing renderer left "thinking…" on screen
+      // for ever and the only way out was a reload — which is a worse failure
+      // than the bug that caused it.
+      try {
       const m = JSON.parse(p.slice(6));
       if (m.kind === 'done'){ status.remove(); break; }
-      if (m.kind === 'status'){ status.textContent = m.payload; continue; }
+      if (m.kind === 'status'){ statusText = m.payload; status.textContent = m.payload; continue; }
       if (m.kind === 'issued'){ await enterComparison(); continue; }
       status.remove();
       const blk = m.payload;
@@ -596,9 +881,14 @@ async function ask(q){
       if (blk.type === 'text') lastText = (blk.text || '').trim();
       t.appendChild(renderBlock(blk));
       $('#chat').scrollTop = 1e9;
+      } catch (err){
+        console.error('block failed', err);
+        t.appendChild(el('div','block status',
+          'A block did not render: ' + esc(err.message)));
+      }
     }
   }
-  status.remove();
+  } finally { clearInterval(tick); status.remove(); }
 }
 
 function renderBlock(b){
@@ -832,8 +1122,25 @@ function renderReviews(b){
     const accept = el('button','','Accept');
     accept.onclick = () => decide(c.review_id, 'accept', null, card);
     const fix = el('button','','Correct…');
-    fix.onclick = () => { const v = prompt('Corrected value', c.proposed_value || '');
-      if (v !== null) decide(c.review_id, 'correct', v, card); };
+    // Inline, not window.prompt. The correction a human types here is the input
+    // to the trust layer — it re-runs normalisation and moves the number on the
+    // grid — so it deserves to look like part of the product rather than a
+    // browser dialog that blocks the page while it is open.
+    fix.onclick = () => {
+      if (card.querySelector('.fixrow')) return;
+      const row = el('div','fixrow');
+      const inp = document.createElement('input');
+      inp.value = c.proposed_value ?? '';
+      inp.setAttribute('aria-label', 'Corrected value');
+      const ok = el('button','go','Save'), no = el('button','','Cancel');
+      ok.onclick = () => { const v = inp.value.trim();
+        if (v) decide(c.review_id, 'correct', v, card); row.remove(); };
+      no.onclick = () => row.remove();
+      inp.onkeydown = e => { if (e.key === 'Enter') ok.onclick();
+                             else if (e.key === 'Escape') no.onclick(); };
+      row.appendChild(inp); row.appendChild(ok); row.appendChild(no);
+      card.appendChild(row); inp.focus(); inp.select();
+    };
     const ev = el('button','','Source');
     ev.onclick = () => openEvidence(c.evidence_id);
     card.appendChild(accept); card.appendChild(fix);

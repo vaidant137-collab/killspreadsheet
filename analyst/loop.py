@@ -11,12 +11,22 @@ be replaced without the interface moving.
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
+import time
 
 from analyst.tools import TOOL_SPECS, Tools
 from contracts.blocks import RefusalBlock, TextBlock
 
 MAX_STEPS = 8
+
+# A step ceiling bounds how many times the model may call a tool. It does not
+# bound how LONG that takes, and those are different failures: eight fast steps
+# is a thorough answer, one slow step is a frozen screen. A deploy already hung
+# for thirteen minutes because nothing here counted seconds. So the turn carries
+# a wall-clock budget as well, and when it runs out it says so rather than
+# leaving "thinking…" on screen.
+TURN_BUDGET_S = float(os.getenv("ANALYST_TURN_BUDGET_S", "150"))
 
 SYSTEM = """You are a procurement analyst working over a live comparison of vendor \
 quotes for corrugated packaging. The buyer is a category manager with roughly \
@@ -101,7 +111,15 @@ class Analyst:
             return
 
         messages = list(history or []) + [{"role": "user", "content": question}]
+        started = time.monotonic()
         for _ in range(MAX_STEPS):
+            if time.monotonic() - started > TURN_BUDGET_S:
+                yield "block", TextBlock(
+                    text=f"I ran out of time on this one — "
+                         f"{TURN_BUDGET_S:.0f} seconds of model calls without "
+                         f"reaching an answer. Nothing was written to the store. "
+                         f"Ask again, or narrow the question.")
+                return
             reply = client.raw_turn(system=self.system, messages=messages, tools=self.specs)
             messages.append({"role": "assistant", "content": reply["content"]})
 

@@ -39,6 +39,17 @@ def main() -> int:
             for p in STRUCTURED_PARAMS:
                 if p not in params:
                     problems.append(f"{c.__name__}.structured has no '{p}'")
+        # A provider with no timeout is the failure that hung a deploy for
+        # thirteen minutes in silence, and it is invisible until it happens.
+        # The seam includes it now, so adding a fifth provider that forgets
+        # fails here rather than in production.
+        init = inspect.signature(c.__init__).parameters
+        if "timeout" not in init:
+            problems.append(f"{c.__name__}.__init__ takes no 'timeout' — "
+                            f"a call with no ceiling can hang indefinitely")
+            row.append("timeout=MISSING")
+        else:
+            row.append("timeout=ok")
         print(f"    {c.__name__:18s} {'  '.join(row)}")
 
     if problems:

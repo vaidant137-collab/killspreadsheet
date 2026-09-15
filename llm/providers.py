@@ -29,15 +29,25 @@ T = TypeVar("T", bound=BaseModel)
 # reports honestly, instead of as a hung deploy.
 CALL_TIMEOUT_S = float(os.getenv("LLM_TIMEOUT_S", "90"))
 
+# The analyst gets a tighter one, for a different reason. Extraction runs in a
+# build nobody is watching, so ninety seconds costs patience nobody is spending.
+# The analyst runs while a buyer stares at the word "thinking" — and eight steps
+# at ninety seconds each is twelve minutes of that. Forty-five seconds a call,
+# with a wall-clock budget across the whole turn in analyst/loop.py, means the
+# screen always says something within about two minutes, even when it has to say
+# that the model gave up.
+ANALYST_TIMEOUT_S = float(os.getenv("LLM_ANALYST_TIMEOUT_S", "45"))
+
 
 class AnthropicClient:
     name = "anthropic"
     supports_vision = True
 
-    def __init__(self, model: str = "claude-sonnet-5"):
+    def __init__(self, model: str = "claude-sonnet-5",
+                 timeout: float = CALL_TIMEOUT_S):
         import anthropic
         self._c = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"],
-                                      timeout=CALL_TIMEOUT_S, max_retries=1)
+                                      timeout=timeout, max_retries=1)
         self.model = model
 
     def structured(self, *, system, user, schema: type[T], images=None,
@@ -71,10 +81,10 @@ class OpenAIClient:
     BASE: str | None = None
     KEY_ENV = "OPENAI_API_KEY"
 
-    def __init__(self, model: str = "gpt-4.1"):
+    def __init__(self, model: str = "gpt-4.1", timeout: float = CALL_TIMEOUT_S):
         from openai import OpenAI
         kw = {"api_key": os.environ[self.KEY_ENV],
-              "timeout": CALL_TIMEOUT_S, "max_retries": 1}
+              "timeout": timeout, "max_retries": 1}
         if self.BASE:
             kw["base_url"] = self.BASE
         self._c = OpenAI(**kw)
@@ -178,8 +188,9 @@ class GeminiClient(OpenAIClient):
     BASE = "https://generativelanguage.googleapis.com/v1beta/openai/"
     KEY_ENV = "GEMINI_API_KEY"
 
-    def __init__(self, model: str = "gemini-3.5-flash"):
-        super().__init__(model=model)
+    def __init__(self, model: str = "gemini-3.5-flash",
+                 timeout: float = CALL_TIMEOUT_S):
+        super().__init__(model=model, timeout=timeout)
 
 
 class OpenRouterClient(OpenAIClient):
@@ -198,8 +209,9 @@ class OpenRouterClient(OpenAIClient):
     BASE = "https://openrouter.ai/api/v1"
     KEY_ENV = "OPENROUTER_API_KEY"
 
-    def __init__(self, model: str = "z-ai/glm-4.6v"):
-        super().__init__(model=model)
+    def __init__(self, model: str = "z-ai/glm-4.6v",
+                 timeout: float = CALL_TIMEOUT_S):
+        super().__init__(model=model, timeout=timeout)
 
 
 def get_client(role: str = "extract"):
@@ -231,12 +243,14 @@ def get_client(role: str = "extract"):
                   "gemini": "GEMINI", "openai": "OPENAI"}[want]
         env = f"{prefix}_ANALYST_MODEL" if role == "analyst" else f"{prefix}_EXTRACT_MODEL"
         m = os.getenv(env)
-        return cls[want](model=m) if m else cls[want]()
+        t = ANALYST_TIMEOUT_S if role == "analyst" else CALL_TIMEOUT_S
+        return cls[want](model=m, timeout=t) if m else cls[want](timeout=t)
     # auto: cheapest capable provider first, so a spare key is never the
     # expensive one by accident
+    t = ANALYST_TIMEOUT_S if role == "analyst" else CALL_TIMEOUT_S
     for name in ("openrouter", "gemini", "anthropic", "openai"):
         if have[name]:
-            return cls[name]()
+            return cls[name](timeout=t)
     raise RuntimeError(
         "No model API key found. Set OPENROUTER_API_KEY, GEMINI_API_KEY, "
         "ANTHROPIC_API_KEY or OPENAI_API_KEY in .env.\n"
