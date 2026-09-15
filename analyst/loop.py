@@ -162,6 +162,11 @@ class Analyst:
             # live site put the payment-terms picker on screen four times in one
             # reply, then kept going until it ran out of steps. Discipline in the
             # prompt is a request; this is the mechanism.
+            #
+            # Blocks are held until the batch has run, because how the turn ends
+            # decides what goes above them. Every tool in here is local Python
+            # over SQLite, so the hold is microseconds, not a pause anyone sees.
+            pending: list = []
             awaiting_buyer = False
             for call in reply["tool_calls"]:
                 yield "status", f"{call['name']}…"
@@ -170,11 +175,19 @@ class Analyst:
                 except Exception as e:                      # noqa: BLE001
                     payload, blocks = {"error": f"{type(e).__name__}: {e}"}, []
                 for b in blocks:
-                    yield "block", b
+                    pending.append(b)
                     if getattr(b, "type", "") == "choice":
                         awaiting_buyer = True
                 results.append({"id": call["id"], "content": json.dumps(payload, default=str)})
 
+            # When the turn ends on a question, the narration that came with the
+            # tool call is not thinking any more — it is the only thing the model
+            # gets to say, and "I'll set the terms to 30 days" belongs above the
+            # next picker rather than in a status line that vanishes.
+            if awaiting_buyer and reply["text"]:
+                yield "block", TextBlock(text=reply["text"].strip())
+            for b in pending:
+                yield "block", b
             if awaiting_buyer:
                 return
 
@@ -241,6 +254,7 @@ def _self_test() -> int:
     a = Analyst(None, client, tools=OneChoiceTools(), specs=[], system="x")
     out = list(a.ask("put it out to tender"))
     choices = [p for k, p in out if k == "block" and getattr(p, "type", "") == "choice"]
+    kinds = [getattr(p, "type", "") for k, p in out if k == "block"]
 
     checks = [
         (len(choices) == 1,
@@ -248,9 +262,11 @@ def _self_test() -> int:
         (client.turns == 1,
          f"the turn ends at the question, without another model call "
          f"(got {client.turns} turns)"),
-        (not any(k == "block" and getattr(p, "type", "") == "text"
-                 for k, p in out),
-         "nothing is said after the question"),
+        (kinds[-1] == "choice" if kinds else False,
+         f"the question is the LAST thing on screen — no chatter after it "
+         f"(ended on {kinds[-1] if kinds else 'nothing'})"),
+        (kinds.count("text") <= 1,
+         f"at most one sentence, and it comes first (blocks: {kinds})"),
     ]
     print("\n  ANALYST LOOP — a question ends the turn\n")
     for ok, name in checks:

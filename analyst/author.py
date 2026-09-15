@@ -214,12 +214,22 @@ class AuthorTools:
     def _propose_default_rfx(self, response_due_days: int = 14):
         from datetime import date, timedelta
         d, cat = self.draft, self.cat
+        # Called once, at the start. On the live site it was called again on
+        # every follow-up — "Payment terms: 30 days" re-proposed the entire RFx
+        # before setting them — which costs a turn, re-renders the card for no
+        # reason, and moved the response date every time the buyer said anything.
+        if d.line_nos:
+            return ({"already_drafted": True,
+                     "note": "The draft exists and is on screen. Do not call this "
+                             "again. Change fields with set_terms, choose_lines, "
+                             "choose_vendors or set_questionnaire."}, [])
         dflt = cat.get("defaults", {})
         d.buyer_org = d.buyer_org or dflt.get("buyer_org")
         d.category = d.category or dflt.get("category")
         d.delivery_point = d.delivery_point or dflt.get("delivery_point")
         d.required_incoterm = d.required_incoterm or dflt.get("required_incoterm")
-        d.response_due = (date.today() + timedelta(days=response_due_days)).isoformat()
+        d.response_due = d.response_due or (
+            date.today() + timedelta(days=response_due_days)).isoformat()
         d.line_nos = [l["line_no"] for l in cat["lines"]]
         d.vendor_ids = [v["vendor_id"] for v in cat["vendors"]]
         d.question_nos = [q["q_no"] for q in cat["questions"]]
@@ -229,8 +239,15 @@ class AuthorTools:
         return ({"drafted": True, "lines": len(d.line_nos),
                  "vendors": len(d.vendor_ids), "gates": d.gating_q_nos,
                  "note": "A complete RFx, drafted from the buyer's last tender. "
-                         "Do not describe it — the card is on screen. Offer the "
-                         "one or two choices worth changing."},
+                         "Do not describe it — the card is on screen.",
+                 # Naming the next step as DATA, because a model follows a tool
+                 # result far more reliably than a line in a system prompt. Terms
+                 # first: they NPV-adjust every rate, so they partly decide the
+                 # winner, and the vendor list and line schedule are already
+                 # right by default and worth nobody's turn.
+                 "next_decision": "payment_terms",
+                 "why": "It re-prices all 139 cells. Call ask_choice with "
+                        "key='payment_terms' and then stop."},
                 [self._draft_block()])
 
     def _ask_choice(self, key: str, title: str = ""):
@@ -348,7 +365,12 @@ class AuthorTools:
         return ({"payment_terms_days": self.draft.payment_terms_days,
                  "cost_of_capital_pct": self.draft.cost_of_capital_pct,
                  "note": "Every rate that comes back will be NPV-adjusted to these "
-                         "terms at this cost of capital."},
+                         "terms at this cost of capital. The card is on screen.",
+                 "next_decision": "gates",
+                 "why": "Which questionnaire answers disqualify is buyer policy, "
+                        "it is the other field that changes who can win, and the "
+                        "options carry who each gate would remove. Call ask_choice "
+                        "with key='gates' and then stop."},
                 [self._draft_block()])
 
     def _set_questionnaire(self, question_nos: list, gating_q_nos=None):
@@ -360,7 +382,12 @@ class AuthorTools:
         self.draft.question_nos = sorted(chosen)
         self.draft.gating_q_nos = sorted(gates)
         return ({"questions": self.draft.question_nos, "gating": self.draft.gating_q_nos,
-                 "note": "Only the gating questions can disqualify a vendor."},
+                 "note": "Only the gating questions can disqualify a vendor. The "
+                         "card is on screen.",
+                 "next_decision": "issue",
+                 "why": "Lines and vendors are already right by default and are "
+                        "worth nobody's turn. Say the RFx is ready and offer to "
+                        "send it; draft_mail when they agree."},
                 [self._draft_block()])
 
     def _choose_vendors(self, vendor_ids: list):
