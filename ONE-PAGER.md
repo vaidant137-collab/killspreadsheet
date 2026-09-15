@@ -26,7 +26,8 @@ today. **The moat isn't the parser; it's the reconciliation graph it builds.**
   renders once, **pinned**, and each turn mutates it in place. Any cell opens its
   source in a drawer — the workbook, the mail, the photograph — never a download.
 - **The buyer authors the RFx, and it is not theatre.** Scope, terms, gates — in
-  conversation, then a mail they approve. Every choice runs downstream: 45-day
+  conversation, then a mail they approve, with `issue_rfx` refusing until the
+  Approve button has actually been pressed and re-drafting clearing the approval. Every choice runs downstream: 45-day
   terms to 30 re-prices all 139 cells; un-gating ISO returns a vendor disqualified
   by an expired certificate to contention. Only the send is stubbed, and it says so.
 - **Extraction writes to a relational store; the analyst queries it with typed

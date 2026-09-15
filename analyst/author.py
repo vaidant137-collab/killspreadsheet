@@ -406,7 +406,13 @@ class AuthorTools:
         self.draft.mail_subject = subject
         self.draft.mail_body = body
         names = {v["vendor_id"]: v["name"] for v in self.cat["vendors"]}
-        return ({"drafted": True, "missing": self.draft.missing()},
+        # A new draft is an unapproved draft. Editing the mail after approval
+        # and issuing on the old approval is exactly the trick this gate exists
+        # to prevent.
+        self.draft.mail_approved = False
+        return ({"drafted": True, "missing": self.draft.missing(),
+                 "note": "On screen, with an Approve button under it. The buyer "
+                         "presses it; you wait. Say nothing else."},
                 [MailDraftBlock(
                     to=[names.get(v, v) for v in self.draft.vendor_ids],
                     subject=subject, body=body,
@@ -419,6 +425,11 @@ class AuthorTools:
                     [self._draft_block()])
         if not self.draft.mail_body:
             return {"error": "draft the covering mail first, so the buyer can approve it."}, []
+        if not self.draft.mail_approved:
+            return ({"error": "the buyer has not approved the mail yet.",
+                     "note": "The mail is on screen with an Approve button. Wait "
+                             "for them to press it. Do not ask them to type "
+                             "'approved' — the button is the approval."}, [])
         # The API layer watches for this and runs the pipeline. See the module
         # docstring for why that job does not live here.
         self.draft.issued = True

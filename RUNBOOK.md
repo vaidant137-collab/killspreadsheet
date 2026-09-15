@@ -82,9 +82,15 @@ NPV-adjusted to these terms, so the terms I just set decide who looks cheapest.*
 
 > **"Draft the mail and send it."**
 
-Read the stub note on screen rather than glossing it: approving does not send
-mail, the SMTP path is stubbed, and the five replies are documents that already
-exist. Say it plainly. Then watch the responses land.
+It drafts the mail and **stops**. There is an Approve button under it, and
+`issue_rfx` refuses until you press it — the co-pilot cannot send on its own
+say-so, and re-drafting clears the approval so an edit cannot ride out on the
+last one. Say that while it is on screen; a buyer who has ever had a tender go
+out early will notice.
+
+Read the stub note rather than glossing it: approving does not send mail, the
+SMTP path is stubbed, and the five replies are documents that already exist.
+Say it plainly. Then press Approve and watch the responses land.
 
 ## 4 · The decision, before the table (50s)
 

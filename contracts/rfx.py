@@ -185,6 +185,11 @@ class RfxDraft(BaseModel):
 
     mail_subject: str | None = None
     mail_body: str | None = None
+    # The buyer clicked Approve on the covering mail. Not a formality: without
+    # it the co-pilot could draft a mail and issue it in the same breath, and
+    # "a mail they approve" would be a claim in a README rather than a step
+    # anyone takes. issue_rfx refuses until this is true.
+    mail_approved: bool = False
     issued: bool = False
 
     def missing(self) -> list[str]:

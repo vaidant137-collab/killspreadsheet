@@ -203,6 +203,31 @@ async def run(port: int, c: Checks) -> None:
         c.eq(d["payment_terms_days"], 30,
              "picking terms writes the field that re-prices 139 cells")
 
+        # ---- the approval gate ---------------------------------------------
+        # Rendered directly rather than waited for: what is being checked is
+        # that the button exists and that pressing it actually writes the
+        # approval the co-pilot is blocked on, not that a model chose to draft
+        # a mail on this particular run.
+        await pg.evaluate("""blk => {
+          const t = turn('Co-pilot'); t.appendChild(renderBlock(blk)); }""",
+          {"type": "mail_draft", "to": ["Apex Packwell"],
+           "subject": "RFX-2026-CORR-011", "body": "Dear supplier,",
+           "attachments": ["rfx_line_schedule.xlsx"],
+           "stub_note": "Approving this does not send mail."})
+        await pg.wait_for_timeout(300)
+        c.is_(await pg.locator("#chat .block.mail .stub").count() == 1,
+              "the covering mail says on its face that the send is stubbed")
+        before = await pg.evaluate(
+            "fetch('/api/draft').then(r => r.json()).then(j => j.draft.mail_approved)")
+        await pg.locator("#chat .block.mail .rfoot button",
+                         has_text="Approve").click()
+        await pg.wait_for_timeout(1200)
+        after = await pg.evaluate(
+            "fetch('/api/draft').then(r => r.json()).then(j => j.draft.mail_approved)")
+        c.is_(before is False and after is True,
+              "approving the mail is a button, and it writes the approval",
+              f"{before} -> {after}")
+
         # ---- the comparison half -------------------------------------------
         # The button the walkthrough falls back to when the model is down, and
         # the same code path the co-pilot uses once the buyer approves the mail.

@@ -1123,6 +1123,24 @@ function renderMail(b){
     <pre class="mailbody">${esc(b.body)}</pre>
     <div class="attach">${b.attachments.map(a=>'📎 '+esc(a)).join('  ')}</div>
     <div class="stub">${esc(b.stub_note)}</div>`;
+
+  /* The approval is a BUTTON, and issue_rfx refuses without it. Before this the
+     co-pilot could draft the mail and issue it in the same turn, which made "a
+     covering mail they approve" a sentence in a README rather than a step
+     anybody took. Re-drafting clears the approval, so an edit after approval
+     cannot ride out on the old one. */
+  const foot = el('div','rfoot');
+  const go = el('button','go','Approve and send');
+  go.onclick = async () => {
+    go.disabled = true; edit.disabled = true; go.textContent = 'approved';
+    await patchDraft({mail_approved: true});
+    ask('Approved — send it.');
+  };
+  const edit = el('button','other','Change something first');
+  edit.onclick = () => { $('#q').focus();
+    $('#q').placeholder = 'e.g. add the drawing revision to the subject'; };
+  foot.appendChild(go); foot.appendChild(edit);
+  d.appendChild(foot);
   return d;
 }
 

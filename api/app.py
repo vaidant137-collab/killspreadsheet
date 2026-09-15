@@ -550,6 +550,7 @@ class DraftEdit(BaseModel):
     vendor_ids: list[str] | None = None
     gating_q_nos: list[int] | None = None
     payment_terms_days: int | None = None
+    mail_approved: bool | None = None
 
 
 @app.post("/api/draft")
@@ -562,7 +563,8 @@ def edit_draft(e: DraftEdit) -> dict:
     to the draft itself.
     """
     d = SESSION["draft"]
-    for field in ("line_nos", "vendor_ids", "gating_q_nos", "payment_terms_days"):
+    for field in ("line_nos", "vendor_ids", "gating_q_nos", "payment_terms_days",
+                  "mail_approved"):
         v = getattr(e, field)
         if v is not None:
             setattr(d, field, v)
