@@ -6,16 +6,16 @@
 # request — that would bill a model call to every visitor.
 #
 # The brief's one hard rule is "don't fake the extraction". So the deployed
-# instance serves a RECORDING OF A REAL RUN: the model genuinely parsed the five
-# documents during this build, and data/extraction_runs/ holds verbatim what came
-# back, with the model name and timestamp attached. Because it is re-recorded on
-# every deploy, it cannot drift away from the code that produced it.
+# instance serves a RECORDING OF A REAL RUN: a model genuinely parsed the five
+# documents, and data/extraction_runs/ holds verbatim what came back, with the
+# model name and the timestamp attached.
 #
-# If no key is present, or the real run fails, the build does NOT fail — it falls
-# back to the fixture path and DELETES the recordings, so /api/provenance tells
-# the truth about which path produced the numbers on screen. A deploy that
-# quietly served fixture numbers while claiming a real run would be the exact
-# failure this whole project is arguing against.
+# That recording is made deliberately and committed — see below for why it is no
+# longer made during the build. If none is committed, the build falls back to the
+# fixture path and says so, and /api/provenance tells the truth about which path
+# produced the numbers on screen. A deploy that quietly served fixture numbers
+# while claiming a real run would be the exact failure this project argues
+# against, and it is one this build made four times before it was caught.
 set -e
 cd "$(dirname "$0")"
 
@@ -25,74 +25,64 @@ pip install -r requirements.txt
 [ -f data/ground_truth.json ] || python -m data.build_ground_truth
 [ -f data/generated/ganesh_rate_card_photo.jpg ] || python -m tools.render_all
 
-# Is there a real recorded run committed in the repo? It matters below: a
-# recording made last week by a real model is a far better thing to fall back to
-# than the fixture, and the chip reports it honestly either way because every
-# recording carries the model name and the timestamp of the run.
-HAD_RECORDING=0
+# Recording is a DELIBERATE ACT, not a side effect of deploying.
+#
+# It used to run on every deploy. That cost ten minutes a build, hit the build's
+# time ceiling every time, fell back, and produced the same bytes it started
+# with -- so four deploys in a row shipped the fixture path while the log said
+# "recording a real model run". A deploy that takes twelve minutes to arrive
+# where it began is a deploy nobody runs, and a slow deploy loop is how the
+# other bugs stayed alive as long as they did.
+#
+# So: the recording is an artefact in the repo, made once on a machine with no
+# ceiling on it (RECORD-EXTRACTION.command, or `python -m pipeline --extractor
+# record`), and committed. The build replays it. FORCE_RECORD=1 makes a fresh
+# one, for when the documents or the extraction schema change -- which is the
+# only time the bytes would differ.
+HAS_RECORDING=0
 if [ -d data/extraction_runs ] && [ -n "$(ls -A data/extraction_runs 2>/dev/null)" ]; then
-  HAD_RECORDING=1
+  HAS_RECORDING=$(ls data/extraction_runs/*.json 2>/dev/null | wc -l | tr -d ' ')
 fi
 
-# A recording committed to the repo is the artefact; re-making it on every
-# deploy was the right design only while there was none. Four deploys spent ten
-# minutes each calling a model, hitting the build ceiling and falling back, and
-# a deploy that takes twelve minutes to arrive at the same bytes is a deploy
-# nobody runs. Set FORCE_RECORD=1 to make a fresh one — for instance after
-# changing the documents or the extraction schema.
-if [ "$HAD_RECORDING" -eq 1 ] && [ -z "$FORCE_RECORD" ]; then
-  echo "--- extraction: replaying the real run committed in the repo ---"
-  ls data/extraction_runs/*.json 2>/dev/null | wc -l | xargs echo "--- documents:"
+if [ -n "$FORCE_RECORD" ] && \
+   [ -n "$OPENROUTER_API_KEY$ANTHROPIC_API_KEY$GEMINI_API_KEY$OPENAI_API_KEY" ]; then
+  echo "--- extraction: FORCE_RECORD set, calling a real model ---"
+  set +e
+  timeout "${EXTRACT_BUDGET_S:-900}" python -m pipeline --extractor record
+  rc=$?
+  set -e
+  N=0
+  if [ -d data/extraction_runs ]; then
+    N=$(ls data/extraction_runs/*.json 2>/dev/null | wc -l | tr -d ' ')
+  fi
+  # Exit 0 is NOT the same as "a model read the documents": pipeline.run falls
+  # back per document and still exits cleanly, so a run in which every document
+  # timed out looks identical from here to a perfect one. Check the artefact.
+  if [ "$rc" -eq 0 ] && [ "$N" != "0" ]; then
+    echo "--- recorded $N document(s); the deploy will replay this run ---"
+    exit 0
+  fi
+  if [ "$rc" -eq 124 ]; then
+    echo "--- the record run hit the ${EXTRACT_BUDGET_S:-900}s ceiling."
+  elif [ "$rc" -ne 0 ]; then
+    echo "--- the record run failed with exit $rc."
+  else
+    echo "--- the run completed but recorded NOTHING: every document fell back."
+    echo "--- the reasons are above, under 'documents that fell back'."
+  fi
+  echo "--- record it on a laptop instead: ./RECORD-EXTRACTION.command"
+  git checkout -- data/extraction_runs data/extraction_latest.json 2>/dev/null || true
+  git clean -fdq data/extraction_runs 2>/dev/null || true
+  HAS_RECORDING=$(ls data/extraction_runs/*.json 2>/dev/null | wc -l | tr -d ' ')
+fi
+
+if [ "$HAS_RECORDING" != "0" ]; then
+  echo "--- extraction: replaying a real run, $HAS_RECORDING document(s), committed in the repo ---"
   python -m pipeline --extractor replay
   exit 0
 fi
 
-if [ -n "$OPENROUTER_API_KEY$ANTHROPIC_API_KEY$GEMINI_API_KEY$OPENAI_API_KEY" ]; then
-  echo "--- extraction: recording a real model run ---"
-  # A ceiling on the whole recording, not just on each call. Belt and braces: if
-  # anything below the client timeout still wedges, the build falls back and
-  # ships rather than hanging and shipping nothing.
-  set +e
-  timeout "${EXTRACT_BUDGET_S:-420}" python -m pipeline --extractor record
-  rc=$?
-  set -e
-  # Exit 0 is NOT the same as "a model read the documents". pipeline.run falls
-  # back PER DOCUMENT and still exits cleanly, so a run in which every single
-  # document timed out looks identical from here to a perfect one -- which is
-  # how this deploy shipped the fixture path four times while the build log
-  # said "recorded". Check for the artefact, not the exit code.
-  RECORDED=0
-  if [ -d data/extraction_runs ] && [ -n "$(ls -A data/extraction_runs 2>/dev/null)" ]; then
-    RECORDED=$(ls data/extraction_runs/*.json 2>/dev/null | wc -l | tr -d ' ')
-  fi
-  if [ "$rc" -eq 0 ] && [ "$RECORDED" != "0" ]; then
-    echo "--- recorded $RECORDED document(s); the deploy will replay this run ---"
-    exit 0
-  fi
-  if [ "$rc" -eq 0 ]; then
-    echo "--- the run completed but recorded NOTHING: every document fell back."
-    echo "--- the reasons are listed above, under 'documents that fell back'."
-  fi
-  # Say WHICH failure. A build that falls back for an unstated reason is a
-  # mystery next deploy, and this one already cost an evening: 124 is the
-  # ceiling, anything else is the run itself.
-  if [ "$rc" -eq 124 ]; then
-    echo "--- the record run hit the ${EXTRACT_BUDGET_S:-420}s ceiling. Either the"
-    echo "--- extract model is slow or a call is retrying. Set"
-    echo "--- OPENROUTER_EXTRACT_MODEL to something faster, or raise EXTRACT_BUDGET_S."
-  else
-    echo "--- the record run failed with exit $rc. ---"
-  fi
-  if [ "$HAD_RECORDING" -eq 1 ]; then
-    echo "--- falling back to the real run committed in the repo ---"
-    git checkout -- data/extraction_runs data/extraction_latest.json 2>/dev/null || true
-    git clean -fdq data/extraction_runs 2>/dev/null || true
-    python -m pipeline --extractor replay
-    exit 0
-  fi
-  echo "--- no committed recording to fall back to. Fixture, and saying so. ---"
-  rm -rf data/extraction_runs data/extraction_latest.json
-fi
-
-echo "--- extraction: fixture path (no key at build time, or the run failed) ---"
+echo "--- extraction: fixture path. No recording is committed, so no model has"
+echo "--- read these documents. /api/provenance and the header say exactly that."
+echo "--- make one: ./RECORD-EXTRACTION.command, then commit data/extraction_runs/"
 python -m pipeline --extractor fixture

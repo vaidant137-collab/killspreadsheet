@@ -17,10 +17,17 @@ pip install -r requirements.txt
 
 **No API key is needed for most of it.** `EXTRACTOR=fixture` replays known-good
 extraction output, so the store, matcher, normaliser, allocator, review queue,
-evidence drawer and UI all run without one. **The deploy does not use it:**
-`build.sh` records a real model run at build time and the site replays that, with
-the model name and timestamp in the header. Without a key the build falls back to
-fixture, deletes the recordings, and the header says so.
+evidence drawer and UI all run without one.
+
+**The deploy replays a recording, and the recording is made deliberately.**
+`./RECORD-EXTRACTION.command` (or `LLM_TIMEOUT_S=600 python -m pipeline
+--extractor record`) makes a real model read all five documents and writes
+`data/extraction_runs/`, which is committed. The build replays it and the header
+names the model and the date. Recording used to happen inside the build; it cost
+ten minutes, hit the build ceiling every time and shipped the fixture anyway.
+`FORCE_RECORD=1` restores that behaviour for when the documents or the extraction
+schema change. With no recording committed, the build uses the fixture path and
+the header says so.
 
 | command | what it does |
 |---|---|
