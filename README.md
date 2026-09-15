@@ -199,11 +199,28 @@ python -m tools.fetch_wild_set            # real documents, on your machine
 ```
 extraction     97.1% field · 97.1% unit · 100% match
 escape rate    0%      every error was caught by the confidence gate
-calibration    accuracy spans 33 points across confidence buckets
+calibration    accuracy spans 44 points across confidence buckets
 comparability  0 of 139 cells were comparable exactly as quoted
 unresolved     7 cells refused rather than estimated
 review queue   29 cells at threshold 0.82
 ```
+
+**Read those numbers the right way.** They are measured on the *fixture* path,
+which replays a correct read of each document instead of calling a model. So they
+do not say "the extractor is 97% accurate." What they measure is everything
+downstream of the read — matching, normalisation, the confidence gate, the review
+queue — against cells deliberately made hard: two near-identical 450×350 fitments,
+a pointer (`rest same as last year`) instead of a price, four rows under the
+photographer's shadow. On that path the load-bearing figures are honest: the gate
+caught all eight errors, and confidence discriminates across a 44-point spread,
+which is what lets the threshold be set on evidence rather than on feel.
+
+What is **not** measured here is model extraction accuracy on documents this repo
+did not generate. `tools/fetch_wild_set.py` pulls five real ones — a 24-page
+catalogue priced per square metre, a brochure with an empty certifications
+section — and they are unlabelled. Until a handful of their fields are labelled by
+hand, 97.1% is a claim about this pipeline, not about OCR. Saying so is cheaper
+than being caught saying otherwise.
 
 Deployed for a URL; **the live demo runs locally**, because free-tier cold starts
 and request timeouts are exactly the shape of an extraction pass.
