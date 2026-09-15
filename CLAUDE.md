@@ -108,10 +108,25 @@ review queue   29 at threshold 0.82
 
 **Built since:** RFx authoring (`analyst/author.py` — same loop, different tools
 and prompt), the decision layer (`allocate.subsets.options`), inline source
-previews (`tools/doc_preview.py`), and real recorded extraction at build time.
+previews (`tools/doc_preview.py`), real recorded extraction at build time, and
+the picker layer — item master, approved vendors, the live draft card — whose
+clicks write straight to `/api/draft` with no model call.
+
+**The front end is not covered by the Python suite and needs driving.** Three
+functions were called and never defined, and a fourth wrote to an element the
+header cleanup had removed; between them they took out the tabs, the draft card,
+the co-pilot's first reply and the comparison grid, while every API behind them
+answered correctly. Drive the page against a local server after any change to
+`web/index.html` — `node --check` on the script catches syntax and nothing else.
 
 **Not built:** the wild set in `tools/fetch_wild_set.py` is fetched but
 unlabelled, so the 97% is measured only against documents this repo generated.
+
+**Timeouts are part of the seam.** Extraction gets 90 seconds a call, the
+analyst 45 with a 150-second budget across the turn — a stuck extraction costs a
+build nobody is watching, a stuck analyst costs a buyer staring at "thinking".
+`llm/test_seam.py` asserts every provider accepts the ceiling, which is how two
+of them were caught swallowing it.
 
 **Known weak:** the review queue is too long at 29; freight in the pinned
 comparison assumes each vendor wins everything they quoted (the allocator

@@ -65,6 +65,15 @@ today. **The moat isn't the parser; it's the reconciliation graph it builds.**
   number, so the *amended* rate disappears without trace. The dangerous half of
   the defence held and the quiet half did not. Reading the code would not have
   produced that distinction; running the attack did.
+- **Half the screen referred to code that did not exist.** `openTab`,
+  `refreshDraft` and `renderDraftPanel` were called in four places and defined in
+  none; `renderTable` still wrote to a header element I had deleted. Two
+  exceptions, and between them they took out the tabs, the RFx draft card, the
+  co-pilot's first reply *and the comparison grid itself* — while the page
+  otherwise looked fine, because a thrown exception in a boot path leaves the
+  static HTML on screen and stops. The reply had arrived and the browser simply
+  could not draw it. Nothing in the Python suite could see any of this: it is all
+  downstream of the API, which was answering correctly throughout.
 - **The flagship interaction returned a non-answer, silently.** Asked which single
   vendor was cheapest, the analyst ran its query, got rows back, said "I will
   calculate the total" — and stopped. A malformed tool-call round-trip drew an
@@ -79,6 +88,12 @@ today. **The moat isn't the parser; it's the reconciliation graph it builds.**
 0 of 139 cells comparable as quoted · 7 refused rather than estimated
 29-item review queue at threshold 0.82 — a product decision, displayed
 ```
+
+Every bug in the list above was found by deploying the thing and using it, and
+none by a test I wrote first. That is the argument for the escape rate too, and
+the reason the browser is now driven headlessly against a local server on every
+change: the seam tests prove the modules meet their contracts, and the only thing
+that proves the product works is working it.
 
 Escape rate is the metric that matters: 90% accurate and catching every error
 beats 98% accurate and hiding 2%, because the 98% is unverifiable without the

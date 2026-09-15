@@ -47,16 +47,31 @@ of this product is the part that happens before any vendor has replied.
 > **"I need to put our annual corrugated packaging out to tender. Thirty-odd
 > lines, and I want it back inside two weeks."**
 
-Let the co-pilot propose. It will call `list_catalogue` before suggesting line
-items — point that out: it is reading the item master rather than inventing
-products the buyer does not stock.
+Let the co-pilot propose. It drafts the **whole** RFx first — schedule,
+questionnaire, terms, vendor list — and the card appears in the pinned slot above
+rather than in the chat. Say why: a co-pilot that interviews you for six turns
+before showing anything has made you do the work it was supposed to do.
+
+Then open **Item master** and **Vendors** for fifteen seconds each. Two things to
+say, quickly:
+
+- Five categories, one of them loaded, four saying *no data available*. This is
+  one category in a buyer's catalogue, not a demo with the answer hardcoded.
+- Ticking a line writes straight to the draft with **no model call**. Data entry
+  is not judgement, and a co-pilot that occasionally mis-ticks one of thirty
+  boxes is strictly worse than a checkbox. The model is for the decisions.
 
 ## 2 · The decision that decides the answer (60s)
 
 > **"What should I gate on, and what would that cost me?"**
 
 This is the question worth asking. Gating is buyer policy, not software
-behaviour, and the co-pilot should say what each gate costs. Then:
+behaviour. What comes back is a list you click, and **each option carries what it
+would cost** — *"disqualifies 2 of 5"*. Say the important part out loud: those
+consequences are computed in Python from the live questionnaire answers and
+handed to the model as data. The model names the decision; it never writes the
+number. A consequence a model wrote from memory is a number the buyer would act
+on and nobody could check. Then:
 
 > **"Gate on ISO and on quality escapes. 45-day terms."**
 
@@ -90,6 +105,11 @@ number.
 
 Twenty-nine cells at threshold 0.82. Open one review card and say why the queue
 being *too long* is the honest failure: a queue nobody reads gets rubber-stamped.
+
+Then use it — click **Correct…**, change the value, save. The number moves on the
+grid and its confidence goes to 1.0, because a correction re-runs the eight
+normalisation steps rather than being logged and forgotten. That is the whole
+trust layer in one click: a human verdict is an input, not a comment.
 
 Then click into the evidence for three cells, in this order:
 
@@ -148,3 +168,6 @@ you do not have yet.
 - **Blank page** — hard reload. The free instance sleeps after fifteen minutes.
 - **A number looks wrong** — open its evidence and find out on camera. That is a
   better minute of video than anything you could have scripted.
+- **The co-pilot is slow** — the status counts seconds, so you can see it working
+  rather than guessing. It gives up honestly at 150 seconds; if it does, say so
+  and click *"Issue the template RFx instead"*.
