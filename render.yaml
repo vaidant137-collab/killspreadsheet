@@ -37,7 +37,15 @@ services:
       # room for one document to need a schema repair without costing the
       # deploy its provenance. About twenty cents a deploy at these rates.
       - key: EXTRACT_BUDGET_S
-        value: "600"
+        value: "700"
+      # Per model call. The default 90 seconds is comfortable for a page of
+      # text and not for a photographed rate card: a build where all five
+      # documents timed out at 90s, fell back one at a time and still exited
+      # zero is exactly what shipped the fixture path while the log said
+      # "recording a real model run". Five documents at 150 still fit the
+      # budget above with room to spare.
+      - key: LLM_TIMEOUT_S
+        value: "150"
       # A public URL with a paid key behind it needs a ceiling. See api/app.py.
       - key: MAX_QUESTIONS_PER_HOUR
         value: "60"

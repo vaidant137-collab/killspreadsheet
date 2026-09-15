@@ -43,9 +43,22 @@ if [ -n "$OPENROUTER_API_KEY$ANTHROPIC_API_KEY$GEMINI_API_KEY$OPENAI_API_KEY" ];
   timeout "${EXTRACT_BUDGET_S:-420}" python -m pipeline --extractor record
   rc=$?
   set -e
-  if [ "$rc" -eq 0 ]; then
-    echo "--- recorded; the deploy will replay this run ---"
+  # Exit 0 is NOT the same as "a model read the documents". pipeline.run falls
+  # back PER DOCUMENT and still exits cleanly, so a run in which every single
+  # document timed out looks identical from here to a perfect one -- which is
+  # how this deploy shipped the fixture path four times while the build log
+  # said "recorded". Check for the artefact, not the exit code.
+  RECORDED=0
+  if [ -d data/extraction_runs ] && [ -n "$(ls -A data/extraction_runs 2>/dev/null)" ]; then
+    RECORDED=$(ls data/extraction_runs/*.json 2>/dev/null | wc -l | tr -d ' ')
+  fi
+  if [ "$rc" -eq 0 ] && [ "$RECORDED" != "0" ]; then
+    echo "--- recorded $RECORDED document(s); the deploy will replay this run ---"
     exit 0
+  fi
+  if [ "$rc" -eq 0 ]; then
+    echo "--- the run completed but recorded NOTHING: every document fell back."
+    echo "--- the reasons are listed above, under 'documents that fell back'."
   fi
   # Say WHICH failure. A build that falls back for an unstated reason is a
   # mystery next deploy, and this one already cost an evening: 124 is the
