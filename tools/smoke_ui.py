@@ -141,6 +141,24 @@ async def run(port: int, c: Checks) -> None:
         await pg.goto(url, wait_until="networkidle")
         await pg.wait_for_timeout(700)
 
+        # Every element the script reaches for must exist. This is exactly
+        # the shape of the bug that blanked the comparison grid: renderTable
+        # kept writing to a header element a redesign had removed, threw, and
+        # took enterComparison down with it. Cheap, and it covers the whole
+        # file rather than only the paths this harness happens to walk.
+        dangling = await pg.evaluate(r'''() => {
+          const html = document.documentElement.outerHTML;
+          const script = html.slice(html.indexOf("<scr" + "ipt"));
+          const used = new Set();
+          const res = [/\$\((?:"|')#([A-Za-z0-9_-]+)(?:"|')\)/g,
+                       /getElementById\((?:"|')([A-Za-z0-9_-]+)(?:"|')\)/g];
+          for (const re of res)
+            for (const m of script.matchAll(re)) used.add(m[1]);
+          return [...used].filter(id => !document.getElementById(id));
+        }''')
+        c.is_(not dangling, "every element the script reaches for exists",
+              ", ".join(dangling))
+
         c.at_least(await pg.locator("#suggest button").count(), 3,
                    "the empty chat offers openers")
         c.is_(not await pg.locator("#panelDraft").is_hidden(),
