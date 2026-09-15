@@ -110,13 +110,14 @@ def case_superseded() -> dict:
     rev_a = re.search(r"Rev\s+([AB])", a)
     rev_b = re.search(r"Rev\s+([AB])", b)
     says_supersedes = bool(re.search(r"supersedes", b, re.I))
-    both_readable = bool(rev_a and rev_b)
+    both_readable = bool(rev_a and rev_b)   # reported below, not assumed
     # Honest scoring: the corpus makes the supersession explicit and readable,
     # but nothing in the pipeline selects between revisions today — documents are
     # registered per vendor, one per role.
     selects = False
     return {"case": "superseded", "attacks": "store", "handled": selects,
-            "detail": f"both revisions parse (Rev {rev_a.group(1) if rev_a else '?'}, "
+            "detail": f"both revisions parse: {both_readable} "
+                      f"(Rev {rev_a.group(1) if rev_a else '?'}, "
                       f"Rev {rev_b.group(1) if rev_b else '?'}); "
                       f"supersession stated in text: {says_supersedes}; "
                       f"pipeline selects between revisions: {selects}",

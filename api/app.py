@@ -14,7 +14,6 @@ from __future__ import annotations
 import json
 import os
 import time
-from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
@@ -436,8 +435,8 @@ def _apply_correction(conn, review_id: int, value: str) -> None:
     n = normalise_line(q, line, sub.vendor, gt, units)
 
     caveats = list(n.caveats) + [
-        f"Value corrected by a human reviewer and re-normalised through the "
-        f"same eight steps. Original extraction is retained in the review log."]
+        "Value corrected by a human reviewer and re-normalised through the "
+        "same eight steps. Original extraction is retained in the review log."]
     conn.execute(
         "UPDATE normalised_line SET landed_inr=?, state=?, base_inr=?, "
         "freight_inr=?, tooling_inr=?, discount_inr=?, npv_adjustment_inr=?, "

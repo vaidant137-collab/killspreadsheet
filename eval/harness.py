@@ -84,7 +84,7 @@ class Scorecard:
         print(f"    field accuracy   {pct(self.field_ok)}   is the number right")
         print(f"    unit accuracy    {pct(self.unit_ok)}   is the unit right")
         print(f"    match accuracy   {pct(self.match_ok)}   did it hit the right buyer line")
-        print(f"    ---")
+        print("    ---")
         print(f"    errors           {len(self.errors):6d}")
         print(f"    caught by gate   {len(caught):6d}   routed to human review")
         print(f"    ESCAPED          {len(escapes):6d}   reached a cell the buyer would trust")
@@ -100,7 +100,7 @@ class Scorecard:
         _calibration_verdict(self.buckets)
 
         if escapes:
-            print(f"\n  ESCAPES — errors the gate did not catch:\n")
+            print("\n  ESCAPES — errors the gate did not catch:\n")
             for e in escapes:
                 print(f"    {e['vendor']:9s} {e['label'][:34]:34s} "
                       f"expected line {e['expected_line']}, got {e['got_line']}  "

@@ -56,7 +56,7 @@ def render(gt: GroundTruth, out_dir: Path) -> Path:
     _p(doc, "The Category Purchase Manager\nNandan Consumer Products Ltd\n"
             "Bhiwandi Distribution Centre, Maharashtra", size=9, space_after=12)
 
-    _p(doc, f"Dear Sir or Madam,", size=9.5, space_after=8)
+    _p(doc, "Dear Sir or Madam,", size=9.5, space_after=8)
     _p(doc, "Sub: Offer against your enquiry " + gt.rfx.rfx_id +
             " for annual corrugated packaging requirement", size=9.5, bold=True, space_after=10)
 

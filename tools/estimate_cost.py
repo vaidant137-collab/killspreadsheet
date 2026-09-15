@@ -11,7 +11,6 @@ Run:  python -m tools.estimate_cost
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 from PIL import Image
 
@@ -79,7 +78,7 @@ def measure() -> dict:
 
 def main() -> None:
     m = measure()
-    print(f"\n  MEASURED, from the five documents in data/generated\n")
+    print("\n  MEASURED, from the five documents in data/generated\n")
     print(f"    one extraction pass   {m['extract_in']:9,.0f} in  "
           f"{m['extract_out']:8,.0f} out"
           f"   ({m['extract_img_share']:.0%} of input is image tokens)")
@@ -98,9 +97,9 @@ def main() -> None:
     a = ANALYST_QUESTIONS * (m["q_in"] * pin_s + m["q_out"] * pout_s) / 1e6
     print(f"\n    {'Split: extraction on the Gemini free tier,':50s}")
     print(f"    {'analyst on Sonnet 5':20s} {0.00:10.2f}  {a:9.2f} {a:9.2f}")
-    print(f"\n  Output tokens dominate: they cost 4-5x input and extraction emits")
-    print(f"  ~15k of them per pass. Recording extraction once and replaying it")
-    print(f"  removes that cost from every run after the first.\n")
+    print("\n  Output tokens dominate: they cost 4-5x input and extraction emits")
+    print("  ~15k of them per pass. Recording extraction once and replaying it")
+    print("  removes that cost from every run after the first.\n")
 
 
 if __name__ == "__main__":
