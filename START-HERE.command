@@ -7,88 +7,85 @@ echo "  Kill the Quote Spreadsheet"
 echo "  ─────────────────────────────────────────────"
 echo ""
 
-# --- python --------------------------------------------------------------
+# --- find a python -------------------------------------------------------
 PY=""
-for c in python3.12 python3.11 python3.10 python3; do
+for c in python3.13 python3.12 python3.11 python3.10 python3; do
   command -v "$c" >/dev/null 2>&1 && { PY="$c"; break; }
 done
 if [ -z "$PY" ]; then
   echo "  Python 3 isn't installed."
-  echo ""
-  echo "  A window should pop up offering to install Developer Tools."
-  echo "  Click Install, wait for it to finish, then double-click this file again."
+  echo "  A window should offer to install Developer Tools. Click Install,"
+  echo "  wait for it to finish, then double-click this file again."
   xcode-select --install 2>/dev/null
-  echo ""
-  read -n 1 -s -r -p "  Press any key to close."
-  exit 1
+  echo ""; read -n 1 -s -r -p "  Press any key to close."; exit 1
 fi
 PYVER=$("$PY" -c 'import sys; print("%d.%d" % sys.version_info[:2])')
 echo "  Using Python $PYVER"
-if [ "$PYVER" = "3.9" ]; then
-  echo "  (3.9 is what macOS ships. It works - a compatibility package is"
-  echo "   installed below to handle the newer type syntax.)"
-fi
 echo ""
 
 # --- API key -------------------------------------------------------------
 if [ ! -f .env ] || ! grep -qE '^(OPENROUTER|ANTHROPIC|OPENAI|GEMINI)_API_KEY=.+' .env; then
   echo "  No API key saved yet."
-  echo ""
-  echo "  Paste your OpenRouter key and press Enter."
-  echo "  (Free at openrouter.ai/keys - it starts with sk-or-)"
-  echo ""
-  echo "  Or press Enter to skip. Everything still works without one;"
-  echo "  you only lose the live analyst chat."
+  echo "  Paste your OpenRouter key and press Enter (free at openrouter.ai/keys),"
+  echo "  or press Enter to skip - everything works without one except the"
+  echo "  live analyst chat."
   echo ""
   printf "  Key: "
   read -r USERKEY
   if [ -n "$USERKEY" ]; then
     printf 'OPENROUTER_API_KEY=%s\n' "$USERKEY" > .env
     printf 'OPENROUTER_ANALYST_MODEL=anthropic/claude-sonnet-5\n' >> .env
-    echo "        Saved. (git ignores .env, so it never leaves your Mac.)"
+    echo "        Saved. git ignores .env, so it never leaves your Mac."
   else
     echo "        Skipped."
   fi
   echo ""
 fi
 
-# --- dependencies, in an isolated environment ----------------------------
-# A virtual environment, because modern macOS refuses a plain `pip install`
-# with "externally-managed-environment". This also means nothing here can
-# disturb any other Python you have.
-if [ ! -d .venv ]; then
-  echo "  [1/5] Creating an isolated Python environment (first run only)..."
-  "$PY" -m venv .venv || {
-    echo ""
-    echo "  Could not create it. Tell Claude exactly what this says:"
-    "$PY" -m venv .venv
-    read -n 1 -s -r -p "  Press any key to close."; exit 1; }
+# --- somewhere to install packages ---------------------------------------
+# Three strategies, because Python installs on macOS vary wildly: Homebrew's
+# ensurepip is often broken, and the system one refuses plain pip installs.
+# Whichever works, we end up with $VPY able to import what we need.
+VPY=""
+PIPFLAGS=""
+
+echo "  [1/5] Setting up an isolated environment..."
+if "$PY" -m venv .venv >/dev/null 2>&1 && [ -x .venv/bin/python ] \
+   && .venv/bin/python -m pip --version >/dev/null 2>&1; then
+  VPY=".venv/bin/python"
+  echo "        done"
 else
-  echo "  [1/5] Environment already set up."
+  rm -rf .venv
+  echo "        Standard method unavailable on this Python. Trying another..."
+  if "$PY" -m venv --without-pip .venv >/dev/null 2>&1 && [ -x .venv/bin/python ]; then
+    curl -sS https://bootstrap.pypa.io/get-pip.py -o /tmp/ks_get_pip.py 2>/dev/null \
+      && .venv/bin/python /tmp/ks_get_pip.py -q >/dev/null 2>&1 \
+      && .venv/bin/python -m pip --version >/dev/null 2>&1 \
+      && { VPY=".venv/bin/python"; echo "        done"; }
+  fi
 fi
-VPY=".venv/bin/python"
+if [ -z "$VPY" ]; then
+  rm -rf .venv
+  VPY="$PY"
+  PIPFLAGS="--break-system-packages"
+  echo "        Using your main Python instead. That is fine."
+fi
 echo ""
 
 echo "  [2/5] Installing what it needs (a minute or two the first time)..."
-"$VPY" -m pip install --quiet --upgrade pip 2>&1 | tail -2
-"$VPY" -m pip install --quiet -r requirements.txt 2>&1 | tail -5
-# On Python 3.9 pydantic cannot evaluate `X | None` annotations without this.
-if [ "$PYVER" = "3.9" ]; then
-  "$VPY" -m pip install --quiet eval_type_backport 2>&1 | tail -2
-fi
+"$VPY" -m pip install $PIPFLAGS --quiet --upgrade pip >/dev/null 2>&1
+"$VPY" -m pip install $PIPFLAGS --quiet -r requirements.txt 2>&1 | tail -4
+[ "$PYVER" = "3.9" ] && "$VPY" -m pip install $PIPFLAGS --quiet eval_type_backport >/dev/null 2>&1
 
-# Check it actually works before going further, so a failure says WHY here
-# rather than as a wall of traceback three steps later.
-if ! "$VPY" -c "from api.app import app" 2>/tmp/ks_import_err; then
+if ! "$VPY" -c "from api.app import app" 2>/tmp/ks_err; then
   echo ""
-  echo "  Something is still missing. The important line is:"
+  echo "  Still missing something. The line that matters:"
   echo ""
-  tail -3 /tmp/ks_import_err | sed 's/^/    /'
+  tail -4 /tmp/ks_err | sed 's/^/    /'
   echo ""
   echo "  Copy that into the Claude chat and I will fix it."
   echo ""
-  read -n 1 -s -r -p "  Press any key to close."
-  exit 1
+  read -n 1 -s -r -p "  Press any key to close."; exit 1
 fi
 echo "        done"
 echo ""
@@ -96,44 +93,37 @@ echo ""
 echo "  [3/5] Building the dataset..."
 "$VPY" -m data.build_ground_truth 2>&1 | tail -1
 echo ""
-
 echo "  [4/5] Rendering the five vendor documents..."
 "$VPY" -m tools.render_all 2>&1 | tail -2
 echo ""
-
 echo "  [5/5] Extraction, matching, normalisation..."
-if [ -f .env ] && grep -qE '^(OPENROUTER|ANTHROPIC|OPENAI|GEMINI)_API_KEY=.+' .env; then
+if grep -qE '^(OPENROUTER|ANTHROPIC|OPENAI|GEMINI)_API_KEY=.+' .env 2>/dev/null; then
   echo "        API key found - recording a real extraction run..."
   "$VPY" -m pipeline --extractor record 2>&1 | tail -9 || {
-    echo "        Real extraction hit a problem. Falling back so the demo still works."
+    echo "        Real extraction had a problem. Falling back so the demo still works."
     "$VPY" -m pipeline --extractor fixture 2>&1 | tail -9; }
 else
   echo "        No API key - using the replay path."
   "$VPY" -m pipeline --extractor fixture 2>&1 | tail -9
 fi
 echo ""
-
 echo "  Scorecard"
 echo "  ─────────────────────────────────────────────"
 "$VPY" -m eval.harness 2>&1 | sed -n '/SCORECARD/,/escape rate/p'
 echo ""
 
-# --- serve ---------------------------------------------------------------
 PORT=8000
 while lsof -ti :$PORT >/dev/null 2>&1; do PORT=$((PORT+1)); done
 echo "  ─────────────────────────────────────────────"
 echo "  Opening http://127.0.0.1:$PORT"
 echo ""
 echo "  LEAVE THIS WINDOW OPEN while you demo."
-echo "  Close it when you're finished."
 echo "  ─────────────────────────────────────────────"
 echo ""
-
-( for i in $(seq 1 30); do
+( for i in $(seq 1 40); do
     curl -s -o /dev/null "http://127.0.0.1:$PORT/" && { open "http://127.0.0.1:$PORT"; break; }
     sleep 1
   done ) &
-
 "$VPY" -m uvicorn api.app:app --host 127.0.0.1 --port $PORT
 echo ""
 echo "  Server stopped."
