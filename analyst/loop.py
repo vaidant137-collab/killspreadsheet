@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sqlite3
 import time
 
@@ -85,6 +86,26 @@ stand alone as the whole reply.
 NEVER pad. No preamble, no restating the question, no bullet list that repeats \
 the sentence above it, no closing offer to do something else. If it fits in one \
 line, it is one line."""
+
+
+# Openings that announce the thing below them rather than saying anything. The
+# prompt asks for this too; a prompt is a request, and this is two lines.
+_ANNOUNCEMENT = re.compile(
+    r"^(i(\'| a)?m going to|i\'?ll|i will|let me|let\'?s|here (are|is)|"
+    r"now i\'?ll|sure[,.]|of course[,.])\b", re.I)
+
+
+def _worth_saying(text: str) -> str:
+    """Drop a lone sentence whose only content is 'look below'."""
+    t = (text or "").strip()
+    if not t:
+        return ""
+    # One short sentence that opens by announcing = a caption. More than one
+    # sentence means it is probably saying something as well, so keep it.
+    first = t.split(".")[0]
+    if len(t.split(".")) <= 2 and len(first.split()) <= 12 and _ANNOUNCEMENT.match(t):
+        return ""
+    return t
 
 
 class Analyst:
@@ -182,10 +203,16 @@ class Analyst:
 
             # When the turn ends on a question, the narration that came with the
             # tool call is not thinking any more — it is the only thing the model
-            # gets to say, and "I'll set the terms to 30 days" belongs above the
-            # next picker rather than in a status line that vanishes.
+            # gets to say, and "Set to 30 days; every rate re-prices" belongs
+            # above the next picker rather than in a status line that vanishes.
+            #
+            # Unless it is announcing the picker. "I'll offer you payment term
+            # options" is a caption on a widget the buyer is looking at, and a
+            # line that says only what is about to appear is worse than no line.
             if awaiting_buyer and reply["text"]:
-                yield "block", TextBlock(text=reply["text"].strip())
+                said = _worth_saying(reply["text"])
+                if said:
+                    yield "block", TextBlock(text=said)
             for b in pending:
                 yield "block", b
             if awaiting_buyer:
@@ -267,6 +294,12 @@ def _self_test() -> int:
          f"(ended on {kinds[-1] if kinds else 'nothing'})"),
         (kinds.count("text") <= 1,
          f"at most one sentence, and it comes first (blocks: {kinds})"),
+        (_worth_saying("I'll offer you payment term options.") == ""
+         and _worth_saying("Let me show you the vendor list.") == "",
+         "a sentence that only announces the picker is dropped"),
+        (_worth_saying("Set to 30 days — every rate re-prices to it.")
+         == "Set to 30 days — every rate re-prices to it.",
+         "a sentence that says what changed is kept"),
     ]
     print("\n  ANALYST LOOP — a question ends the turn\n")
     for ok, name in checks:

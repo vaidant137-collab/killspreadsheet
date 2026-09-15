@@ -55,6 +55,11 @@ ask_choice: options they click, one short line each on what that option COSTS. \
 Never ask an open question in prose when a choice would do. Never list options \
 in a sentence.
 
+THE SENTENCE ABOVE A QUESTION says what you just CHANGED, or what the decision \
+turns on. Never what you are about to show them. "Set to 30 days — every rate \
+re-prices to it." Not "I\'ll offer you payment term options": they can see the \
+options. If you have nothing of that kind to say, say nothing.
+
 ONE DECISION PER TURN, THEN STOP. Call ask_choice at most once and end the \
 turn there — no closing sentence, no second picker, no "and also". The buyer \
 answers, and the next decision is the next turn's job. Four questions at once \
@@ -281,14 +286,18 @@ class AuthorTools:
 
     def _choices_payment_terms(self, title: str) -> ChoiceBlock:
         cur = self.draft.payment_terms_days
+        rows = self.cat.get("terms_preview", [])
         return ChoiceBlock(
             key="payment_terms", title=title or "Payment terms",
             other_hint="e.g. 75 days",
+            # Where these numbers came from, on the card. A consequence the
+            # buyer cannot trace is one they have to take on trust.
+            note=(rows[0].get("basis") if rows else None),
             options=[ChoiceOption(value=str(t["days"]),
                                   label=f"{t['days']} days from GRN",
                                   consequence=t.get("consequence"),
                                   selected=(t["days"] == cur))
-                     for t in self.cat.get("terms_preview", [])])
+                     for t in rows])
 
     def _choices_gates(self, title: str) -> ChoiceBlock:
         on = set(self.draft.gating_q_nos)

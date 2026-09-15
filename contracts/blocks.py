@@ -189,6 +189,11 @@ class ChoiceBlock(BaseModel):
     options: list[ChoiceOption] = Field(default_factory=list)
     allow_other: bool = True
     other_hint: str | None = None
+    # Where the consequences on the options came from. Not decoration: a
+    # consequence the buyer cannot trace is a number they have to take on
+    # trust, and before any vendor has replied the only defensible sources are
+    # last year's contract and the buyer's own finance policy.
+    note: str | None = None
 
 
 class OptionCard(BaseModel):

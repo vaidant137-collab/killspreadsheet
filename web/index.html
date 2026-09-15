@@ -158,6 +158,8 @@ table.pick tr.on .mark{background:var(--accent);border-color:var(--accent);
 .block.choice .opt .txt{display:block}
 .block.choice .opt em{display:block;font-style:normal;font-size:11px;
   color:var(--dim);margin-top:1px}
+.block.choice .cnote{font-family:"IBM Plex Mono",monospace;font-size:10px;
+  color:var(--ink-faint);margin-top:9px;line-height:1.5}
 .block.choice .foot{display:flex;gap:8px;margin-top:10px;padding-top:9px;
   border-top:1px solid var(--rule-soft)}
 .block.choice .go,.block.choice .other{font:inherit;font-size:11px;cursor:pointer;
@@ -991,6 +993,7 @@ function renderChoice(b){
 
   d.innerHTML = `<div class="h">${esc(b.title)}</div>`;
   d.appendChild(list);
+  if (b.note) d.appendChild(el('div','cnote', esc(b.note)));
 
   const foot = el('div','foot');
   const apply = el('button','go'); apply.hidden = !b.multi;

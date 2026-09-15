@@ -114,21 +114,43 @@ def _live_gt():
         _json.loads((DATA / "ground_truth.json").read_text(encoding="utf-8")))
 
 
-def _gate_preview() -> list[dict]:
-    from allocate.subsets import gate_preview
-    return gate_preview(_live_gt())
+def _gate_preview(known_before_quotes: bool = True) -> list[dict]:
+    """What gating a question means.
+
+    Before the RFx goes out, that is the SHAPE of the rule and not who it would
+    remove: who it removes is in answers nobody has sent yet. The draft-time
+    pickers were showing "removes Nova" — read out of Nova's reply, in a
+    conversation whose entire premise is that Nova has not replied.
+    """
+    from allocate.subsets import gate_preview, gate_preview_prior
+    gt = _live_gt()
+    return gate_preview_prior(gt) if known_before_quotes else gate_preview(gt)
 
 
-def _terms_preview() -> list[dict]:
-    from allocate.subsets import terms_preview
-    return terms_preview(_live_gt())
+def _terms_preview(known_before_quotes: bool = True) -> list[dict]:
+    """What payment terms cost.
+
+    Same rule. Before quotes exist this is the BUYER's working capital on last
+    year's awarded spend — knowable, checkable against the FY26 contract, and
+    the actual reason the field matters. "Shakti saves you INR 445,474" is a
+    number from the future; it tells the buyer what to ask for by reading the
+    answers, which is the failure this whole project is an argument against.
+    """
+    from allocate.subsets import terms_preview, terms_preview_prior
+    gt = _live_gt()
+    return terms_preview_prior(gt) if known_before_quotes else terms_preview(gt)
 
 
 @app.get("/api/preview")
 def preview() -> dict:
-    """What each candidate choice would cost. Served so the pickers can show
-    consequences without a model call."""
-    return {"gates": _gate_preview(), "terms": _terms_preview()}
+    """What each candidate choice would cost, without a model call.
+
+    Which version depends on whether the vendors have answered. Once they have,
+    "gating this removes Nova" is a measurement; before they have, it is a leak.
+    """
+    known_only = SESSION["phase"] == "draft"
+    return {"gates": _gate_preview(known_only), "terms": _terms_preview(known_only),
+            "known_before_quotes_only": known_only}
 
 
 def _issue(draft: RfxDraft) -> None:

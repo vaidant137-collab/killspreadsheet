@@ -474,7 +474,129 @@ def _self_test() -> int:
         s = single[0]
         print(f"\n  Versus single-sourcing to {s.vendors_used[0]}: "
               f"{s.total_inr:,.0f}  (split saves {s.total_inr - best.total_inr:,.0f})")
+
+    # --- the invariant that matters most, and the easiest to lose -----------
+    # Draft-time consequences must be knowable BEFORE the RFx goes out. The
+    # shipped version showed "Shakti saves you INR 445,474 a year" on the
+    # payment-terms picker, in a conversation whose whole premise is that
+    # Shakti has not replied. It was right, traceable, computed in Python and
+    # completely indefensible: it told the buyer what to ask for by reading the
+    # answers. Everything this project argues collapses if a number can come
+    # from the future, so it is asserted rather than remembered.
+    print("\n  Pre-quote consequences — nothing from a reply that has not arrived\n")
+    names = [s_.vendor.name.split()[0] for s_ in gt.submissions]
+    ids = [s_.vendor.vendor_id for s_ in gt.submissions]
+    leaks = []
+    for row in terms_preview_prior(gt) + gate_preview_prior(gt):
+        text = f"{row.get('consequence', '')} {row.get('basis', '')}"
+        for n in names + ids:
+            if n.lower() in text.lower():
+                leaks.append((n, text))
+        if row.get("removes") or row.get("removes_names"):
+            leaks.append(("removes", str(row)))
+    if leaks:
+        print("    FAIL — a vendor's unsent answer reached the drafting screen:")
+        for n, t in leaks[:5]:
+            print(f"      {n}: {t[:90]}")
+        return 1
+    print(f"    ok    {len(terms_preview_prior(gt))} terms options and "
+          f"{len(gate_preview_prior(gt))} gate options name no vendor")
+    print( "    ok    they cite last year's contract and the cost of capital,")
+    print( "          which is what a buyer has on the day they write an RFx")
+
+    # And the POST-quote versions must still name names — that is their job,
+    # and a fix that silenced both would have solved this by deleting the
+    # feature rather than by placing it correctly.
+    post = gate_preview(gt)
+    if not any(r["removes"] for r in post):
+        print("    FAIL — the post-quote gate preview names nobody either;")
+        print("           the fix removed the measurement instead of moving it")
+        return 1
+    print( "    ok    after the replies land, the same preview names who a gate removes")
     return 0
+
+
+# ---------------------------------------------------------------------------
+# Consequences the buyer could know BEFORE anyone has replied
+# ---------------------------------------------------------------------------
+# The draft-time pickers were showing lines like "Shakti saves you INR 445,474 a
+# year against 45 days" -- computed, correctly, from Shakti's quote. Which has
+# not arrived. The RFx has not gone out.
+#
+# That is the worst failure available to this project. Everything here argues
+# that a buyer should be able to check where a number came from, and a number
+# that came from the future cannot be checked at all: it tells them what to ask
+# for by reading the answers. A demo that leaks the result into the question is
+# doing exactly what it accuses the spreadsheet of.
+#
+# So before quotes exist, consequences come only from what a buyer actually
+# has on the day they write an RFx: last year's awarded rates, the item master,
+# and their own cost of capital. Every line says which of those it used.
+
+def terms_preview_prior(gt: GroundTruth, candidates=(30, 45, 60, 90)) -> list[dict]:
+    """What moving payment terms costs the BUYER, on last year's awarded spend.
+
+    Not what it does to any vendor's ranking -- nobody has quoted. This is the
+    buyer's own working capital: paying sooner costs them the float, paying
+    later earns it, at the cost of capital their finance team set. It is the
+    one number that is genuinely knowable in advance, it is checkable against
+    the FY26 contract, and it is the reason the field matters at all.
+    """
+    from config import COST_OF_CAPITAL_PCT
+
+    qty = {l.line_no: l.annual_qty for l in gt.rfx.lines}
+    base_spend = sum(p.rate_inr * qty.get(p.line_no, 0) for p in gt.prior_contract)
+    baseline = 45 if 45 in candidates else candidates[0]
+    r = COST_OF_CAPITAL_PCT / 100.0
+    covered = len([p for p in gt.prior_contract if p.line_no in qty])
+
+    out = []
+    for days in candidates:
+        delta_days = days - baseline
+        # Same convention as normalize step 8, so the number the buyer reads
+        # here and the adjustment applied to quotes later are the same idea.
+        worth = base_spend - base_spend / (1 + r * (delta_days / 365.0))
+        if days == baseline:
+            why = (f"your current terms \u2014 the FY26 contract was written on "
+                   f"{baseline} days")
+        elif worth > 0:
+            why = (f"about INR {abs(worth):,.0f} a year of working capital "
+                   f"released, on last year's awarded spend")
+        else:
+            why = (f"about INR {abs(worth):,.0f} a year of working capital "
+                   f"given up, on last year's awarded spend")
+        out.append({
+            "days": days, "consequence": why,
+            "basis": f"FY26 awarded rates on {covered} of {len(gt.rfx.lines)} lines, "
+                     f"at {COST_OF_CAPITAL_PCT:.0f}% cost of capital",
+            "known_before_quotes": True})
+    return out
+
+
+def gate_preview_prior(gt: GroundTruth) -> list[dict]:
+    """Each question, and what GATING it means -- not who it would remove.
+
+    Who it removes is in the answers, and the answers are not in yet. Saying
+    "removes Nova" before Nova has replied is a number from the future wearing
+    a measurement's clothes. What a buyer can be told in advance is the shape
+    of the rule: a gate is a veto, not a score, and a question whose answer is
+    a number is a threshold they still have to set.
+    """
+    out = []
+    for q in gt.rfx.questionnaire:
+        if q.answer_type == "yes_no":
+            why = "a No disqualifies outright \u2014 no trade-off against price"
+        elif q.answer_type == "number":
+            why = ("gating a number means setting a threshold, and a vendor "
+                   "one unit the wrong side of it is out")
+        elif q.answer_type == "date":
+            why = "an expired or missing date disqualifies, whatever the price"
+        else:
+            why = "a free-text answer has to be read before it can disqualify"
+        out.append({"q_no": q.q_no, "question": q.question,
+                    "gating_now": q.gating, "removes": [], "removes_names": [],
+                    "consequence": why, "known_before_quotes": True})
+    return out
 
 
 if __name__ == "__main__":
