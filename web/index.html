@@ -550,9 +550,15 @@ function renderMail(b){
 }
 
 function renderQuery(b){
+  // Collapsed and labelled "computed", not "SQL". A buyer does not need to read
+  // a query to trust a number, but a VP challenging one needs it to exist — so
+  // it is one click away and never the headline.
+  const src = b.sql || b.code || '';
+  const typed = /^[a-z_]+\(/.test(src) && !/\bselect\b/i.test(src);
   const d = el('details','qry');
-  d.appendChild(el('summary','', (b.sql ? 'SQL' : 'computation') + ` · ${b.row_count} rows`));
-  d.appendChild(el('pre','', esc(b.sql || b.code || '')));
+  d.appendChild(el('summary','',
+    (typed ? esc(src.replace(/\(.*$/, '')) : 'computed') + ` · ${b.row_count} rows`));
+  d.appendChild(el('pre','', esc(src)));
   return d;
 }
 

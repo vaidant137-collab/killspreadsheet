@@ -23,13 +23,63 @@ from contracts.blocks import (
 )
 from store import repo
 
+# The typed tools come first deliberately. Free-form SQL against a ten-table
+# schema does not usually fail loudly — it returns a wrong-but-valid number,
+# which is the worst failure mode available here, because it is indistinguishable
+# on screen from a right one. These four cover what buyers actually ask, compute
+# in Python, and cannot be subtly wrong about what they exclude.
 TOOL_SPECS = [
+    {
+        "name": "vendor_totals",
+        "description": (
+            "Total landed cost per vendor across the lines they quoted, with the "
+            "coverage that total rests on. Use this for anything of the form 'who "
+            "is cheapest overall' or 'what would vendor X cost me'.\n\n"
+            "Returns, per vendor: lines_quoted, lines_priced, lines_unresolved, "
+            "annual_landed_inr, qualified, and lead_time_days. The totals cover "
+            "ONLY priced lines — a vendor with six unresolved lines looks cheap for "
+            "a reason, and lines_unresolved is how you say so."),
+        "input_schema": {"type": "object", "properties": {
+            "qualified_only": {"type": "boolean",
+                               "description": "Restrict to vendors who cleared the gate."}}},
+    },
+    {
+        "name": "cheapest_per_line",
+        "description": (
+            "The cheapest vendor on every line, among the vendors you name (or all "
+            "of them). This is the 'cheapest per line' question the VP asks. "
+            "Returns each line's winner, their landed rate, the runner-up and the "
+            "gap, plus lines nobody priced."),
+        "input_schema": {"type": "object", "properties": {
+            "vendor_ids": {"type": "array", "items": {"type": "string"},
+                           "description": "Omit for all vendors."},
+            "qualified_only": {"type": "boolean"}}},
+    },
+    {
+        "name": "best_split",
+        "description": (
+            "Enumerate every award split and return them ranked, with the "
+            "constraints each one violates. Use for 'what if I split it', 'is a "
+            "single vendor viable', 'what does that split cost versus one vendor'."),
+        "input_schema": {"type": "object", "properties": {
+            "max_vendors": {"type": "integer"},
+            "qualified_only": {"type": "boolean"}}},
+    },
+    {
+        "name": "show_options",
+        "description": (
+            "Re-render the three decision cards — cheapest, fastest, single vendor "
+            "— with cost, lead time and feasibility. Use when the buyer asks what "
+            "their choices are, or after a change that moves them."),
+        "input_schema": {"type": "object", "properties": {}},
+    },
     {
         "name": "run_sql",
         "description": (
-            "Run one read-only SELECT against the comparison database and get rows back. "
-            "This is how you obtain every number you report. Never state a figure you "
-            "did not get from here.\n\n"
+            "ESCAPE HATCH. Run one read-only SELECT when none of the typed tools above "
+            "fits the question. Prefer them: they compute in Python and cannot be "
+            "quietly wrong about what they left out. Never state a figure you did "
+            "not get from a tool.\n\n"
             "Tables:\n"
             "  rfx_line(line_no, code, description, style, ply, length_mm, width_mm, "
             "height_mm, liner_gsm, gsm_stack, bursting_factor, print_spec, annual_qty, "
@@ -131,6 +181,131 @@ class Tools:
     def __init__(self, conn: sqlite3.Connection):
         self.conn = conn
         self.last_rows: list[dict[str, Any]] = []
+
+    # -- typed tools ---------------------------------------------------------
+    # Each one owns its own arithmetic and its own exclusions. The point is not
+    # that SQL is dangerous; it is that a model writing SQL fails by returning a
+    # number that is wrong in a way nothing on screen can show.
+
+    def _q(self, sql: str, args: tuple = ()) -> list[dict]:
+        """Direct read for the typed tools.
+
+        `repo.query` is the guard around MODEL-authored SQL: it refuses writes,
+        rejects multiple statements and pins a LIMIT on. None of that applies to
+        the queries in this file, which are code and need complete result sets —
+        a silently LIMITed total is exactly the wrong-but-plausible number these
+        tools exist to prevent.
+        """
+        return [dict(r) for r in self.conn.execute(sql, args).fetchall()]
+
+    def _gt(self):
+        import json as _json
+
+        from config import DATA
+        from contracts.quote import GroundTruth
+        gt = GroundTruth.model_validate(
+            _json.loads((DATA / "ground_truth.json").read_text(encoding="utf-8")))
+        live_l = {r["line_no"] for r in self._q("SELECT line_no FROM rfx_line")}
+        live_v = {r["vendor_id"] for r in self._q("SELECT vendor_id FROM vendor")}
+        gt.rfx.lines = [l for l in gt.rfx.lines if l.line_no in live_l]
+        gt.submissions = [x for x in gt.submissions if x.vendor.vendor_id in live_v]
+        for x in gt.submissions:
+            x.line_quotes = [q for q in x.line_quotes if q.line_no in live_l]
+        return gt
+
+    def vendor_totals(self, qualified_only: bool = False) -> tuple[dict, list]:
+        from allocate.subsets import lead_times
+        lt = lead_times(self._gt())
+        rows = self._q("""
+            SELECT v.vendor_id, v.name, v.qualified,
+                   COUNT(n.line_no)                                   AS lines_quoted,
+                   SUM(n.state != 'unresolved')                       AS lines_priced,
+                   SUM(n.state = 'unresolved')                        AS lines_unresolved,
+                   SUM(CASE WHEN n.state != 'unresolved'
+                            THEN n.landed_inr * l.annual_qty END)     AS annual_landed_inr
+            FROM vendor v
+            JOIN normalised_line n ON n.vendor_id = v.vendor_id
+            JOIN rfx_line l        ON l.line_no  = n.line_no
+            GROUP BY v.vendor_id ORDER BY annual_landed_inr""")
+        for r in rows:
+            r["lead_time_days"] = lt.get(r["vendor_id"])
+        if qualified_only:
+            rows = [r for r in rows if r["qualified"]]
+        self.last_rows = rows
+        return ({"vendors": rows,
+                 "warning": "Totals cover priced lines only. A vendor with "
+                            "unresolved lines is cheap partly because those lines "
+                            "are missing — say so alongside the number."},
+                [QueryBlock(sql="vendor_totals()", row_count=len(rows))])
+
+    def cheapest_per_line(self, vendor_ids: list | None = None,
+                          qualified_only: bool = False) -> tuple[dict, list]:
+        where, args = [], []
+        if qualified_only:
+            where.append("v.qualified = 1")
+        if vendor_ids:
+            where.append("n.vendor_id IN (%s)" % ",".join("?" * len(vendor_ids)))
+            args += list(vendor_ids)
+        clause = ("AND " + " AND ".join(where)) if where else ""
+        rows = self._q(f"""
+            SELECT n.line_no, n.vendor_id, n.landed_inr, l.description, l.annual_qty
+            FROM normalised_line n
+            JOIN vendor v ON v.vendor_id = n.vendor_id
+            JOIN rfx_line l ON l.line_no = n.line_no
+            WHERE n.state != 'unresolved' AND n.landed_inr IS NOT NULL {clause}
+            ORDER BY n.line_no, n.landed_inr""", tuple(args))
+        by_line: dict[int, list] = {}
+        for r in rows:
+            by_line.setdefault(r["line_no"], []).append(r)
+        out = []
+        for ln in sorted(by_line):
+            bids = by_line[ln]
+            w, up = bids[0], (bids[1] if len(bids) > 1 else None)
+            out.append({"line_no": ln, "description": w["description"],
+                        "annual_qty": w["annual_qty"],
+                        "winner": w["vendor_id"], "landed_inr": w["landed_inr"],
+                        "runner_up": up["vendor_id"] if up else None,
+                        "gap_inr": round(up["landed_inr"] - w["landed_inr"], 4) if up else None,
+                        "bidders": len(bids)})
+        all_lines = {r["line_no"] for r in self._q("SELECT line_no FROM rfx_line")}
+        unpriced = sorted(all_lines - set(by_line))
+        self.last_rows = out
+        return ({"lines": out, "lines_with_no_price": unpriced,
+                 "annual_total_inr": round(
+                     sum(r["landed_inr"] * r["annual_qty"] for r in out), 2)},
+                [QueryBlock(sql="cheapest_per_line()", row_count=len(out))])
+
+    def best_split(self, max_vendors: int = 3,
+                   qualified_only: bool = True) -> tuple[dict, list]:
+        from allocate.subsets import allocate, lead_times
+        from normalize.engine import normalise_all
+        gt = self._gt()
+        lt = lead_times(gt)
+        allocs = allocate(gt, normalise_all(gt), qualified_only=qualified_only,
+                          max_vendors=max_vendors)
+        rows = [{"strategy": a.strategy, "vendors": a.vendors_used,
+                 "total_inr": round(a.total_inr, 2),
+                 "freight_inr": round(a.freight_inr, 2),
+                 "tooling_inr": round(a.tooling_inr, 2),
+                 "lines_covered": sum(1 for x in a.awards if x.vendor_id),
+                 "lead_time_days": (max((lt[v] for v in a.vendors_used), default=None)
+                                    if all(lt.get(v) is not None for v in a.vendors_used)
+                                    else None),
+                 "feasible": a.feasible, "violations": a.violations}
+                for a in allocs]
+        self.last_rows = rows
+        return ({"splits": rows[:12], "evaluated": len(rows)},
+                [QueryBlock(sql=f"best_split(max_vendors={max_vendors})",
+                            row_count=len(rows))])
+
+    def show_options(self) -> tuple[dict, list]:
+        from allocate.subsets import options as build_options
+        from contracts.blocks import OptionCard, OptionsBlock
+        from normalize.engine import normalise_all
+        gt = self._gt()
+        cards = build_options(gt, normalise_all(gt))
+        return ({"cards": cards},
+                [OptionsBlock(cards=[OptionCard(**c) for c in cards])])
 
     # -- run_sql -------------------------------------------------------------
     def run_sql(self, sql: str, purpose: str = "") -> tuple[dict, list]:
