@@ -127,8 +127,14 @@ class Analyst:
                     yield "block", b
                 results.append({"id": call["id"], "content": json.dumps(payload, default=str)})
 
+            # Intermediate narration is the model THINKING, not answering. It
+            # used to be streamed to the screen as a block, so a turn that made
+            # four tool calls printed four paragraphs — each one a fresh draft of
+            # the same answer, each restating context the card already shows.
+            # Only the final turn (the one with no tool calls) is the answer.
+            # The rest becomes a status line and disappears when it is done.
             if reply["text"]:
-                yield "block", TextBlock(text=reply["text"])
+                yield "status", reply["text"].strip().split("\n")[0][:90]
             messages.append({"role": "user", "content": results, "_tool_results": True})
 
         yield "block", TextBlock(

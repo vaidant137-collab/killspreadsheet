@@ -140,6 +140,36 @@ class RefusalBlock(BaseModel):
     would_need: list[str] = Field(default_factory=list)
 
 
+class ChoiceOption(BaseModel):
+    value: str                      # sent back when clicked
+    label: str
+    consequence: str | None = None  # one line: what choosing this COSTS
+    selected: bool = False
+
+
+class ChoiceBlock(BaseModel):
+    """A decision, rendered as things the buyer clicks.
+
+    The co-pilot used to ask open questions in prose — "What payment terms would
+    you like me to set?" followed by a paragraph on why terms matter. That makes
+    the buyer do the data entry and read a lecture to do it.
+
+    A choice carries its own consequence. "Gate on FSC chain of custody" is not a
+    preference, it is a decision that removes three of five vendors, and the
+    buyer should see that on the option before they click it, not discover it
+    afterwards. Those lines are computed from the live data, never written by the
+    model — a consequence the model guessed would be worse than none.
+    """
+
+    type: Literal["choice"] = "choice"
+    key: str                        # payment_terms | gates | vendors | lines
+    title: str
+    multi: bool = False
+    options: list[ChoiceOption] = Field(default_factory=list)
+    allow_other: bool = True
+    other_hint: str | None = None
+
+
 class OptionCard(BaseModel):
     kind: str                       # cheapest | fastest | single
     label: str
@@ -227,4 +257,4 @@ class MailDraftBlock(BaseModel):
 # classes is only valid from Python 3.10. macOS still ships 3.9.
 Block = Union[TextBlock, TableBlock, ChartBlock, EvidenceBlock, ReviewBlock,
               AssumptionBlock, QueryBlock, RefusalBlock, RfxDraftBlock,
-              MailDraftBlock, OptionsBlock]
+              MailDraftBlock, OptionsBlock, ChoiceBlock]

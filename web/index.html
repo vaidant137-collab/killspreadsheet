@@ -68,6 +68,80 @@ body{margin:0;background:var(--paper);color:var(--ink);
 .block.draft,.block.mail{border:1px solid var(--rule);border-radius:6px;padding:14px 16px;
   background:var(--surface)}
 .block.draft{border-left:2px solid var(--accent)}
+
+/* ---------- artifact tabs and pickers ---------- */
+nav.tabs{display:flex;gap:2px}
+nav.tabs button{font:inherit;font-size:11.5px;cursor:pointer;background:none;
+  border:0;border-bottom:2px solid transparent;color:var(--ink-faint);
+  padding:3px 9px 5px}
+nav.tabs button:hover{color:var(--ink)}
+nav.tabs button.on{color:var(--ink);border-bottom-color:var(--accent)}
+.panel{overflow:auto;padding:14px 20px 18px;flex:1;min-height:0}
+.panel .empty{color:var(--dim);font-size:12.5px;padding:18px 0;max-width:52ch;
+  line-height:1.6}
+.phead{display:flex;align-items:center;gap:12px;margin-bottom:11px}
+.phead select.catsel{font:inherit;font-size:12px;background:var(--surface);
+  color:var(--ink);border:1px solid var(--rule);border-radius:4px;padding:5px 8px}
+.pcount{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--dim)}
+.pfoot{display:flex;gap:8px;margin-top:12px}
+.pfoot .go,.pfoot .other{font:inherit;font-size:11px;cursor:pointer;border-radius:4px;
+  padding:5px 11px;border:1px solid var(--rule);background:none;color:var(--ink-soft)}
+.pfoot .go{background:var(--accent);border-color:var(--accent);color:#fff}
+
+table.pick{width:100%;border-collapse:collapse;font-size:12.5px}
+table.pick th{text-align:left;font-family:"IBM Plex Mono",monospace;font-size:9.5px;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--dim);
+  padding:0 10px 6px 0;border-bottom:1px solid var(--rule)}
+table.pick th.num,table.pick td.num{text-align:right}
+table.pick td{padding:6px 10px 6px 0;border-bottom:1px solid var(--rule-soft);
+  vertical-align:top}
+table.pick td small{display:block;font-size:10px;color:var(--dim);
+  font-family:"IBM Plex Mono",monospace}
+table.pick tbody tr{cursor:pointer}
+table.pick tbody tr:hover{background:var(--surface-2)}
+table.pick .mark{display:inline-block;width:12px;height:12px;border-radius:3px;
+  border:1px solid var(--rule);margin-top:2px}
+table.pick tr.on .mark{background:var(--accent);border-color:var(--accent);
+  box-shadow:inset 0 0 0 2px var(--surface)}
+
+.pbody.vendors{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));
+  gap:9px}
+.vcard{text-align:left;font:inherit;cursor:pointer;background:var(--surface);
+  border:1px solid var(--rule);border-radius:6px;padding:11px 12px;color:var(--ink);
+  display:flex;flex-direction:column;gap:3px;position:relative}
+.vcard:hover{border-color:var(--ink-faint)}
+.vcard.on{border-color:var(--accent);box-shadow:inset 2px 0 0 var(--accent)}
+.vcard .mark{position:absolute;top:11px;right:11px;width:12px;height:12px;
+  border-radius:3px;border:1px solid var(--rule)}
+.vcard.on .mark{background:var(--accent);border-color:var(--accent);
+  box-shadow:inset 0 0 0 2px var(--surface)}
+.vcard b{font-weight:500;font-size:12.5px;padding-right:18px}
+.vcard em{font-style:normal;font-size:11px;color:var(--dim)}
+
+.block.choice{border:1px solid var(--rule);border-radius:6px;padding:13px 14px 11px;
+  background:var(--surface)}
+.block.choice.done{opacity:.55}
+.block.choice .h{font-family:"IBM Plex Mono",monospace;font-size:9.5px;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:9px}
+.block.choice .opts{display:flex;flex-direction:column;gap:1px}
+.block.choice .opt{display:flex;align-items:flex-start;gap:9px;width:100%;
+  text-align:left;background:none;border:0;border-radius:4px;padding:7px 9px;
+  cursor:pointer;color:var(--ink);font:inherit;font-size:12.5px;line-height:1.4}
+.block.choice .opt:hover{background:var(--surface-2)}
+.block.choice .opt .mark{flex:none;width:12px;height:12px;margin-top:3px;
+  border:1px solid var(--rule);border-radius:3px}
+.block.choice .opt.on .mark{background:var(--accent);border-color:var(--accent);
+  box-shadow:inset 0 0 0 2px var(--surface)}
+.block.choice .opt .txt{display:block}
+.block.choice .opt em{display:block;font-style:normal;font-size:11px;
+  color:var(--dim);margin-top:1px}
+.block.choice .foot{display:flex;gap:8px;margin-top:10px;padding-top:9px;
+  border-top:1px solid var(--rule-soft)}
+.block.choice .go,.block.choice .other{font:inherit;font-size:11px;cursor:pointer;
+  border-radius:4px;padding:5px 11px;border:1px solid var(--rule);
+  background:none;color:var(--ink-soft)}
+.block.choice .go{background:var(--accent);border-color:var(--accent);color:#fff}
+.block.choice button:disabled{cursor:default;opacity:.7}
 .block.draft .h,.block.mail .h{font-family:"IBM Plex Mono",monospace;font-size:9.5px;
   letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:10px}
 table.draft{width:100%;border-collapse:collapse;font-size:12.5px}
@@ -259,9 +333,12 @@ svg.chart text{font-family:"IBM Plex Mono",monospace;font-size:9px;fill:var(--in
 
 <header>
   <h1>Kill the Quote Spreadsheet</h1>
+  <!-- The header used to recite the state of the data — "NO RFX YET · ITEM
+       MASTER 30 LINES · APPROVED VENDORS 5". None of it was actionable and all
+       of it is visible elsewhere. What belongs here is where you are, and the
+       two things that need your attention. -->
   <div class="meta" id="meta"></div>
   <div class="spacer"></div>
-  <button class="chip" id="chipProv" hidden></button>
   <button class="chip risk" id="chipReview" hidden></button>
   <button class="chip warn" id="chipAsm">assumptions</button>
 </header>
@@ -270,10 +347,17 @@ svg.chart text{font-family:"IBM Plex Mono",monospace;font-size:9px;fill:var(--in
   <div id="stage">
     <section id="pinned">
       <div class="bar">
-        <h2 id="pinTitle">Side-by-side comparison</h2>
+        <!-- Tabs live INSIDE the artifact, not beside the chat: picking line
+             items is editing the RFx, so the picker belongs with it. -->
+        <nav class="tabs" id="tabs">
+          <button data-tab="main" class="on" id="tabMain">RFx draft</button>
+          <button data-tab="options" id="tabOptions" hidden>Options</button>
+          <button data-tab="items">Item master</button>
+          <button data-tab="vendors">Vendors</button>
+        </nav>
         <span class="sub" id="pinSub"></span>
         <div class="right">
-          <div class="legend">
+          <div class="legend" id="legend">
             <span><i class="e"></i>extracted</span>
             <span><i class="d"></i>derived</span>
             <span><i class="u"></i>unresolved</span>
@@ -284,6 +368,10 @@ svg.chart text{font-family:"IBM Plex Mono",monospace;font-size:9px;fill:var(--in
         </div>
       </div>
       <div id="tableWrap"></div>
+      <div id="panelDraft" class="panel" hidden></div>
+      <div id="panelOptions" class="panel" hidden></div>
+      <div id="panelItems" class="panel" hidden></div>
+      <div id="panelVendors" class="panel" hidden></div>
       <div id="foot"></div>
     </section>
 
@@ -313,22 +401,15 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g, c =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const inr = n => '₹' + Number(n).toLocaleString('en-IN', {maximumFractionDigits:2});
 
-let STATE = null, CATALOGUE = null;
+let STATE = null, CATALOGUE = null, DRAFT = null, LASTDRAFT = null,
+    ITEMCAT = 'corrugated';
 
 /* ---------------- boot ---------------- */
 async function boot(){
   STATE = await (await fetch('/api/state')).json();
-  // Say where the numbers came from before anyone asks. A viewer who assumes a
-  // model read these documents when a fixture did has been misled by omission.
-  const prov = STATE.provenance;
-  if (prov){
-    const b = $('#chipProv'); b.hidden = false;
-    b.textContent = prov.label;
-    b.className = 'chip' + (prov.mode === 'recorded' ? '' : ' warn');
-    b.title = prov.detail;
-    b.onclick = () => showProvenance(prov);
-  }
   $('#chipAsm').onclick = showAssumptions;
+  $('#tabs').querySelectorAll('button').forEach(
+    b => b.onclick = () => openTab(b.dataset.tab));
   if (STATE.phase === 'draft') enterDraft(); else await enterComparison();
 }
 
@@ -338,46 +419,44 @@ async function boot(){
 async function enterDraft(){
   const cat = await (await fetch('/api/catalogue')).json();
   CATALOGUE = cat;
-  $('#pinned').hidden = true;
+  await refreshDraft();
+  $('#tabMain').textContent = 'RFx draft';
+  $('#tabOptions').hidden = true;
+  $('#pinTitle') && ($('#pinTitle').textContent = '');
+  $('#meta').innerHTML = '<span>Drafting</span>';
   $('#chipAsm').hidden = true;
   $('#q').placeholder = 'Tell me what you need to buy…';
-  $('#meta').innerHTML = `<span>No RFx yet</span>
-    <span>Item master <b>${cat.lines.length}</b> lines</span>
-    <span>Approved vendors <b>${cat.vendors.length}</b></span>`;
+  openTab('main');
+  $('#panelDraft').replaceChildren(el('div','empty',
+    'No RFx yet. Say what you need to buy and I will draft the whole thing — '
+    + 'or open the item master and pick the lines yourself.'));
   const t = turn('Co-pilot');
-  t.appendChild(el('div','block', `<p>Nothing has gone out yet. Tell me what you
-    need to buy and I'll draft the RFx — line schedule, questionnaire, terms — and
-    write the covering mail for you to approve.</p>
-    <p>Your item master has <b>${cat.lines.length}</b> lines and there are
-    <b>${cat.vendors.length}</b> approved vendors on file. Four decisions will
-    decide the answer: which lines go out, your payment terms, who is invited,
-    and which questionnaire answers are allowed to disqualify.</p>`));
+  t.appendChild(el('div','block', `<p>Tell me what you're buying and I'll draft
+    the RFx — schedule, questionnaire, terms — then you change what matters.</p>`));
   suggest([
-    'Draft an RFx for corrugated packaging — all 30 lines, 45-day terms',
-    'I only need the 3-ply boxes this quarter. Who should I invite?',
-    'What should I gate on, and what would that cost me?',
-    'Show me the item master']);
+    'Annual corrugated packaging, back in two weeks',
+    'Same as last year, but 30-day terms',
+    'What should I gate on?',
+    'Only the 3-ply boxes this quarter']);
 }
 
 async function enterComparison(){
   STATE = await (await fetch('/api/state')).json();
   const r = STATE.rfx, c = STATE.counts;
-  $('#pinned').hidden = false;
+  $('#tabMain').textContent = 'Comparison';
+  $('#tabOptions').hidden = false;
   $('#chipAsm').hidden = false;
   $('#q').placeholder = 'Ask about the comparison…';
-  $('#meta').innerHTML = `
-    <span>${esc(r.rfx_id)}</span>
-    <span>Buyer <b>${esc(r.buyer_org)}</b></span>
-    <span>Lines <b>${STATE.comparison.rows.length}</b></span>
-    <span>Vendors <b>${STATE.vendors.length}</b></span>
-    <span>Terms <b>${esc(r.required_payment_terms)}</b></span>
-    <span>Unresolved <b>${c.unresolved}</b></span>`;
+  $('#meta').innerHTML = `<span>${esc(r.rfx_id)}</span>
+    <span>${esc(r.required_payment_terms)}</span>
+    <span>${c.unresolved} unresolved</span>`;
   const b = $('#chipReview');
   if (STATE.open_reviews){
     b.hidden = false; b.textContent = STATE.open_reviews + ' need review';
     b.onclick = showReviews;
   } else { b.hidden = true; }
   renderTable(STATE.comparison);
+  openTab('main');
   greet();
 }
 
@@ -489,7 +568,7 @@ async function ask(q){
     headers:{'Content-Type':'application/json'}, body: JSON.stringify({question:q})});
   const rd = res.body.getReader(); const dec = new TextDecoder(); let buf = '';
   // A model narrating each tool call often repeats itself verbatim. Say it once.
-  let lastText = '';
+  let lastText = '', draftNoted = false;
   while (true){
     const {done, value} = await rd.read(); if (done) break;
     buf += dec.decode(value, {stream:true});
@@ -503,13 +582,13 @@ async function ask(q){
       status.remove();
       const blk = m.payload;
       if (blk.type === 'rfx_draft'){
-        // One draft, mutated in place. A co-pilot that sets four fields emits
-        // four blocks, and appending them stacks four near-identical cards —
-        // the same "transcript of stale copies" problem the pinned comparison
-        // exists to avoid. Same fix: render once, update, keep it last.
-        const prev = $('#chat').querySelector('.block.draft');
-        const next = renderBlock(blk);
-        if (prev) prev.replaceWith(next); else t.appendChild(next);
+        // The draft IS the pinned artifact before quotes arrive — the same slot
+        // the comparison takes afterwards. Putting it in the chat made a
+        // transcript of stale copies, which is the exact thing the pinned
+        // canvas exists to avoid.
+        LASTDRAFT = blk; renderDraftPanel(); refreshDraft();
+        if (!draftNoted){ draftNoted = true;
+          t.appendChild(el('div','block status','↑ RFx draft updated above')); }
         $('#chat').scrollTop = 1e9;
         continue;
       }
@@ -538,6 +617,7 @@ function renderBlock(b){
     d.appendChild(btn); if (b.snippet) d.appendChild(el('div','status', esc(b.snippet)));
     return d;
   }
+  if (b.type === 'choice') return renderChoice(b);
   if (b.type === 'options') return renderOptions(b);
   if (b.type === 'rfx_draft') return renderDraft(b);
   if (b.type === 'mail_draft') return renderMail(b);
@@ -568,6 +648,56 @@ function renderBlock(b){
 
 const mdish = s => '<p>' + esc(s).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')
   .replace(/\n\n/g,'</p><p>').replace(/\n/g,'<br>') + '</p>';
+
+function renderChoice(b){
+  // A decision the buyer clicks, with what each option costs written on it.
+  // Single-select fires immediately; multi-select waits for Apply, because
+  // toggling four gates one at a time would re-price the tender four times.
+  const d = el('div','block choice');
+  const picked = new Set(b.options.filter(o => o.selected).map(o => o.value));
+  const list = el('div','opts');
+
+  b.options.forEach(o => {
+    const row = el('button','opt' + (picked.has(o.value) ? ' on' : ''));
+    row.innerHTML = `<span class="mark"></span><span class="txt">${esc(o.label)}` +
+      (o.consequence ? `<em>${esc(o.consequence)}</em>` : '') + `</span>`;
+    row.onclick = () => {
+      if (!b.multi){ send(b, [o.value]); return; }
+      picked.has(o.value) ? picked.delete(o.value) : picked.add(o.value);
+      row.classList.toggle('on');
+      apply.hidden = false;
+      apply.textContent = picked.size ? `Apply ${picked.size} selected` : 'Apply — gate on nothing';
+    };
+    list.appendChild(row);
+  });
+
+  d.innerHTML = `<div class="h">${esc(b.title)}</div>`;
+  d.appendChild(list);
+
+  const foot = el('div','foot');
+  const apply = el('button','go'); apply.hidden = !b.multi;
+  apply.textContent = picked.size ? `Apply ${picked.size} selected` : 'Apply';
+  apply.onclick = () => send(b, [...picked]);
+  foot.appendChild(apply);
+
+  if (b.allow_other){
+    const other = el('button','other', 'Something else…');
+    other.onclick = () => { $('#q').focus();
+      if (b.other_hint) $('#q').placeholder = b.other_hint; };
+    foot.appendChild(other);
+  }
+  d.appendChild(foot);
+
+  function send(blk, values){
+    if (blk.key === 'lines' && values[0] === 'pick'){ openTab('items'); return; }
+    const labels = values.map(v =>
+      (blk.options.find(o => o.value === v) || {}).label || v);
+    d.querySelectorAll('button').forEach(x => x.disabled = true);
+    d.classList.add('done');
+    ask(`${blk.title}: ${labels.length ? labels.join('; ') : 'none'}`);
+  }
+  return d;
+}
 
 const inr0 = n => '\u20B9' + Math.round(n).toLocaleString('en-IN');
 
@@ -754,19 +884,23 @@ async function showReviews(){
 
 async function showAssumptions(){
   const r = await (await fetch('/api/assumptions')).json();
-  turn('Assumptions').appendChild(renderAssumptions({title:'Assumptions in force',
+  const t = turn('Assumptions');
+  t.appendChild(renderAssumptions({title:'Assumptions in force',
     rows: r.rows, note:'Every derived number rests on these.'}));
+  // Provenance lives here rather than in the header. A viewer who assumes a
+  // model read these documents when a fixture did has been misled by omission —
+  // so it is still disclosed, and still one click away, but it no longer
+  // shouts a warning at everyone who opens the page.
+  if (STATE && STATE.provenance) showProvenanceInto(t, STATE.provenance);
 }
 
-function showProvenance(prov){
-  const t = turn('Provenance');
+function showProvenanceInto(t, prov){
   const runs = (prov.runs || []).map(r =>
     `<tr><td class="mono">${esc(r.vendor_id)}</td><td class="mono">${esc(r.extractor)}</td>
      <td class="mono">${esc(r.model)}</td><td class="mono">${r.lines} lines</td>
      <td class="mono">${esc(r.recorded_at)}</td></tr>`).join('');
-  t.appendChild(el('div', 'block derivation',
-    `<h4>Where these numbers came from</h4>
-     <div>${esc(prov.detail)}</div>` +
+  t.appendChild(el('div','block derivation',
+    `<h4>Where these numbers came from</h4><div>${esc(prov.detail)}</div>` +
     (runs ? `<table class="prov"><thead><tr><th>vendor</th><th>parser</th>
              <th>model</th><th>read</th><th>recorded</th></tr></thead>
              <tbody>${runs}</tbody></table>` : '')));

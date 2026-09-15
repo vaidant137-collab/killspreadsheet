@@ -35,42 +35,41 @@ direction: a leaf importing the composition root.
 
 from __future__ import annotations
 
-from contracts.blocks import DraftField, MailDraftBlock, RfxDraftBlock, TextBlock
+from contracts.blocks import (ChoiceBlock, ChoiceOption, DraftField,
+                             MailDraftBlock, RfxDraftBlock, TextBlock)
 from contracts.rfx import RfxDraft
 
-AUTHOR_SYSTEM = """You are an RFx co-pilot working with a category buyer who is \
-about to put roughly INR 11 crore of corrugated packaging out to tender. Your \
-job is to turn what they tell you into a defensible RFx, and to make them decide \
-the things that decide the outcome.
+AUTHOR_SYSTEM = """You are an RFx co-pilot for a category buyer putting roughly \
+INR 11 crore of packaging out to tender. They have run tenders before. Your job \
+is to hand them a finished draft and make them decide only the things that \
+change the outcome.
 
-HOW YOU WORK
+PROPOSE THE WHOLE THING FIRST. On the buyer's first message, call \
+propose_default_rfx. It drafts the complete RFx from their last tender — lines, \
+vendors, terms, gates, response date — in one call. Do NOT ask for the buyer's \
+organisation, the category, or anything else already on file. A co-pilot that \
+interviews the buyer field by field has made them do the data entry.
 
-Call list_catalogue before proposing line items, questions or vendors. You do \
-not know what is in the buyer's item master until you look, and inventing a line \
-item they do not stock wastes everybody's tender.
+THEN OFFER CHOICES, NOT QUESTIONS. Anything worth changing goes through \
+ask_choice: options they click, one short line each on what that option COSTS. \
+Never ask an open question in prose when a choice would do. Never list options \
+in a sentence.
 
-PROPOSE, THEN CONFIRM. Make a concrete recommendation with a reason — "45-day \
-terms, because that is what your incumbent contract runs on and quoting against \
-anything else makes the responses non-comparable" — and let the buyer overrule \
-it. A co-pilot that asks nine open questions in a row has made the buyer do the \
-work.
+THE CARD IS ON SCREEN. It shows lines, vendors, terms, gates and what is still \
+missing. Never restate it, never re-count it, never tell them how many lines or \
+vendors they have. They can see it.
+
+NO EXPLANATIONS UNLESS ASKED. Not why payment terms matter, not what NPV is, \
+not what a gate does in general. If a choice has a consequence, ask_choice \
+carries it on the option itself. One sentence per turn is usually right; three \
+is too many.
 
 THE FOUR THINGS THAT DECIDE THE ANSWER are the line schedule, payment terms, \
-the vendor list, and which questionnaire answers are allowed to disqualify. \
-Everything else is paperwork. Spend the conversation on those four.
+the vendor list, and which questionnaire answers disqualify. Spend the \
+conversation there and nowhere else.
 
-SAY WHAT A CHOICE COSTS. Payment terms are not a formality: every rate that \
-comes back is NPV-adjusted to them, so the terms you set determine who looks \
-cheapest. Gating questions are a buyer policy, not a fact — gate on quality \
-escapes and you may disqualify your lowest bidder. Name that at the time the \
-buyer chooses, not afterwards.
-
-BE BRIEF. You are talking to someone who has run tenders before. Two or three \
-sentences per turn. Never restate the whole draft in prose — show_draft renders \
-it, and it renders after every change automatically.
-
-When the buyer is ready, draft_mail writes the covering note and issue_rfx sends \
-it. Tell them plainly that the send is stubbed."""
+WHEN THEY ARE READY, draft_mail writes the covering note and issue_rfx sends it. \
+Say plainly that the send is stubbed."""
 
 
 # ---------------------------------------------------------------------------
@@ -79,6 +78,35 @@ it. Tell them plainly that the send is stubbed."""
 # ---------------------------------------------------------------------------
 
 AUTHOR_TOOL_SPECS = [
+    {"name": "propose_default_rfx",
+     "description": (
+         "Draft the WHOLE RFx in one call, from the buyer's last tender: every "
+         "line in the category, the approved vendor list, the terms and gates "
+         "they used last year, and a response date. Call this FIRST, on the "
+         "buyer's opening message, before asking them anything. They can change "
+         "any of it afterwards."),
+     "input_schema": {"type": "object", "properties": {
+         "response_due_days": {"type": "integer",
+                               "description": "Days from today. Default 14."}}}},
+
+    {"name": "ask_choice",
+     "description": (
+         "Put a decision in front of the buyer as options they click. You name "
+         "WHAT is being decided; the options and their consequences are computed "
+         "from live data — you do not write them and must not invent them.\n\n"
+         "  payment_terms  30/45/60/90 days, each with what it moves\n"
+         "  gates          each questionnaire question, with who it disqualifies\n"
+         "  vendors        the approved list, with who is already invited\n"
+         "  lines          the item master by category\n\n"
+         "Use this instead of asking an open question in prose."),
+     "input_schema": {"type": "object", "properties": {
+         "key": {"type": "string",
+                 "enum": ["payment_terms", "gates", "vendors", "lines"]},
+         "title": {"type": "string",
+                   "description": "Short imperative, e.g. 'Payment terms' or "
+                                  "'Gate on'. No question mark, no sentence."}},
+         "required": ["key"]}},
+
     {"name": "list_catalogue",
      "description": "Look at what is available to put in the RFx: 'lines' is the "
                     "buyer's item master, 'questions' the standard quality "
@@ -172,6 +200,90 @@ class AuthorTools:
         return fn(**args)
 
     # -- tools -------------------------------------------------------------
+    def _propose_default_rfx(self, response_due_days: int = 14):
+        from datetime import date, timedelta
+        d, cat = self.draft, self.cat
+        dflt = cat.get("defaults", {})
+        d.buyer_org = d.buyer_org or dflt.get("buyer_org")
+        d.category = d.category or dflt.get("category")
+        d.delivery_point = d.delivery_point or dflt.get("delivery_point")
+        d.required_incoterm = d.required_incoterm or dflt.get("required_incoterm")
+        d.response_due = (date.today() + timedelta(days=response_due_days)).isoformat()
+        d.line_nos = [l["line_no"] for l in cat["lines"]]
+        d.vendor_ids = [v["vendor_id"] for v in cat["vendors"]]
+        d.question_nos = [q["q_no"] for q in cat["questions"]]
+        d.gating_q_nos = [g["q_no"] for g in cat.get("gate_preview", []) if g["gating_now"]]
+        d.payment_terms_days = d.payment_terms_days or 45
+        d.cost_of_capital_pct = d.cost_of_capital_pct or 9.0
+        return ({"drafted": True, "lines": len(d.line_nos),
+                 "vendors": len(d.vendor_ids), "gates": d.gating_q_nos,
+                 "note": "A complete RFx, drafted from the buyer's last tender. "
+                         "Do not describe it — the card is on screen. Offer the "
+                         "one or two choices worth changing."},
+                [self._draft_block()])
+
+    def _ask_choice(self, key: str, title: str = ""):
+        """The model names the decision; the options are built from live data.
+
+        Deliberately the model does NOT supply options or consequences. "Gating
+        on FSC removes three of five vendors" is a measurement, and a model
+        writing that line from memory would produce a number the buyer would act
+        on and nobody could check.
+        """
+        builder = getattr(self, f"_choices_{key}", None)
+        if builder is None:
+            return {"error": f"no choices for '{key}'"}, []
+        block = builder(title)
+        return ({"asked": key, "options": [o.label for o in block.options]}, [block])
+
+    def _choices_payment_terms(self, title: str) -> ChoiceBlock:
+        cur = self.draft.payment_terms_days
+        return ChoiceBlock(
+            key="payment_terms", title=title or "Payment terms",
+            other_hint="e.g. 75 days",
+            options=[ChoiceOption(value=str(t["days"]),
+                                  label=f"{t['days']} days from GRN",
+                                  consequence=t.get("consequence"),
+                                  selected=(t["days"] == cur))
+                     for t in self.cat.get("terms_preview", [])])
+
+    def _choices_gates(self, title: str) -> ChoiceBlock:
+        on = set(self.draft.gating_q_nos)
+        return ChoiceBlock(
+            key="gates", title=title or "Disqualify a vendor for", multi=True,
+            allow_other=False,
+            options=[ChoiceOption(value=str(g["q_no"]),
+                                  label=f"Q{g['q_no']} · {g['question']}",
+                                  consequence=g.get("consequence"),
+                                  selected=(g["q_no"] in on))
+                     for g in self.cat.get("gate_preview", [])])
+
+    def _choices_vendors(self, title: str) -> ChoiceBlock:
+        on = set(self.draft.vendor_ids)
+        return ChoiceBlock(
+            key="vendors", title=title or "Invite", multi=True, allow_other=False,
+            options=[ChoiceOption(
+                value=v["vendor_id"], label=v["name"],
+                consequence=(("incumbent · " if v.get("incumbent") else "")
+                             + (v.get("city") or "")),
+                selected=(v["vendor_id"] in on)) for v in self.cat["vendors"]])
+
+    def _choices_lines(self, title: str) -> ChoiceBlock:
+        n = len(self.cat["lines"])
+        chosen = len(self.draft.line_nos)
+        return ChoiceBlock(
+            key="lines", title=title or "Line schedule", other_hint="e.g. 5-ply only",
+            options=[
+                ChoiceOption(value="all", label=f"All {n} lines",
+                             consequence="the full annual requirement",
+                             selected=(chosen == n)),
+                ChoiceOption(value="3", label="3-ply only",
+                             consequence="the high-volume boxes"),
+                ChoiceOption(value="5", label="5-ply only",
+                             consequence="the heavier cases"),
+                ChoiceOption(value="pick", label="Pick them myself",
+                             consequence="opens the item master")])
+
     def _list_catalogue(self, kind: str):
         rows = self.cat.get(kind, [])
         return {"kind": kind, "count": len(rows), "items": rows}, []

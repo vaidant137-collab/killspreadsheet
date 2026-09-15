@@ -62,7 +62,25 @@ def _catalogue() -> dict:
     wasted the tender."""
     gt = json.loads((DATA / "ground_truth.json").read_text(encoding="utf-8"))
     return {
+        # A real item master has many categories and most of them are somebody
+        # else's problem. Showing corrugated alongside four empty ones says this
+        # is one category in a buyer's catalogue rather than a demo with the
+        # answer hardcoded — and the empty ones say "no data" instead of
+        # pretending to have some.
+        "categories": [
+            {"key": "corrugated", "name": "Corrugated packaging",
+             "lines": len(gt["rfx"]["lines"]), "note": None},
+            {"key": "flexible", "name": "Flexible packaging", "lines": 0,
+             "note": "No data available — not yet loaded into the item master"},
+            {"key": "labels", "name": "Labels & tags", "lines": 0,
+             "note": "No data available — managed by the marketing category"},
+            {"key": "pallets", "name": "Pallets & dunnage", "lines": 0,
+             "note": "No data available — on a separate contract to FY28"},
+            {"key": "tapes", "name": "Tapes & adhesives", "lines": 0,
+             "note": "No data available"},
+        ],
         "lines": [{"line_no": l["line_no"], "code": l["code"],
+                   "category": "corrugated",
                    "description": l["description"], "style": l["style"],
                    "ply": l.get("ply"), "annual_qty": l["annual_qty"],
                    "uom": l["uom"], "food_contact": l.get("food_contact", False),
@@ -75,12 +93,43 @@ def _catalogue() -> dict:
                      "city": s_["vendor"].get("city"),
                      "incumbent": s_["vendor"].get("is_incumbent", False)}
                     for s_ in gt["submissions"]],
+        # Consequences are computed HERE, in the composition root, and handed to
+        # the co-pilot as data. analyst/author.py must not import allocate/ —
+        # and more importantly, a consequence the model wrote from memory would
+        # be worse than no consequence at all.
+        "gate_preview": _gate_preview(),
+        "terms_preview": _terms_preview(),
         "defaults": {"buyer_org": gt["rfx"]["buyer_org"],
                      "category": gt["rfx"]["category"],
                      "delivery_point": gt["rfx"]["delivery_point"],
                      "required_incoterm": gt["rfx"]["required_incoterm"],
                      "response_due": gt["rfx"]["response_due"]},
     }
+
+
+def _live_gt():
+    import json as _json
+
+    from contracts.quote import GroundTruth
+    return GroundTruth.model_validate(
+        _json.loads((DATA / "ground_truth.json").read_text(encoding="utf-8")))
+
+
+def _gate_preview() -> list[dict]:
+    from allocate.subsets import gate_preview
+    return gate_preview(_live_gt())
+
+
+def _terms_preview() -> list[dict]:
+    from allocate.subsets import terms_preview
+    return terms_preview(_live_gt())
+
+
+@app.get("/api/preview")
+def preview() -> dict:
+    """What each candidate choice would cost. Served so the pickers can show
+    consequences without a model call."""
+    return {"gates": _gate_preview(), "terms": _terms_preview()}
 
 
 def _issue(draft: RfxDraft) -> None:
@@ -460,6 +509,40 @@ def issue_default() -> dict:
     d.issued = True
     _issue(d)
     return {"ok": True, "phase": SESSION["phase"]}
+
+
+class DraftEdit(BaseModel):
+    line_nos: list[int] | None = None
+    vendor_ids: list[str] | None = None
+    gating_q_nos: list[int] | None = None
+    payment_terms_days: int | None = None
+
+
+@app.post("/api/draft")
+def edit_draft(e: DraftEdit) -> dict:
+    """Edit the draft directly, with no model call.
+
+    Ticking twelve line items is data entry, not judgement. Routing it through
+    the co-pilot would cost a model call per click, take a second each time, and
+    occasionally get it wrong. The model is for the decisions; the picker writes
+    to the draft itself.
+    """
+    d = SESSION["draft"]
+    for field in ("line_nos", "vendor_ids", "gating_q_nos", "payment_terms_days"):
+        v = getattr(e, field)
+        if v is not None:
+            setattr(d, field, v)
+    if not d.question_nos:
+        d.question_nos = [q["q_no"] for q in _catalogue()["questions"]]
+    return {"ok": True, "draft": json.loads(d.model_dump_json()),
+            "missing": d.missing()}
+
+
+@app.get("/api/draft")
+def get_draft() -> dict:
+    d = SESSION["draft"]
+    return {"draft": json.loads(d.model_dump_json()), "missing": d.missing(),
+            "phase": SESSION["phase"]}
 
 
 @app.post("/api/reset")

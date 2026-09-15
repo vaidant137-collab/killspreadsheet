@@ -78,6 +78,20 @@ def qualify(gt: GroundTruth) -> dict[str, VendorTotals]:
                             f"ISO 9001 certificate expired {att.valid_until}, contradicting "
                             f"their 'Yes' at question 1")
 
+        # Any OTHER gating question is a plain yes/no policy: "No" disqualifies.
+        # Q1 and Q7 get bespoke rules above because they are the two that read an
+        # attachment and parse a number. Without this branch, marking FSC or
+        # BRCGS as gating did nothing at all — the buyer set a policy and the
+        # software silently ignored it, which is worse than refusing to offer it.
+        for q in gt.rfx.questionnaire:
+            if q.q_no in (1, 7) or q.q_no not in gated:
+                continue
+            a = ans.get(q.q_no)
+            if a is None:
+                reasons.append(f"No answer to Q{q.q_no} ({q.question[:48]})")
+            elif a.answer.strip().lower().startswith("no"):
+                reasons.append(f"Q{q.q_no}: answered No — {q.question[:56]}")
+
         if 7 in gated:
             try:
                 # "1 (minor - print registration, Aug 2025)" is one escape, not
@@ -228,6 +242,95 @@ def allocate(gt: GroundTruth, rows: list[NormalisedLine], *,
             results.append(evaluate(gt, rows, subset,
                                     strategy=f"{k}-vendor: {', '.join(subset)}"))
     return sorted(results, key=lambda a: (not a.feasible, a.total_inr))
+
+
+# ---------------------------------------------------------------------------
+# Consequence preview — what a choice COSTS, before it is made
+# ---------------------------------------------------------------------------
+
+def gate_preview(gt: GroundTruth) -> list[dict]:
+    """For each questionnaire question: who would it disqualify, on today's data.
+
+    This is the difference between a settings screen and a decision. "Gate on
+    FSC chain of custody" is not a preference — it removes three of five
+    vendors, and one of the two it leaves is the most expensive in the set. A
+    buyer should read that on the option before clicking it, not discover it
+    afterwards when the comparison comes back thin.
+
+    Computed by running the real gate with that question alone, so the line is a
+    measurement rather than a guess. A model writing these from memory would be
+    the worst version of this feature.
+    """
+    out = []
+    for q in gt.rfx.questionnaire:
+        probe = gt.model_copy(deep=True)
+        for x in probe.rfx.questionnaire:
+            x.gating = (x.q_no == q.q_no)
+        res = qualify(probe)
+        removed = [v for v, t in res.items() if not t.qualified]
+        names = {s.vendor.vendor_id: s.vendor.name for s in gt.submissions}
+        out.append({
+            "q_no": q.q_no, "question": q.question,
+            "gating_now": q.gating,
+            "removes": removed,
+            "removes_names": [names.get(v, v) for v in removed],
+            "consequence": ("removes nobody today" if not removed
+                            else f"removes {', '.join(names.get(v, v).split()[0] for v in removed)}"
+                            if len(removed) < len(res)
+                            else "removes every vendor — nobody would qualify"),
+        })
+    return out
+
+
+def terms_preview(gt: GroundTruth, candidates=(30, 45, 60, 90)) -> list[dict]:
+    """What each candidate payment term does to who looks cheapest.
+
+    Terms are the least obviously consequential field on an RFx and one of the
+    most consequential in fact: every rate is NPV-adjusted to them, so the term
+    the buyer picks partly decides the winner. Showing that as four numbers is
+    more honest than a paragraph explaining that it matters.
+    """
+    names = {s.vendor.vendor_id: s.vendor.name for s in gt.submissions}
+    out = []
+    for days in candidates:
+        probe = gt.model_copy(deep=True)
+        probe.rfx.required_payment_terms = f"{days} days from GRN"
+        rows = normalise_all(probe)
+        totals: dict[str, float] = {}
+        for r in rows:
+            if r.landed_inr is not None:
+                line = next((l for l in probe.rfx.lines if l.line_no == r.line_no), None)
+                if line:
+                    totals[r.vendor_id] = totals.get(r.vendor_id, 0.0) + \
+                        r.landed_inr * line.annual_qty
+        best = min(totals, key=totals.get) if totals else None
+        out.append({"days": days, "cheapest": best,
+                    "cheapest_name": names.get(best, best),
+                    "total_inr": round(totals.get(best, 0.0), 2),
+                    "totals": {k: round(v, 2) for k, v in totals.items()}})
+
+    # "Who is cheapest" often does not change across terms, which makes it a
+    # useless thing to put on the option. What DOES change is how much each
+    # vendor's own terms are worth to them — a vendor quoting 90 days gains
+    # against a 30-day tender and loses against a 90-day one. Name the biggest
+    # mover against the 45-day baseline, because that is the consequence.
+    base = next((r for r in out if r["days"] == 45), out[0])
+    for r in out:
+        moves = {v: r["totals"].get(v, 0) - base["totals"].get(v, 0)
+                 for v in base["totals"]}
+        big = max(moves, key=lambda v: abs(moves[v])) if moves else None
+        delta = moves.get(big, 0.0) if big else 0.0
+        if r["days"] == base["days"]:
+            r["consequence"] = "the baseline — matches your FY26 contract"
+        elif big is None or abs(delta) < 1:
+            r["consequence"] = "moves nobody materially"
+        else:
+            direction = "costs" if delta > 0 else "saves"
+            r["consequence"] = (f"{names.get(big, big).split()[0]} {direction} you "
+                                f"INR {abs(delta):,.0f} a year against 45 days")
+        r["moves_most"] = big
+        r["moves_most_inr"] = round(delta, 2)
+    return out
 
 
 # ---------------------------------------------------------------------------
